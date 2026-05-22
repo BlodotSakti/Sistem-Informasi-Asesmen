@@ -1,7 +1,36 @@
 <?php
 
+use App\Http\Controllers\AdminController;
+use App\Http\Controllers\AnalisisDiagnostikController;
+use App\Http\Controllers\ApresiasiController;
+use App\Http\Controllers\BankSoalController;
+use App\Http\Controllers\BeritaAcaraController;
+use App\Http\Controllers\CatatanPrivatController;
+use App\Http\Controllers\DetailSesiSoalController;
+use App\Http\Controllers\GuruController;
+use App\Http\Controllers\JawabanSiswaController;
+use App\Http\Controllers\KelasController;
+use App\Http\Controllers\MataPelajaranController;
+use App\Http\Controllers\PenggunaController;
+use App\Http\Controllers\SesiAsesmenController;
+use App\Http\Controllers\SiswaController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
     return view('welcome');
 });
+
+Route::resource('pengguna', PenggunaController::class);
+Route::resource('admin', AdminController::class);
+Route::resource('guru', GuruController::class);
+Route::resource('siswa', SiswaController::class);
+Route::resource('kelas', KelasController::class);
+Route::resource('mata-pelajaran', MataPelajaranController::class);
+Route::resource('bank-soal', BankSoalController::class);
+Route::resource('sesi-asesmen', SesiAsesmenController::class);
+Route::resource('detail-sesi-soal', DetailSesiSoalController::class);
+Route::resource('jawaban-siswa', JawabanSiswaController::class);
+Route::resource('analisis-diagnostik', AnalisisDiagnostikController::class);
+Route::resource('berita-acara', BeritaAcaraController::class);
+Route::resource('catatan-privat', CatatanPrivatController::class);
+Route::resource('apresiasi', ApresiasiController::class);
