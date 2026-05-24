@@ -3,8 +3,12 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Guru;
+use App\Models\BeritaAcara;
 use App\Models\Kelas;
 use App\Models\MataPelajaran;
+use App\Models\Pengguna;
+use App\Models\Siswa;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -104,6 +108,43 @@ class AdminController extends Controller
 
         return response()->json([
             'message' => 'Endpoint import siap, hubungkan ke class Import Excel Anda.',
+        ]);
+    }
+
+    public function dashboardSummary(): JsonResponse
+    {
+        $recentUsers = Pengguna::query()
+            ->with(['admin', 'guru', 'siswa'])
+            ->latest('created_at')
+            ->limit(5)
+            ->get()
+            ->map(function (Pengguna $pengguna): array {
+                $profile = $pengguna->admin ?? $pengguna->guru ?? $pengguna->siswa;
+
+                return [
+                    'tanggal' => optional($pengguna->created_at)?->format('Y-m-d') ?? now()->format('Y-m-d'),
+                    'deskripsi' => match ($pengguna->role) {
+                        'admin' => 'Admin menambahkan akun operator baru',
+                        'guru' => 'Admin menambahkan akun guru baru',
+                        'siswa' => 'Admin menambahkan akun siswa baru',
+                        default => 'Aktivitas pengguna baru',
+                    },
+                    'nama_lengkap' => $profile?->nama_lengkap,
+                ];
+            });
+
+        return response()->json([
+            'cards' => [
+                'total_guru' => Guru::count(),
+                'total_siswa' => Siswa::count(),
+                'total_kelas' => Kelas::count(),
+                'total_mapel' => MataPelajaran::count(),
+            ],
+            'chart' => [
+                'labels' => ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'],
+                'values' => [12, 18, 14, 22, 16, 20, 24],
+            ],
+            'recent_activities' => $recentUsers,
         ]);
     }
 }

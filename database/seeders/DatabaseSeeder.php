@@ -15,15 +15,55 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // User::factory(10)->create();
+        $accounts = [
+            [
+                'username' => 'admin',
+                'role' => 'admin',
+                'profile' => [
+                    'relation' => 'admin',
+                    'attributes' => [
+                        'nama_lengkap' => 'Administrator Sekolah',
+                    ],
+                ],
+            ],
+            [
+                'username' => 'guru01',
+                'role' => 'guru',
+                'profile' => [
+                    'relation' => 'guru',
+                    'attributes' => [
+                        'nama_lengkap' => 'Guru Uji Coba',
+                        'nip' => '198812312026010001',
+                    ],
+                ],
+            ],
+            [
+                'username' => 'siswa01',
+                'role' => 'siswa',
+                'profile' => [
+                    'relation' => 'siswa',
+                    'attributes' => [
+                        'nama_lengkap' => 'Siswa Uji Coba',
+                        'nisn' => '0012345678',
+                    ],
+                ],
+            ],
+        ];
 
-        $adminUser = User::factory()->create([
-            'username' => 'admin',
-            'role' => 'admin',
-        ]);
+        foreach ($accounts as $account) {
+            $user = User::updateOrCreate(
+                ['username' => $account['username']],
+                [
+                    'password' => 'password',
+                    'role' => $account['role'],
+                ],
+            );
 
-        $adminUser->admin()->create([
-            'nama_lengkap' => 'Administrator Sekolah',
-        ]);
+            $relation = $account['profile']['relation'];
+            $user->{$relation}()->updateOrCreate(
+                ['id_pengguna' => $user->id_pengguna],
+                $account['profile']['attributes'],
+            );
+        }
     }
 }

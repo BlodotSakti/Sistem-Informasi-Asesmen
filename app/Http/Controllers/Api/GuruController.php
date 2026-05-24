@@ -8,6 +8,7 @@ use App\Models\Apresiasi;
 use App\Models\BankSoal;
 use App\Models\BeritaAcara;
 use App\Models\CatatanPrivat;
+use App\Models\Kelas;
 use App\Models\SesiAsesmen;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -95,5 +96,42 @@ class GuruController extends Controller
         }
 
         return response()->json($query->latest('tanggal_generate')->paginate(15));
+    }
+
+    public function dashboardSummary(Request $request): JsonResponse
+    {
+        $guruId = $request->user()->guru->id_guru;
+
+        $kelasIds = Kelas::query()
+            ->where('id_guru_wali', $guruId)
+            ->pluck('id_kelas');
+
+        $upcomingSchedules = SesiAsesmen::query()
+            ->with(['kelas', 'mataPelajaran'])
+            ->whereIn('id_kelas', $kelasIds)
+            ->where('waktu_mulai', '>=', now())
+            ->orderBy('waktu_mulai')
+            ->limit(5)
+            ->get()
+            ->map(fn (SesiAsesmen $sesi): array => [
+                'title' => 'Jadwal Ujian - ' . $sesi->kelas?->nama_kelas,
+                'meta' => optional($sesi->waktu_mulai)?->format('d/m/Y') . ' - ' . ucfirst($sesi->jenis_asesmen) . ' | ' . ($sesi->mataPelajaran?->nama_mapel ?? '-'),
+                'note' => 'Mulai ' . optional($sesi->waktu_mulai)?->format('H:i') . ' WIB',
+            ]);
+
+        return response()->json([
+            'cards' => [
+                'total_kelas' => $kelasIds->count(),
+                'total_bank_soal' => BankSoal::query()->where('id_guru', $guruId)->count(),
+                'ujian_aktif' => SesiAsesmen::query()->whereIn('id_kelas', $kelasIds)->where('waktu_mulai', '>=', now())->count(),
+                'total_berita_acara' => BeritaAcara::query()->where('id_guru', $guruId)->count(),
+            ],
+            'upcoming_schedules' => $upcomingSchedules,
+            'quick_tips' => [
+                'Siapkan bank soal sesuai level kognitif sebelum sesi dimulai.',
+                'Gunakan berita acara untuk dokumentasi kelas harian.',
+                'Pantau analisis diagnostik untuk melihat kelemahan siswa.',
+            ],
+        ]);
     }
 }

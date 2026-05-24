@@ -13,6 +13,7 @@ Route::middleware('auth:sanctum')->group(function (): void {
 	Route::post('/auth/logout', [AuthController::class, 'logout']);
 
 	Route::prefix('admin')->as('api.admin.')->middleware('role:admin')->group(function (): void {
+		Route::get('/dashboard-summary', [AdminController::class, 'dashboardSummary'])->name('dashboard-summary');
 		Route::get('/kelas', [AdminController::class, 'kelasIndex'])->name('kelas.index');
 		Route::post('/kelas', [AdminController::class, 'kelasStore'])->name('kelas.store');
 		Route::get('/kelas/{kelas}', [AdminController::class, 'kelasShow'])->name('kelas.show');
@@ -29,6 +30,7 @@ Route::middleware('auth:sanctum')->group(function (): void {
 	});
 
 	Route::prefix('guru')->as('api.guru.')->middleware('role:guru')->group(function (): void {
+		Route::get('/dashboard-summary', [GuruController::class, 'dashboardSummary'])->name('dashboard-summary');
 		Route::post('/bank-soal', [GuruController::class, 'bankSoalStore'])->name('bank-soal.store');
 		Route::post('/sesi-asesmen', [GuruController::class, 'sesiAsesmenStore'])->name('sesi-asesmen.store');
 		Route::post('/berita-acara', [GuruController::class, 'beritaAcaraStore'])->name('berita-acara.store');
@@ -38,6 +40,7 @@ Route::middleware('auth:sanctum')->group(function (): void {
 	});
 
 	Route::prefix('siswa')->as('api.siswa.')->middleware('role:siswa')->group(function (): void {
+		Route::get('/dashboard-summary', [SiswaController::class, 'dashboardSummary'])->name('dashboard-summary');
 		Route::get('/sesi-asesmen/aktif', [SiswaController::class, 'activeSessions'])->name('sesi-asesmen.aktif');
 		Route::post('/jawaban-siswa', [SiswaController::class, 'submitJawaban'])->name('jawaban-siswa.store');
 		Route::get('/tren-nilai', [SiswaController::class, 'trendNilai'])->name('tren-nilai.index');

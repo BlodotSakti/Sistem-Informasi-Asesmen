@@ -16,9 +16,11 @@ use App\Http\Controllers\SesiAsesmenController;
 use App\Http\Controllers\SiswaController;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', function () {
-    return view('welcome');
-});
+Route::redirect('/', '/login');
+Route::view('/login', 'app');
+Route::view('/admin/dashboard', 'app');
+Route::view('/guru/dashboard', 'app');
+Route::view('/siswa/dashboard', 'app');
 
 Route::resource('pengguna', PenggunaController::class);
 Route::resource('admin', AdminController::class);
