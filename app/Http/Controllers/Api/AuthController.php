@@ -34,6 +34,8 @@ class AuthController extends Controller
             ], 403);
         }
 
+        $this->loadRoleRelations($pengguna);
+
         return response()->json([
             'message' => 'Login berhasil.',
             'token_type' => 'Bearer',
@@ -45,6 +47,8 @@ class AuthController extends Controller
     public function me(Request $request): JsonResponse
     {
         $pengguna = $request->user()->load(['admin', 'guru', 'siswa']);
+
+        $this->loadRoleRelations($pengguna);
 
         return response()->json([
             'data' => $this->payload($pengguna),
@@ -76,5 +80,25 @@ class AuthController extends Controller
             'nama_lengkap' => $profile?->nama_lengkap,
             'profile' => $profile,
         ];
+    }
+
+    protected function loadRoleRelations(Pengguna $pengguna): void
+    {
+        if ($pengguna->role === 'siswa') {
+            $pengguna->loadMissing([
+                'siswa.kelasAktifAssignment.kelas.guruWali',
+                'siswa.kelasRiwayat.kelas.guruWali',
+                'siswa.rencanaBelajar.mataPelajaran',
+            ]);
+
+            return;
+        }
+
+        if ($pengguna->role === 'guru') {
+            $pengguna->loadMissing([
+                'guru.penugasanPembelajaran.kelas',
+                'guru.penugasanPembelajaran.mataPelajaran',
+            ]);
+        }
     }
 }

@@ -43,6 +43,21 @@ Route::middleware('auth:sanctum')->group(function (): void {
 			Route::get('/mata-pelajaran/{mataPelajaran}', [AdminController::class, 'mataPelajaranShow'])->name('mata-pelajaran.show');
 			Route::patch('/mata-pelajaran/{mataPelajaran}', [AdminController::class, 'mataPelajaranUpdate'])->name('mata-pelajaran.update');
 			Route::delete('/mata-pelajaran/{mataPelajaran}', [AdminController::class, 'mataPelajaranDestroy'])->name('mata-pelajaran.destroy');
+
+			Route::get('/kelas-siswa', [AdminController::class, 'kelasSiswaIndex'])->name('kelas-siswa.index');
+			Route::post('/kelas-siswa', [AdminController::class, 'kelasSiswaStore'])->name('kelas-siswa.store');
+			Route::post('/kelas-siswa/bulk-import', [AdminController::class, 'kelasSiswaBulkImport'])->name('kelas-siswa.bulk-import');
+			Route::get('/kelas-siswa/{kelasSiswa}', [AdminController::class, 'kelasSiswaShow'])->name('kelas-siswa.show');
+			Route::patch('/kelas-siswa/{kelasSiswa}', [AdminController::class, 'kelasSiswaUpdate'])->name('kelas-siswa.update');
+			Route::delete('/kelas-siswa/{kelasSiswa}', [AdminController::class, 'kelasSiswaDestroy'])->name('kelas-siswa.destroy');
+
+			Route::get('/penugasan-pembelajaran', [AdminController::class, 'penugasanPembelajaranIndex'])->name('penugasan-pembelajaran.index');
+			Route::post('/penugasan-pembelajaran', [AdminController::class, 'penugasanPembelajaranStore'])->name('penugasan-pembelajaran.store');
+			Route::post('/penugasan-pembelajaran/bulk-import', [AdminController::class, 'penugasanPembelajaranBulkImport'])->name('penugasan-pembelajaran.bulk-import');
+			Route::get('/penugasan-pembelajaran/{penugasanPembelajaran}', [AdminController::class, 'penugasanPembelajaranShow'])->name('penugasan-pembelajaran.show');
+			Route::patch('/penugasan-pembelajaran/{penugasanPembelajaran}', [AdminController::class, 'penugasanPembelajaranUpdate'])->name('penugasan-pembelajaran.update');
+			Route::delete('/penugasan-pembelajaran/{penugasanPembelajaran}', [AdminController::class, 'penugasanPembelajaranDestroy'])->name('penugasan-pembelajaran.destroy');
+			Route::get('/import-templates/{type}/{format}', [AdminController::class, 'importTemplate'])->name('import-templates.show');
 		});
 
 		Route::prefix('guru')->as('api.guru.')->middleware('role:guru')->group(function (): void {
@@ -62,6 +77,8 @@ Route::middleware('auth:sanctum')->group(function (): void {
 			Route::get('/tren-nilai', [SiswaController::class, 'trendNilai'])->name('tren-nilai.index');
 			Route::get('/catatan-privat', [SiswaController::class, 'catatanPrivat'])->name('catatan-privat.index');
 			Route::get('/apresiasi', [SiswaController::class, 'apresiasi'])->name('apresiasi.index');
+			Route::get('/rencana-belajar', [SiswaController::class, 'rencanaBelajarIndex'])->name('rencana-belajar.index');
+			Route::post('/rencana-belajar', [SiswaController::class, 'rencanaBelajarStore'])->name('rencana-belajar.store');
 		});
     });
 });

@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 /**
  * @property int $id_siswa
@@ -20,9 +21,14 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property-read int|null $apresiasi_count
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\CatatanPrivat> $catatanPrivat
  * @property-read int|null $catatan_privat_count
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\KelasSiswa> $kelasRiwayat
+ * @property-read int|null $kelas_riwayat_count
+ * @property-read \App\Models\KelasSiswa|null $kelasAktifAssignment
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\JawabanSiswa> $jawabanSiswa
  * @property-read int|null $jawaban_siswa_count
  * @property-read \App\Models\Pengguna $pengguna
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\RencanaBelajar> $rencanaBelajar
+ * @property-read int|null $rencana_belajar_count
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Siswa newModelQuery()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Siswa newQuery()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Siswa query()
@@ -71,5 +77,22 @@ class Siswa extends Model
     public function apresiasi(): HasMany
     {
         return $this->hasMany(Apresiasi::class, 'id_siswa', 'id_siswa');
+    }
+
+    public function kelasRiwayat(): HasMany
+    {
+        return $this->hasMany(KelasSiswa::class, 'id_siswa', 'id_siswa');
+    }
+
+    public function kelasAktifAssignment(): HasOne
+    {
+        return $this->hasOne(KelasSiswa::class, 'id_siswa', 'id_siswa')
+            ->where('is_aktif', true)
+            ->latestOfMany('tanggal_masuk');
+    }
+
+    public function rencanaBelajar(): HasMany
+    {
+        return $this->hasMany(RencanaBelajar::class, 'id_siswa', 'id_siswa');
     }
 }

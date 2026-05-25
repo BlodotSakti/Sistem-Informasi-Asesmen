@@ -24,6 +24,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property-read int|null $catatan_privat_count
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Kelas> $kelasWali
  * @property-read int|null $kelas_wali_count
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\PenugasanPembelajaran> $penugasanPembelajaran
+ * @property-read int|null $penugasan_pembelajaran_count
  * @property-read \App\Models\Pengguna $pengguna
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Guru newModelQuery()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Guru newQuery()
@@ -78,5 +80,10 @@ class Guru extends Model
     public function apresiasi(): HasMany
     {
         return $this->hasMany(Apresiasi::class, 'id_guru', 'id_guru');
+    }
+
+    public function penugasanPembelajaran(): HasMany
+    {
+        return $this->hasMany(PenugasanPembelajaran::class, 'id_guru', 'id_guru');
     }
 }

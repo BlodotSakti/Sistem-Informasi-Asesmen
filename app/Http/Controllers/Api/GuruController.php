@@ -9,6 +9,7 @@ use App\Models\BankSoal;
 use App\Models\BeritaAcara;
 use App\Models\CatatanPrivat;
 use App\Models\Kelas;
+use App\Models\PenugasanPembelajaran;
 use App\Models\SesiAsesmen;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -26,7 +27,10 @@ class GuruController extends Controller
             'level_kognitif' => ['required', 'in:C1,C2,C3,C4,C5,C6'],
         ]);
 
-        $data['id_guru'] = $request->user()->guru->id_guru;
+        $guruId = $request->user()->guru->id_guru;
+        $this->ensureGuruMengampuMapel($guruId, (int) $data['id_mapel']);
+
+        $data['id_guru'] = $guruId;
 
         return response()->json(BankSoal::create($data), 201);
     }
@@ -41,6 +45,9 @@ class GuruController extends Controller
             'waktu_mulai' => ['required', 'date'],
             'durasi_menit' => ['required', 'integer', 'min:1'],
         ]);
+
+        $guruId = $request->user()->guru->id_guru;
+        $this->ensureGuruMengampuKelasDanMapel($guruId, (int) $data['id_kelas'], (int) $data['id_mapel']);
 
         return response()->json(SesiAsesmen::create($data), 201);
     }
@@ -102,13 +109,28 @@ class GuruController extends Controller
     {
         $guruId = $request->user()->guru->id_guru;
 
-        $kelasIds = Kelas::query()
+        $penugasan = PenugasanPembelajaran::query()
+            ->with(['kelas', 'mataPelajaran'])
+            ->where('id_guru', $guruId)
+            ->where('is_aktif', true)
+            ->get();
+
+        $waliKelas = Kelas::query()
             ->where('id_guru_wali', $guruId)
-            ->pluck('id_kelas');
+            ->get();
+
+        $kelasIds = $penugasan
+            ->pluck('id_kelas')
+            ->merge($waliKelas->pluck('id_kelas'))
+            ->unique()
+            ->values();
+
+        $mapelIds = $penugasan->pluck('id_mapel')->unique()->values();
 
         $upcomingSchedules = SesiAsesmen::query()
             ->with(['kelas', 'mataPelajaran'])
-            ->whereIn('id_kelas', $kelasIds)
+            ->when($kelasIds->isNotEmpty(), fn ($query) => $query->whereIn('id_kelas', $kelasIds))
+            ->when($mapelIds->isNotEmpty(), fn ($query) => $query->whereIn('id_mapel', $mapelIds))
             ->where('waktu_mulai', '>=', now())
             ->orderBy('waktu_mulai')
             ->limit(5)
@@ -123,15 +145,57 @@ class GuruController extends Controller
             'cards' => [
                 'total_kelas' => $kelasIds->count(),
                 'total_bank_soal' => BankSoal::query()->where('id_guru', $guruId)->count(),
-                'ujian_aktif' => SesiAsesmen::query()->whereIn('id_kelas', $kelasIds)->where('waktu_mulai', '>=', now())->count(),
+                'total_penugasan' => $penugasan->count(),
+                'ujian_aktif' => SesiAsesmen::query()
+                    ->when($kelasIds->isNotEmpty(), fn ($query) => $query->whereIn('id_kelas', $kelasIds))
+                    ->when($mapelIds->isNotEmpty(), fn ($query) => $query->whereIn('id_mapel', $mapelIds))
+                    ->where('waktu_mulai', '>=', now())
+                    ->count(),
                 'total_berita_acara' => BeritaAcara::query()->where('id_guru', $guruId)->count(),
             ],
             'upcoming_schedules' => $upcomingSchedules,
+            'teaching_assignments' => $penugasan->map(fn (PenugasanPembelajaran $assignment): array => [
+                'id_penugasan_pembelajaran' => $assignment->id_penugasan_pembelajaran,
+                'nama_kelas' => $assignment->kelas?->nama_kelas,
+                'nama_mapel' => $assignment->mataPelajaran?->nama_mapel,
+                'tahun_ajaran' => $assignment->tahun_ajaran,
+            ])->values(),
             'quick_tips' => [
-                'Siapkan bank soal sesuai level kognitif sebelum sesi dimulai.',
+                'Pastikan penugasan guru-mapel-kelas aktif sebelum membuat bank soal.',
                 'Gunakan berita acara untuk dokumentasi kelas harian.',
                 'Pantau analisis diagnostik untuk melihat kelemahan siswa.',
             ],
         ]);
+    }
+
+    protected function ensureGuruMengampuMapel(int $guruId, int $idMapel): void
+    {
+        $exists = PenugasanPembelajaran::query()
+            ->where('id_guru', $guruId)
+            ->where('id_mapel', $idMapel)
+            ->where('is_aktif', true)
+            ->exists();
+
+        if (! $exists) {
+            abort(response()->json([
+                'message' => 'Guru belum ditugaskan untuk mengampu mata pelajaran ini.',
+            ], 422));
+        }
+    }
+
+    protected function ensureGuruMengampuKelasDanMapel(int $guruId, int $idKelas, int $idMapel): void
+    {
+        $exists = PenugasanPembelajaran::query()
+            ->where('id_guru', $guruId)
+            ->where('id_kelas', $idKelas)
+            ->where('id_mapel', $idMapel)
+            ->where('is_aktif', true)
+            ->exists();
+
+        if (! $exists) {
+            abort(response()->json([
+                'message' => 'Guru belum ditugaskan untuk kelas dan mata pelajaran tersebut.',
+            ], 422));
+        }
     }
 }

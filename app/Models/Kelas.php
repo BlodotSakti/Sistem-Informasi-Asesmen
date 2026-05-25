@@ -17,6 +17,10 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\BeritaAcara> $beritaAcara
  * @property-read int|null $berita_acara_count
  * @property-read \App\Models\Guru $guruWali
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\KelasSiswa> $kelasSiswa
+ * @property-read int|null $kelas_siswa_count
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\PenugasanPembelajaran> $penugasanPembelajaran
+ * @property-read int|null $penugasan_pembelajaran_count
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\SesiAsesmen> $sesiAsesmen
  * @property-read int|null $sesi_asesmen_count
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Kelas newModelQuery()
@@ -52,6 +56,16 @@ class Kelas extends Model
     public function sesiAsesmen(): HasMany
     {
         return $this->hasMany(SesiAsesmen::class, 'id_kelas', 'id_kelas');
+    }
+
+    public function kelasSiswa(): HasMany
+    {
+        return $this->hasMany(KelasSiswa::class, 'id_kelas', 'id_kelas');
+    }
+
+    public function penugasanPembelajaran(): HasMany
+    {
+        return $this->hasMany(PenugasanPembelajaran::class, 'id_kelas', 'id_kelas');
     }
 
     public function beritaAcara(): HasMany

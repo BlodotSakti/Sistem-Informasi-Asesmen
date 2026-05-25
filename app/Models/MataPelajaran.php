@@ -14,6 +14,10 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property \Illuminate\Support\Carbon|null $updated_at
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\BankSoal> $bankSoal
  * @property-read int|null $bank_soal_count
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\PenugasanPembelajaran> $penugasanPembelajaran
+ * @property-read int|null $penugasan_pembelajaran_count
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\RencanaBelajar> $rencanaBelajar
+ * @property-read int|null $rencana_belajar_count
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\SesiAsesmen> $sesiAsesmen
  * @property-read int|null $sesi_asesmen_count
  * @method static \Illuminate\Database\Eloquent\Builder<static>|MataPelajaran newModelQuery()
@@ -47,5 +51,15 @@ class MataPelajaran extends Model
     public function sesiAsesmen(): HasMany
     {
         return $this->hasMany(SesiAsesmen::class, 'id_mapel', 'id_mapel');
+    }
+
+    public function penugasanPembelajaran(): HasMany
+    {
+        return $this->hasMany(PenugasanPembelajaran::class, 'id_mapel', 'id_mapel');
+    }
+
+    public function rencanaBelajar(): HasMany
+    {
+        return $this->hasMany(RencanaBelajar::class, 'id_mapel', 'id_mapel');
     }
 }
