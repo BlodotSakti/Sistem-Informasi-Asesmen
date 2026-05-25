@@ -1,8 +1,10 @@
 export default function DashboardLayout({ title, user, navigation, onLogout, children }) {
+    const currentPath = window.location.pathname;
+
     return (
         <div className="min-h-screen bg-slate-100 text-slate-900">
-            <div className="grid min-h-screen grid-cols-1 lg:grid-cols-[280px_1fr]">
-                <aside className="flex flex-col bg-slate-950 text-slate-100 shadow-2xl shadow-slate-950/20">
+            <div className="grid min-h-screen grid-cols-1 lg:h-screen lg:grid-cols-[280px_1fr] lg:overflow-hidden">
+                <aside className="flex flex-col bg-slate-950 text-slate-100 shadow-2xl shadow-slate-950/20 lg:sticky lg:top-0 lg:h-screen lg:overflow-y-auto">
                     <div className="border-b border-white/10 p-6">
                         <div className="flex items-center gap-4 rounded-3xl border border-white/10 bg-white/5 p-4 backdrop-blur">
                             <div className="flex h-16 w-16 items-center justify-center rounded-full border border-white/15 bg-slate-800 text-sm font-semibold uppercase text-amber-300">
@@ -21,7 +23,7 @@ export default function DashboardLayout({ title, user, navigation, onLogout, chi
                             <a
                                 key={item.href}
                                 href={item.href}
-                                className="flex items-center justify-between rounded-2xl px-4 py-3 text-sm font-medium text-slate-200 transition hover:bg-white/10 hover:text-white"
+                                className={`flex items-center justify-between rounded-2xl px-4 py-3 text-sm font-medium transition ${currentPath === item.href ? 'bg-white/15 text-white ring-1 ring-white/10' : 'text-slate-200 hover:bg-white/10 hover:text-white'}`}
                             >
                                 <span>{item.label}</span>
                                 <span className="text-xs text-slate-500">{item.badge}</span>
@@ -34,8 +36,8 @@ export default function DashboardLayout({ title, user, navigation, onLogout, chi
                     </div>
                 </aside>
 
-                <main className="flex min-h-screen flex-col bg-slate-100">
-                    <header className="flex items-center justify-between border-b border-slate-200 bg-white px-6 py-4 shadow-sm">
+                <main className="flex min-h-screen flex-col bg-slate-100 lg:h-screen lg:overflow-y-auto">
+                    <header className="sticky top-0 z-30 flex items-center justify-between border-b border-slate-200/80 bg-white/90 px-6 py-4 shadow-sm backdrop-blur">
                         <div>
                             <p className="text-xs uppercase tracking-[0.3em] text-slate-500">{user?.role || 'Dashboard'}</p>
                             <h2 className="text-2xl font-semibold text-slate-900">{title}</h2>

@@ -19,6 +19,11 @@ use Illuminate\Support\Facades\Route;
 Route::redirect('/', '/login');
 Route::view('/login', 'app');
 Route::view('/admin/dashboard', 'app');
+Route::view('/admin/pengguna', 'app');
+Route::view('/admin/tahun-ajaran', 'app');
+Route::view('/admin/kelas', 'app');
+Route::view('/admin/mata-pelajaran', 'app');
+Route::view('/admin/import-akun', 'app');
 Route::view('/guru/dashboard', 'app');
 Route::view('/siswa/dashboard', 'app');
 

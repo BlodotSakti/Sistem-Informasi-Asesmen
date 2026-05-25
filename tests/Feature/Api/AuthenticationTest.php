@@ -71,6 +71,32 @@ class AuthenticationTest extends TestCase
         $response->assertOk();
     }
 
+    public function test_archived_account_cannot_login_or_access_api(): void
+    {
+        $pengguna = $this->createUserWithProfile('siswa', 'siswa99', 'Siswa Arsip');
+
+        $pengguna->update(['is_aktif' => false]);
+
+        $login = $this->postJson('/api/auth/login', [
+            'username' => 'siswa99',
+            'password' => 'secret123',
+        ]);
+
+        $login->assertStatus(403);
+
+        $activeTokenLogin = $this->createUserWithProfile('guru', 'guru99', 'Guru Aktif');
+        $token = $this->postJson('/api/auth/login', [
+            'username' => 'guru99',
+            'password' => 'secret123',
+        ])->json('token');
+
+        $activeTokenLogin->update(['is_aktif' => false]);
+
+        $response = $this->withToken($token)->getJson('/api/guru/dashboard-summary');
+
+        $response->assertForbidden();
+    }
+
     protected function createUserWithProfile(string $role, string $username, string $namaLengkap): Pengguna
     {
         $pengguna = Pengguna::create([

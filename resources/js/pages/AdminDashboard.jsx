@@ -1,18 +1,54 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import DashboardLayout from '../components/layout/DashboardLayout';
 import StatCard from '../components/ui/StatCard';
 import { apiFetch } from '../lib/api';
 
-export default function AdminDashboard({ session, onLogout }) {
+export default function AdminDashboard({ session, onLogout, activePage = 'dashboard' }) {
     const [summary, setSummary] = useState(null);
     const [masterData, setMasterData] = useState({ tahun_ajaran: [], kelas: [], mata_pelajaran: [], guru_options: [] });
     const [loading, setLoading] = useState(true);
     const [loadingMaster, setLoadingMaster] = useState(true);
     const [error, setError] = useState('');
-    const [notice, setNotice] = useState('');
+    const [toast, setToast] = useState(null);
+    const toastTimer = useRef(null);
+
+    const pageTitleMap = {
+        dashboard: 'Dashboard Admin',
+        'tahun-ajaran': 'Tahun Ajaran',
+        kelas: 'Kelas',
+        'mata-pelajaran': 'Mata Pelajaran',
+        'import-akun': 'Import Akun',
+    };
+
+    const pageLeadMap = {
+        dashboard: 'Ringkasan kondisi sistem dan aktivitas terbaru.',
+        'tahun-ajaran': 'Kelola periode akademik per semester agar filter kelas dan laporan lebih rapi.',
+        kelas: 'Kelola wali kelas dan periode aktif yang dipakai pada sesi asesmen.',
+        'mata-pelajaran': 'Susun daftar mapel inti dengan tingkat kelas yang terstandar.',
+        'import-akun': 'Impor akun guru dan siswa dari Excel dengan username otomatis dari NIP/NISN.',
+    };
+
+    const showToast = (message, type = 'success') => {
+        setToast({ message, type });
+
+        if (toastTimer.current) {
+            window.clearTimeout(toastTimer.current);
+        }
+
+        toastTimer.current = window.setTimeout(() => {
+            setToast(null);
+        }, 3600);
+    };
+
+    useEffect(() => () => {
+        if (toastTimer.current) {
+            window.clearTimeout(toastTimer.current);
+        }
+    }, []);
 
     const [tahunAjaranForm, setTahunAjaranForm] = useState({
         nama_tahun_ajaran: '',
+        semester: 'ganjil',
         tanggal_mulai: '',
         tanggal_selesai: '',
         is_aktif: true,
@@ -49,7 +85,7 @@ export default function AdminDashboard({ session, onLogout }) {
         setMasterData(payload);
         setKelasForm((current) => ({
             ...current,
-            tahun_ajaran: current.tahun_ajaran || payload.tahun_ajaran?.[0]?.nama_tahun_ajaran || '',
+            tahun_ajaran: current.tahun_ajaran || payload.tahun_ajaran?.[0]?.periode_label || '',
         }));
     };
 
@@ -87,6 +123,7 @@ export default function AdminDashboard({ session, onLogout }) {
     const resetTahunAjaranForm = () => {
         setTahunAjaranForm({
             nama_tahun_ajaran: '',
+            semester: 'ganjil',
             tanggal_mulai: '',
             tanggal_selesai: '',
             is_aktif: true,
@@ -99,7 +136,7 @@ export default function AdminDashboard({ session, onLogout }) {
         setKelasForm({
             id_guru_wali: masterData.guru_options?.[0]?.id_guru || '',
             nama_kelas: '',
-            tahun_ajaran: masterData.tahun_ajaran?.[0]?.nama_tahun_ajaran || '',
+            tahun_ajaran: masterData.tahun_ajaran?.[0]?.periode_label || '',
         });
         setKelasId(null);
     };
@@ -111,7 +148,6 @@ export default function AdminDashboard({ session, onLogout }) {
 
     const submitTahunAjaran = async (event) => {
         event.preventDefault();
-        setNotice('');
 
         const payload = {
             ...tahunAjaranForm,
@@ -124,14 +160,14 @@ export default function AdminDashboard({ session, onLogout }) {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload),
             });
-            setNotice('Tahun ajaran berhasil diperbarui.');
+            showToast('Tahun ajaran berhasil diperbarui.');
         } else {
             await apiFetch('/api/admin/tahun-ajaran', session, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload),
             });
-            setNotice('Tahun ajaran berhasil ditambahkan.');
+            showToast('Tahun ajaran berhasil ditambahkan.');
         }
 
         resetTahunAjaranForm();
@@ -140,7 +176,6 @@ export default function AdminDashboard({ session, onLogout }) {
 
     const submitKelas = async (event) => {
         event.preventDefault();
-        setNotice('');
 
         if (kelasId) {
             await apiFetch(`/api/admin/kelas/${kelasId}`, session, {
@@ -148,14 +183,14 @@ export default function AdminDashboard({ session, onLogout }) {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(kelasForm),
             });
-            setNotice('Kelas berhasil diperbarui.');
+            showToast('Kelas berhasil diperbarui.');
         } else {
             await apiFetch('/api/admin/kelas', session, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(kelasForm),
             });
-            setNotice('Kelas berhasil ditambahkan.');
+            showToast('Kelas berhasil ditambahkan.');
         }
 
         resetKelasForm();
@@ -164,7 +199,6 @@ export default function AdminDashboard({ session, onLogout }) {
 
     const submitMapel = async (event) => {
         event.preventDefault();
-        setNotice('');
 
         if (mapelId) {
             await apiFetch(`/api/admin/mata-pelajaran/${mapelId}`, session, {
@@ -172,14 +206,14 @@ export default function AdminDashboard({ session, onLogout }) {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(mapelForm),
             });
-            setNotice('Mata pelajaran berhasil diperbarui.');
+            showToast('Mata pelajaran berhasil diperbarui.');
         } else {
             await apiFetch('/api/admin/mata-pelajaran', session, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(mapelForm),
             });
-            setNotice('Mata pelajaran berhasil ditambahkan.');
+            showToast('Mata pelajaran berhasil ditambahkan.');
         }
 
         resetMapelForm();
@@ -192,46 +226,52 @@ export default function AdminDashboard({ session, onLogout }) {
         }
 
         await apiFetch(path, session, { method: 'DELETE' });
-        setNotice(`${label} berhasil dihapus.`);
+        showToast(`${label} berhasil dihapus.`);
         await refreshData();
     };
 
     const submitImport = async (event) => {
         event.preventDefault();
-        setNotice('');
         setImportResult(null);
 
         if (!importForm.file) {
-            setError('Pilih file Excel terlebih dahulu.');
+            showToast('Pilih file Excel terlebih dahulu.', 'error');
             return;
         }
 
-        const formData = new FormData();
-        formData.append('file', importForm.file);
-        formData.append('default_role', importForm.default_role);
+        try {
+            const formData = new FormData();
+            formData.append('file', importForm.file);
+            formData.append('default_role', importForm.default_role);
 
-        const payload = await apiFetch('/api/admin/pengguna/bulk-import', session, {
-            method: 'POST',
-            body: formData,
-        });
+            const payload = await apiFetch('/api/admin/pengguna/bulk-import', session, {
+                method: 'POST',
+                body: formData,
+            });
 
-        setImportResult(payload);
-        setNotice(payload.message || 'Import akun selesai diproses.');
-        setImportForm((current) => ({ ...current, file: null }));
-        await refreshData();
+            setImportResult(payload);
+            setImportForm((current) => ({ ...current, file: null }));
+            showToast(`${payload.message || 'Import akun selesai diproses.'} Created: ${payload.created || 0}, Updated: ${payload.updated || 0}, Skipped: ${payload.skipped || 0}.`, 'success');
+            await refreshData();
+        } catch (exception) {
+            showToast(exception.message || 'Import akun gagal diproses.', 'error');
+        }
     };
 
     const navigation = [
         { label: 'Dashboard', href: '/admin/dashboard', badge: 'Home' },
-        { label: 'Tahun Ajaran', href: '#tahun-ajaran', badge: 'Master' },
-        { label: 'Manajemen Kelas', href: '#kelas', badge: 'CRUD' },
-        { label: 'Mata Pelajaran', href: '#mapel', badge: 'CRUD' },
-        { label: 'Import Akun', href: '#import', badge: 'Excel' },
+        { label: 'Tahun Ajaran', href: '/admin/tahun-ajaran', badge: 'Master' },
+        { label: 'Manajemen Kelas', href: '/admin/kelas', badge: 'CRUD' },
+        { label: 'Mata Pelajaran', href: '/admin/mata-pelajaran', badge: 'CRUD' },
+        { label: 'Import Akun', href: '/admin/import-akun', badge: 'Excel' },
     ];
+
+    const pageTitle = pageTitleMap[activePage] || 'Dashboard Admin';
+    const pageLead = pageLeadMap[activePage] || pageLeadMap.dashboard;
 
     return (
         <DashboardLayout
-            title="Dashboard Admin"
+            title={pageTitle}
             user={session?.user}
             navigation={navigation}
             onLogout={onLogout}
@@ -240,12 +280,12 @@ export default function AdminDashboard({ session, onLogout }) {
                 <section id="overview" className="overflow-hidden rounded-[2rem] border border-slate-200 bg-gradient-to-br from-slate-950 via-slate-900 to-amber-900 px-6 py-8 text-white shadow-2xl shadow-slate-950/20 lg:px-8">
                     <div className="grid gap-8 lg:grid-cols-[1.2fr_0.8fr] lg:items-center">
                         <div>
-                            <p className="text-xs uppercase tracking-[0.45em] text-amber-200/80">Manajemen Data Induk</p>
+                            <p className="text-xs uppercase tracking-[0.45em] text-amber-200/80">{pageTitle}</p>
                             <h3 className="mt-4 max-w-2xl text-3xl font-semibold leading-tight text-white md:text-4xl">
-                                Kelola tahun ajaran, kelas, mapel, dan akun pengguna dari satu panel yang ringkas.
+                                {pageLead}
                             </h3>
                             <p className="mt-4 max-w-2xl text-sm leading-7 text-slate-200 md:text-base">
-                                Panel ini disusun untuk alur kerja operator sekolah: tambah master data terlebih dahulu, lalu impor akun guru dan siswa dari Excel tanpa input berulang.
+                                Panel operator sekolah dirancang agar alur kerja terasa jelas: pilih menu di sidebar, isi data master, lalu kelola akun dan sesi dari halaman yang sesuai.
                             </p>
                         </div>
 
@@ -276,15 +316,16 @@ export default function AdminDashboard({ session, onLogout }) {
                     </div>
                 </section>
 
-                {notice ? (
-                    <div className="rounded-3xl border border-emerald-200 bg-emerald-50 px-5 py-4 text-sm text-emerald-800">
-                        {notice}
-                    </div>
-                ) : null}
-
                 {error ? (
                     <div className="rounded-3xl border border-rose-200 bg-rose-50 px-5 py-4 text-sm text-rose-700">
                         {error}
+                    </div>
+                ) : null}
+
+                {toast ? (
+                    <div className={`fixed right-6 top-6 z-50 max-w-md rounded-3xl border px-5 py-4 text-sm shadow-2xl ${toast.type === 'error' ? 'border-rose-200 bg-rose-50 text-rose-800' : 'border-emerald-200 bg-emerald-50 text-emerald-800'}`}>
+                        <p className="text-xs font-semibold uppercase tracking-[0.28em] opacity-80">{toast.type === 'error' ? 'Gagal' : 'Berhasil'}</p>
+                        <p className="mt-2 leading-6">{toast.message}</p>
                     </div>
                 ) : null}
 
@@ -384,6 +425,17 @@ export default function AdminDashboard({ session, onLogout }) {
                                         placeholder="2025/2026"
                                     />
                                 </label>
+                                <label className="space-y-2 text-sm font-medium text-slate-700 md:col-span-2">
+                                    <span>Semester</span>
+                                    <select
+                                        value={tahunAjaranForm.semester}
+                                        onChange={(event) => setTahunAjaranForm((current) => ({ ...current, semester: event.target.value }))}
+                                        className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-slate-900"
+                                    >
+                                        <option value="ganjil">Ganjil</option>
+                                        <option value="genap">Genap</option>
+                                    </select>
+                                </label>
                                 <label className="space-y-2 text-sm font-medium text-slate-700">
                                     <span>Tanggal Mulai</span>
                                     <input
@@ -446,6 +498,9 @@ export default function AdminDashboard({ session, onLogout }) {
                                             <div className="flex flex-wrap items-center gap-2">
                                                 <p className="font-semibold text-slate-900">{item.nama_tahun_ajaran}</p>
                                                 {item.is_aktif ? <span className="rounded-full bg-emerald-100 px-2 py-1 text-xs font-semibold text-emerald-700">Aktif</span> : null}
+                                                <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-700">
+                                                    Semester {String(item.semester || 'ganjil').toUpperCase()}
+                                                </span>
                                             </div>
                                             <p className="mt-1 text-sm text-slate-500">
                                                 {item.tanggal_mulai || '-'} sampai {item.tanggal_selesai || '-'}
@@ -459,6 +514,7 @@ export default function AdminDashboard({ session, onLogout }) {
                                                     setTahunAjaranId(item.id_tahun_ajaran);
                                                     setTahunAjaranForm({
                                                         nama_tahun_ajaran: item.nama_tahun_ajaran || '',
+                                                        semester: item.semester || 'ganjil',
                                                         tanggal_mulai: item.tanggal_mulai || '',
                                                         tanggal_selesai: item.tanggal_selesai || '',
                                                         is_aktif: Boolean(item.is_aktif),
@@ -535,8 +591,8 @@ export default function AdminDashboard({ session, onLogout }) {
                                         >
                                             <option value="">Pilih tahun ajaran</option>
                                             {(masterData.tahun_ajaran || []).map((item) => (
-                                                <option key={item.id_tahun_ajaran} value={item.nama_tahun_ajaran}>
-                                                    {item.nama_tahun_ajaran}
+                                                <option key={item.id_tahun_ajaran} value={item.periode_label || item.nama_tahun_ajaran}>
+                                                    {item.periode_label || item.nama_tahun_ajaran}
                                                 </option>
                                             ))}
                                         </select>
@@ -634,12 +690,16 @@ export default function AdminDashboard({ session, onLogout }) {
                                 </label>
                                 <label className="space-y-2 text-sm font-medium text-slate-700">
                                     <span>Tingkat</span>
-                                    <input
+                                    <select
                                         value={mapelForm.tingkat}
                                         onChange={(event) => setMapelForm((current) => ({ ...current, tingkat: event.target.value }))}
                                         className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-slate-900"
-                                        placeholder="XI"
-                                    />
+                                    >
+                                        <option value="">Pilih tingkat kelas</option>
+                                        <option value="X">X</option>
+                                        <option value="XI">XI</option>
+                                        <option value="XII">XII</option>
+                                    </select>
                                 </label>
                             </div>
                             <div className="flex flex-wrap gap-3">

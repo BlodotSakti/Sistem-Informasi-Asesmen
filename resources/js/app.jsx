@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import '../css/app.css';
 import LoginPage from './pages/LoginPage';
-import AdminDashboard from './pages/AdminDashboard';
+import AdminWorkspacePage from './pages/AdminWorkspacePage';
 import GuruDashboard from './pages/GuruDashboard';
 import SiswaDashboard from './pages/SiswaDashboard';
 
@@ -38,14 +38,31 @@ function App() {
             return;
         }
 
-        const protectedRoutes = ['/admin/dashboard', '/guru/dashboard', '/siswa/dashboard'];
+        const protectedRoutes = [
+            '/admin/dashboard',
+            '/admin/pengguna',
+            '/admin/tahun-ajaran',
+            '/admin/kelas',
+            '/admin/mata-pelajaran',
+            '/admin/import-akun',
+            '/guru/dashboard',
+            '/siswa/dashboard',
+        ];
 
         if (protectedRoutes.includes(pathname) && !session?.token) {
             window.location.replace('/login');
             return;
         }
 
-        if (session?.role && protectedRoutes.includes(pathname) && pathname !== `/${session.role}/dashboard`) {
+        if (session?.role && pathname.startsWith('/admin/') && session.role !== 'admin') {
+            window.location.replace(`/${session.role}/dashboard`);
+        }
+
+        if (session?.role && pathname.startsWith('/guru/') && session.role !== 'guru') {
+            window.location.replace(`/${session.role}/dashboard`);
+        }
+
+        if (session?.role && pathname.startsWith('/siswa/') && session.role !== 'siswa') {
             window.location.replace(`/${session.role}/dashboard`);
         }
     }, [pathname, session]);
@@ -96,8 +113,17 @@ function App() {
     };
 
     const page = useMemo(() => {
-        if (pathname === '/admin/dashboard') {
-            return <AdminDashboard session={session} onLogout={onLogout} />;
+        const adminRouteMap = {
+            '/admin/dashboard': 'dashboard',
+            '/admin/pengguna': 'pengguna',
+            '/admin/tahun-ajaran': 'tahun-ajaran',
+            '/admin/kelas': 'kelas',
+            '/admin/mata-pelajaran': 'mata-pelajaran',
+            '/admin/import-akun': 'import-akun',
+        };
+
+        if (adminRouteMap[pathname]) {
+            return <AdminWorkspacePage session={session} onLogout={onLogout} mode={adminRouteMap[pathname]} />;
         }
 
         if (pathname === '/guru/dashboard') {

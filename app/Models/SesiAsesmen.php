@@ -8,6 +8,38 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
+/**
+ * @property int $id_sesi
+ * @property int $id_kelas
+ * @property int $id_mapel
+ * @property string $tipe_soal
+ * @property string $jenis_asesmen
+ * @property \Illuminate\Support\Carbon $waktu_mulai
+ * @property int $durasi_menit
+ * @property \Illuminate\Support\Carbon|null $created_at
+ * @property \Illuminate\Support\Carbon|null $updated_at
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\AnalisisDiagnostik> $analisisDiagnostik
+ * @property-read int|null $analisis_diagnostik_count
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\BankSoal> $bankSoal
+ * @property-read int|null $bank_soal_count
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\DetailSesiSoal> $detailSesiSoal
+ * @property-read int|null $detail_sesi_soal_count
+ * @property-read \App\Models\Kelas $kelas
+ * @property-read \App\Models\MataPelajaran $mataPelajaran
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|SesiAsesmen newModelQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|SesiAsesmen newQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|SesiAsesmen query()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|SesiAsesmen whereCreatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|SesiAsesmen whereDurasiMenit($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|SesiAsesmen whereIdKelas($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|SesiAsesmen whereIdMapel($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|SesiAsesmen whereIdSesi($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|SesiAsesmen whereJenisAsesmen($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|SesiAsesmen whereTipeSoal($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|SesiAsesmen whereUpdatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|SesiAsesmen whereWaktuMulai($value)
+ * @mixin \Eloquent
+ */
 class SesiAsesmen extends Model
 {
     use HasFactory;

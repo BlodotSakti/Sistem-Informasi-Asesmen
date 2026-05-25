@@ -28,6 +28,12 @@ class AuthController extends Controller
             ], 422);
         }
 
+        if (! $pengguna->is_aktif) {
+            return response()->json([
+                'message' => 'Akun Anda sudah diarsipkan dan tidak dapat login.',
+            ], 403);
+        }
+
         return response()->json([
             'message' => 'Login berhasil.',
             'token_type' => 'Bearer',

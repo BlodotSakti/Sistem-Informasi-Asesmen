@@ -24,4 +24,22 @@ class AppShellTest extends TestCase
         $response->assertOk();
         $response->assertSee('id="app"', false);
     }
+
+    public function test_admin_master_pages_are_served(): void
+    {
+        $pages = [
+            '/admin/pengguna',
+            '/admin/tahun-ajaran',
+            '/admin/kelas',
+            '/admin/mata-pelajaran',
+            '/admin/import-akun',
+        ];
+
+        foreach ($pages as $page) {
+            $response = $this->get($page);
+
+            $response->assertOk();
+            $response->assertSee('id="app"', false);
+        }
+    }
 }

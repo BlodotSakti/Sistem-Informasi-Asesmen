@@ -69,43 +69,37 @@ class PenggunaBulkImportService
                     continue;
                 }
 
-                $existingUser = Pengguna::query()->where('username', $identifier)->first();
+                if ($this->identifierAlreadyExists($role, $identifier)) {
+                    $summary['skipped']++;
+                    $summary['skipped_rows'][] = [
+                        'row' => $rowNumber + 2,
+                        'reason' => strtoupper($role) . ' dengan NIP/NISN tersebut sudah ada di sistem.',
+                    ];
 
-                $pengguna = Pengguna::query()->updateOrCreate(
-                    ['username' => $identifier],
-                    [
-                        'password' => self::DEFAULT_PASSWORD,
-                        'role' => $role,
-                    ]
-                );
+                    continue;
+                }
 
-                $pengguna->admin()->delete();
-                $pengguna->guru()->delete();
-                $pengguna->siswa()->delete();
+                $pengguna = Pengguna::query()->create([
+                    'username' => $identifier,
+                    'password' => self::DEFAULT_PASSWORD,
+                    'role' => $role,
+                ]);
 
                 if ($role === 'guru') {
-                    Guru::query()->updateOrCreate(
-                        ['id_pengguna' => $pengguna->id_pengguna],
-                        [
-                            'nama_lengkap' => $namaLengkap,
-                            'nip' => $identifier,
-                        ]
-                    );
+                    Guru::query()->create([
+                        'id_pengguna' => $pengguna->id_pengguna,
+                        'nama_lengkap' => $namaLengkap,
+                        'nip' => $identifier,
+                    ]);
                 } else {
-                    Siswa::query()->updateOrCreate(
-                        ['id_pengguna' => $pengguna->id_pengguna],
-                        [
-                            'nama_lengkap' => $namaLengkap,
-                            'nisn' => $identifier,
-                        ]
-                    );
+                    Siswa::query()->create([
+                        'id_pengguna' => $pengguna->id_pengguna,
+                        'nama_lengkap' => $namaLengkap,
+                        'nisn' => $identifier,
+                    ]);
                 }
 
-                if ($existingUser === null) {
-                    $summary['created']++;
-                } else {
-                    $summary['updated']++;
-                }
+                $summary['created']++;
             }
         });
 
@@ -113,6 +107,17 @@ class PenggunaBulkImportService
             ...$summary,
             'default_password' => self::DEFAULT_PASSWORD,
         ];
+    }
+
+    protected function identifierAlreadyExists(string $role, string $identifier): bool
+    {
+        if (Pengguna::query()->where('username', $identifier)->exists()) {
+            return true;
+        }
+
+        return $role === 'guru'
+            ? Guru::query()->where('nip', $identifier)->exists()
+            : Siswa::query()->where('nisn', $identifier)->exists();
     }
 
     protected function normalizeRow(array $row, array $headers): array

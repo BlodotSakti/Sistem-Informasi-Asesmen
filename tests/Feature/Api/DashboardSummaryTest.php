@@ -35,6 +35,7 @@ class DashboardSummaryTest extends TestCase
 
         TahunAjaran::create([
             'nama_tahun_ajaran' => '2025/2026',
+            'semester' => 'ganjil',
             'tanggal_mulai' => now()->startOfMonth()->toDateString(),
             'tanggal_selesai' => now()->addMonths(10)->toDateString(),
             'is_aktif' => true,

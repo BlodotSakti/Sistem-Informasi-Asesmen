@@ -8,6 +8,38 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
+/**
+ * @property int $id_soal
+ * @property int $id_guru
+ * @property int $id_mapel
+ * @property string $isi_soal
+ * @property string $jenis_soal
+ * @property string $kunci_jawaban
+ * @property string $topik_materi
+ * @property string $level_kognitif
+ * @property \Illuminate\Support\Carbon|null $created_at
+ * @property \Illuminate\Support\Carbon|null $updated_at
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\DetailSesiSoal> $detailSesiSoal
+ * @property-read int|null $detail_sesi_soal_count
+ * @property-read \App\Models\Guru $guru
+ * @property-read \App\Models\MataPelajaran $mataPelajaran
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\SesiAsesmen> $sesiAsesmen
+ * @property-read int|null $sesi_asesmen_count
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|BankSoal newModelQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|BankSoal newQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|BankSoal query()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|BankSoal whereCreatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|BankSoal whereIdGuru($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|BankSoal whereIdMapel($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|BankSoal whereIdSoal($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|BankSoal whereIsiSoal($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|BankSoal whereJenisSoal($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|BankSoal whereKunciJawaban($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|BankSoal whereLevelKognitif($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|BankSoal whereTopikMateri($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|BankSoal whereUpdatedAt($value)
+ * @mixin \Eloquent
+ */
 class BankSoal extends Model
 {
     use HasFactory;
