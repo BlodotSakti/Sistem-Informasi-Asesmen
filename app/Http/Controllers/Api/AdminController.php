@@ -3,17 +3,81 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\TahunAjaran;
 use App\Models\Guru;
 use App\Models\BeritaAcara;
 use App\Models\Kelas;
 use App\Models\MataPelajaran;
 use App\Models\Pengguna;
 use App\Models\Siswa;
+use App\Services\PenggunaBulkImportService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use RuntimeException;
 
 class AdminController extends Controller
 {
+    public function masterData(): JsonResponse
+    {
+        return response()->json([
+            'tahun_ajaran' => TahunAjaran::query()->latest()->get(),
+            'kelas' => Kelas::query()->with('guruWali')->latest()->get(),
+            'mata_pelajaran' => MataPelajaran::query()->latest()->get(),
+            'guru_options' => Guru::query()
+                ->select(['id_guru', 'nama_lengkap', 'nip'])
+                ->orderBy('nama_lengkap')
+                ->get(),
+        ]);
+    }
+
+    public function tahunAjaranIndex(): JsonResponse
+    {
+        return response()->json(TahunAjaran::query()->latest()->paginate(15));
+    }
+
+    public function tahunAjaranStore(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'nama_tahun_ajaran' => ['required', 'string', 'max:30', 'unique:tahun_ajaran,nama_tahun_ajaran'],
+            'tanggal_mulai' => ['nullable', 'date'],
+            'tanggal_selesai' => ['nullable', 'date', 'after_or_equal:tanggal_mulai'],
+            'is_aktif' => ['sometimes', 'boolean'],
+            'keterangan' => ['nullable', 'string'],
+        ]);
+
+        $tahunAjaran = TahunAjaran::create($data);
+
+        return response()->json($tahunAjaran, 201);
+    }
+
+    public function tahunAjaranShow(TahunAjaran $tahunAjaran): JsonResponse
+    {
+        return response()->json($tahunAjaran);
+    }
+
+    public function tahunAjaranUpdate(Request $request, TahunAjaran $tahunAjaran): JsonResponse
+    {
+        $data = $request->validate([
+            'nama_tahun_ajaran' => ['sometimes', 'string', 'max:30', 'unique:tahun_ajaran,nama_tahun_ajaran,' . $tahunAjaran->id_tahun_ajaran . ',id_tahun_ajaran'],
+            'tanggal_mulai' => ['nullable', 'date'],
+            'tanggal_selesai' => ['nullable', 'date', 'after_or_equal:tanggal_mulai'],
+            'is_aktif' => ['sometimes', 'boolean'],
+            'keterangan' => ['nullable', 'string'],
+        ]);
+
+        $tahunAjaran->update($data);
+
+        return response()->json($tahunAjaran->fresh());
+    }
+
+    public function tahunAjaranDestroy(TahunAjaran $tahunAjaran): JsonResponse
+    {
+        $tahunAjaran->delete();
+
+        return response()->json(null, 204);
+    }
+
     public function kelasIndex(): JsonResponse
     {
         return response()->json(Kelas::query()->with('guruWali')->latest()->paginate(15));
@@ -96,18 +160,24 @@ class AdminController extends Controller
 
     public function bulkImportPengguna(Request $request): JsonResponse
     {
-        $request->validate([
+        $data = $request->validate([
             'file' => ['required', 'file', 'mimes:xlsx,xls,csv'],
+            'default_role' => ['nullable', 'in:guru,siswa'],
         ]);
 
-        if (! class_exists(\Maatwebsite\Excel\Facades\Excel::class)) {
+        $service = app(PenggunaBulkImportService::class);
+
+        try {
+            $summary = $service->import($request->file('file'), $data['default_role'] ?? null);
+        } catch (RuntimeException $exception) {
             return response()->json([
-                'message' => 'Fitur import Excel membutuhkan paket maatwebsite/excel.',
-            ], 501);
+                'message' => $exception->getMessage(),
+            ], 422);
         }
 
         return response()->json([
-            'message' => 'Endpoint import siap, hubungkan ke class Import Excel Anda.',
+            'message' => 'Import akun berhasil diproses.',
+            ...$summary,
         ]);
     }
 
@@ -138,6 +208,7 @@ class AdminController extends Controller
                 'total_guru' => Guru::count(),
                 'total_siswa' => Siswa::count(),
                 'total_kelas' => Kelas::count(),
+                'total_tahun_ajaran' => TahunAjaran::count(),
                 'total_mapel' => MataPelajaran::count(),
             ],
             'chart' => [

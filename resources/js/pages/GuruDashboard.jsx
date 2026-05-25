@@ -5,6 +5,7 @@ import { apiFetch } from '../lib/api';
 
 export default function GuruDashboard({ session, onLogout }) {
     const [summary, setSummary] = useState(null);
+    const [diagnostics, setDiagnostics] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
 
@@ -14,10 +15,14 @@ export default function GuruDashboard({ session, onLogout }) {
         const loadSummary = async () => {
             try {
                 setLoading(true);
-                const payload = await apiFetch('/api/guru/dashboard-summary', session);
+                const [summaryPayload, diagnosticsPayload] = await Promise.all([
+                    apiFetch('/api/guru/dashboard-summary', session),
+                    apiFetch('/api/guru/analisis-diagnostik', session),
+                ]);
 
                 if (mounted) {
-                    setSummary(payload);
+                    setSummary(summaryPayload);
+                    setDiagnostics(diagnosticsPayload);
                 }
             } catch (exception) {
                 if (mounted) {
@@ -141,6 +146,53 @@ export default function GuruDashboard({ session, onLogout }) {
                                     Belum ada jadwal mendatang.
                                 </div>
                             ) : null}
+                        </div>
+                    </div>
+                </section>
+
+                <section className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
+                    <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+                        <p className="text-sm font-medium uppercase tracking-[0.3em] text-slate-500">Analisis Diagnostik Terbaru</p>
+                        <h3 className="mt-2 text-xl font-semibold text-slate-900">Pantau siswa yang butuh perhatian</h3>
+
+                        <div className="mt-6 space-y-3">
+                            {(diagnostics?.data || []).slice(0, 4).map((item) => (
+                                <div key={item.id_analisis} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                                    <div className="flex items-center justify-between gap-3">
+                                        <div>
+                                            <p className="font-semibold text-slate-900">{item.siswa?.nama_lengkap || 'Siswa'}</p>
+                                            <p className="mt-1 text-xs text-slate-500">
+                                                {item.sesi_asesmen?.jenis_asesmen || item.sesiAsesmen?.jenis_asesmen || 'asesmen'} • {item.tanggal_generate}
+                                            </p>
+                                        </div>
+                                        <span className="rounded-full bg-slate-900 px-3 py-1 text-xs font-semibold text-white">
+                                            {item.skor_total}
+                                        </span>
+                                    </div>
+                                    <p className="mt-3 text-sm text-slate-600 line-clamp-2">
+                                        {item.narasi_kelemahan || 'Belum ada narasi kelemahan.'}
+                                    </p>
+                                </div>
+                            ))}
+
+                            {!loading && (diagnostics?.data || []).length === 0 ? (
+                                <div className="rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-500">
+                                    Belum ada analisis diagnostik yang tersedia.
+                                </div>
+                            ) : null}
+                        </div>
+                    </div>
+
+                    <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+                        <p className="text-sm font-medium uppercase tracking-[0.3em] text-slate-500">Insight Guru</p>
+                        <h3 className="mt-2 text-xl font-semibold text-slate-900">Prioritas tindak lanjut</h3>
+
+                        <div className="mt-6 space-y-3 text-sm text-slate-600">
+                            {(summary?.quick_tips || []).map((tip) => (
+                                <div key={tip} className="rounded-2xl bg-slate-50 px-4 py-3">
+                                    {tip}
+                                </div>
+                            ))}
                         </div>
                     </div>
                 </section>

@@ -32,6 +32,7 @@ export default function LoginPage({ session, onLogin }) {
     const [form, setForm] = useState({ username: '', password: '' });
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
+    const [showPassword, setShowPassword] = useState(false);
 
     useEffect(() => {
         if (session?.role) {
@@ -152,13 +153,35 @@ export default function LoginPage({ session, onLogin }) {
 
                                     <label className="block">
                                         <span className="mb-2 block text-sm font-medium text-slate-700">Password</span>
-                                        <input
-                                            type="password"
-                                            value={form.password}
-                                            onChange={(event) => setForm((current) => ({ ...current, password: event.target.value }))}
-                                            placeholder="Masukkan password"
-                                            className="w-full rounded-2xl border border-slate-300 bg-slate-50 px-4 py-3 text-sm outline-none transition placeholder:text-slate-400 focus:border-slate-950 focus:bg-white"
-                                        />
+                                        <div className="relative">
+                                            <input
+                                                type={showPassword ? 'text' : 'password'}
+                                                value={form.password}
+                                                onChange={(event) => setForm((current) => ({ ...current, password: event.target.value }))}
+                                                placeholder="Masukkan password"
+                                                className="w-full rounded-2xl border border-slate-300 bg-slate-50 px-4 py-3 pr-12 text-sm outline-none transition placeholder:text-slate-400 focus:border-slate-950 focus:bg-white"
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowPassword((current) => !current)}
+                                                aria-label={showPassword ? 'Sembunyikan password' : 'Tampilkan password'}
+                                                className="absolute inset-y-0 right-3 my-auto flex h-9 w-9 items-center justify-center rounded-full text-slate-500 transition hover:bg-slate-100 hover:text-slate-900"
+                                            >
+                                                {showPassword ? (
+                                                    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                                        <path d="M3 3l18 18" />
+                                                        <path d="M10.58 10.58a2 2 0 102.83 2.83" />
+                                                        <path d="M9.88 5.09A10.42 10.42 0 0112 5c7 0 10 7 10 7a19.07 19.07 0 01-4.09 5.12" />
+                                                        <path d="M6.61 6.61C3.87 8.39 2 12 2 12s3 7 10 7a10.4 10.4 0 004.4-.97" />
+                                                    </svg>
+                                                ) : (
+                                                    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                                        <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" />
+                                                        <circle cx="12" cy="12" r="3" />
+                                                    </svg>
+                                                )}
+                                            </button>
+                                        </div>
                                     </label>
 
                                     {error ? (

@@ -5,6 +5,7 @@ import { apiFetch } from '../lib/api';
 
 export default function SiswaDashboard({ session, onLogout }) {
     const [summary, setSummary] = useState(null);
+    const [activeSessions, setActiveSessions] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
 
@@ -14,10 +15,14 @@ export default function SiswaDashboard({ session, onLogout }) {
         const loadSummary = async () => {
             try {
                 setLoading(true);
-                const payload = await apiFetch('/api/siswa/dashboard-summary', session);
+                const [summaryPayload, sessionsPayload] = await Promise.all([
+                    apiFetch('/api/siswa/dashboard-summary', session),
+                    apiFetch('/api/siswa/sesi-asesmen/aktif', session),
+                ]);
 
                 if (mounted) {
-                    setSummary(payload);
+                    setSummary(summaryPayload);
+                    setActiveSessions(sessionsPayload);
                 }
             } catch (exception) {
                 if (mounted) {
@@ -99,6 +104,44 @@ export default function SiswaDashboard({ session, onLogout }) {
                             description="Badge dari guru mapel"
                             tone="rose"
                         />
+                    </div>
+                </section>
+
+                <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+                    <div className="flex items-start justify-between gap-4">
+                        <div>
+                            <p className="text-sm font-medium uppercase tracking-[0.3em] text-slate-500">Sesi Aktif</p>
+                            <h3 className="mt-2 text-xl font-semibold text-slate-900">Daftar CBT yang sedang tersedia</h3>
+                        </div>
+                        <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
+                            {activeSessions?.data?.length || 0} sesi
+                        </span>
+                    </div>
+
+                    <div className="mt-6 grid gap-4 lg:grid-cols-2">
+                        {(activeSessions?.data || []).slice(0, 4).map((sessionItem) => (
+                            <div key={sessionItem.id_sesi} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                                <div className="flex items-center justify-between gap-3">
+                                    <div>
+                                        <p className="font-semibold text-slate-900">{sessionItem.kelas?.nama_kelas || 'Kelas'}</p>
+                                        <p className="mt-1 text-sm text-slate-500">{sessionItem.mata_pelajaran?.nama_mapel || sessionItem.mataPelajaran?.nama_mapel || '-'}</p>
+                                    </div>
+                                    <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-800">
+                                        {sessionItem.jenis_asesmen}
+                                    </span>
+                                </div>
+                                <div className="mt-4 flex items-center justify-between gap-3 text-sm text-slate-600">
+                                    <span>{sessionItem.tipe_soal}</span>
+                                    <span>{sessionItem.durasi_menit} menit</span>
+                                </div>
+                            </div>
+                        ))}
+
+                        {!loading && (activeSessions?.data || []).length === 0 ? (
+                            <div className="rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-500 lg:col-span-2">
+                                Belum ada sesi aktif yang tersedia saat ini.
+                            </div>
+                        ) : null}
                     </div>
                 </section>
 

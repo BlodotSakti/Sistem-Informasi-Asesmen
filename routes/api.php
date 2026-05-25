@@ -14,6 +14,14 @@ Route::middleware('auth:sanctum')->group(function (): void {
 
 	Route::prefix('admin')->as('api.admin.')->middleware('role:admin')->group(function (): void {
 		Route::get('/dashboard-summary', [AdminController::class, 'dashboardSummary'])->name('dashboard-summary');
+		Route::get('/master-data', [AdminController::class, 'masterData'])->name('master-data');
+
+		Route::get('/tahun-ajaran', [AdminController::class, 'tahunAjaranIndex'])->name('tahun-ajaran.index');
+		Route::post('/tahun-ajaran', [AdminController::class, 'tahunAjaranStore'])->name('tahun-ajaran.store');
+		Route::get('/tahun-ajaran/{tahunAjaran}', [AdminController::class, 'tahunAjaranShow'])->name('tahun-ajaran.show');
+		Route::patch('/tahun-ajaran/{tahunAjaran}', [AdminController::class, 'tahunAjaranUpdate'])->name('tahun-ajaran.update');
+		Route::delete('/tahun-ajaran/{tahunAjaran}', [AdminController::class, 'tahunAjaranDestroy'])->name('tahun-ajaran.destroy');
+
 		Route::get('/kelas', [AdminController::class, 'kelasIndex'])->name('kelas.index');
 		Route::post('/kelas', [AdminController::class, 'kelasStore'])->name('kelas.store');
 		Route::get('/kelas/{kelas}', [AdminController::class, 'kelasShow'])->name('kelas.show');

@@ -11,6 +11,7 @@ use App\Models\Guru;
 use App\Models\Kelas;
 use App\Models\MataPelajaran;
 use App\Models\Pengguna;
+use App\Models\TahunAjaran;
 use App\Models\SesiAsesmen;
 use App\Models\Siswa;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -32,6 +33,14 @@ class DashboardSummaryTest extends TestCase
             'tahun_ajaran' => '2025/2026',
         ]);
 
+        TahunAjaran::create([
+            'nama_tahun_ajaran' => '2025/2026',
+            'tanggal_mulai' => now()->startOfMonth()->toDateString(),
+            'tanggal_selesai' => now()->addMonths(10)->toDateString(),
+            'is_aktif' => true,
+            'keterangan' => 'Periode aktif utama',
+        ]);
+
         MataPelajaran::create([
             'nama_mapel' => 'Matematika',
             'tingkat' => 'XI',
@@ -43,6 +52,8 @@ class DashboardSummaryTest extends TestCase
         $response->assertJsonPath('cards.total_guru', 1);
         $response->assertJsonPath('cards.total_siswa', 1);
         $response->assertJsonPath('cards.total_kelas', 1);
+        $response->assertJsonPath('cards.total_tahun_ajaran', 1);
+        $response->assertJsonPath('cards.total_mapel', 1);
         $response->assertJsonStructure(['cards', 'chart', 'recent_activities']);
     }
 
@@ -95,6 +106,46 @@ class DashboardSummaryTest extends TestCase
         $response->assertJsonPath('cards.total_bank_soal', 1);
         $response->assertJsonPath('cards.total_berita_acara', 1);
         $response->assertJsonStructure(['cards', 'upcoming_schedules', 'quick_tips']);
+    }
+
+    public function test_guru_diagnostic_index_returns_paginated_items(): void
+    {
+        $guru = $this->makeUser('guru', 'guru02', 'Guru Dua', ['nip' => '198801012026010002']);
+        $siswa = $this->makeUser('siswa', 'siswa02', 'Siswa Dua', ['nisn' => '1234567891']);
+        $mapel = MataPelajaran::create([
+            'nama_mapel' => 'Biologi',
+            'tingkat' => 'XI',
+        ]);
+
+        $kelas = Kelas::create([
+            'id_guru_wali' => $guru->guru->id_guru,
+            'nama_kelas' => 'XI IPA 2',
+            'tahun_ajaran' => '2025/2026',
+        ]);
+
+        $sesi = SesiAsesmen::create([
+            'id_kelas' => $kelas->id_kelas,
+            'id_mapel' => $mapel->id_mapel,
+            'tipe_soal' => 'CBT',
+            'jenis_asesmen' => 'posttest',
+            'waktu_mulai' => now()->subDay(),
+            'durasi_menit' => 60,
+        ]);
+
+        AnalisisDiagnostik::create([
+            'id_siswa' => $siswa->siswa->id_siswa,
+            'id_sesi' => $sesi->id_sesi,
+            'skor_total' => 79,
+            'narasi_kekuatan' => 'Cukup baik',
+            'narasi_kelemahan' => 'Perlu penguatan',
+            'tanggal_generate' => now(),
+        ]);
+
+        $response = $this->withToken($this->loginToken('guru02'))->getJson('/api/guru/analisis-diagnostik');
+
+        $response->assertOk();
+        $response->assertJsonCount(1, 'data');
+        $response->assertJsonStructure(['data']);
     }
 
     public function test_siswa_dashboard_summary_returns_trend_and_highlight(): void
@@ -151,6 +202,37 @@ class DashboardSummaryTest extends TestCase
         $response->assertJsonPath('cards.apresiasi', 1);
         $response->assertJsonPath('cards.tugas_aktif', 0);
         $response->assertJsonStructure(['cards', 'trend', 'highlight']);
+    }
+
+    public function test_siswa_active_sessions_endpoint_returns_list_for_widget(): void
+    {
+        $siswa = $this->makeUser('siswa', 'siswa03', 'Siswa Tiga', ['nisn' => '1234567892']);
+        $guru = $this->makeUser('guru', 'guru03', 'Guru Tiga', ['nip' => '198801012026010003']);
+        $mapel = MataPelajaran::create([
+            'nama_mapel' => 'Fisika',
+            'tingkat' => 'XI',
+        ]);
+
+        $kelas = Kelas::create([
+            'id_guru_wali' => $guru->guru->id_guru,
+            'nama_kelas' => 'XI IPA 3',
+            'tahun_ajaran' => '2025/2026',
+        ]);
+
+        SesiAsesmen::create([
+            'id_kelas' => $kelas->id_kelas,
+            'id_mapel' => $mapel->id_mapel,
+            'tipe_soal' => 'CBT',
+            'jenis_asesmen' => 'posttest',
+            'waktu_mulai' => now()->subHour(),
+            'durasi_menit' => 60,
+        ]);
+
+        $response = $this->withToken($this->loginToken('siswa03'))->getJson('/api/siswa/sesi-asesmen/aktif');
+
+        $response->assertOk();
+        $response->assertJsonCount(1, 'data');
+        $response->assertJsonStructure(['data']);
     }
 
     protected function loginToken(string $username): string
