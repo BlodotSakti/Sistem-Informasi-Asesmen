@@ -5,6 +5,7 @@ import LoginPage from './pages/LoginPage';
 import AdminWorkspacePage from './pages/AdminWorkspacePage';
 import GuruDashboard from './pages/GuruDashboard';
 import SiswaDashboard from './pages/SiswaDashboard';
+import SiswaProfilePage from './pages/SiswaProfilePage';
 
 const STORAGE_KEY = 'sia-session';
 
@@ -44,9 +45,12 @@ function App() {
             '/admin/tahun-ajaran',
             '/admin/kelas',
             '/admin/mata-pelajaran',
+            '/admin/kelas-siswa',
+            '/admin/penugasan-pembelajaran',
             '/admin/import-akun',
             '/guru/dashboard',
             '/siswa/dashboard',
+            '/siswa/profil',
         ];
 
         if (protectedRoutes.includes(pathname) && !session?.token) {
@@ -119,6 +123,8 @@ function App() {
             '/admin/tahun-ajaran': 'tahun-ajaran',
             '/admin/kelas': 'kelas',
             '/admin/mata-pelajaran': 'mata-pelajaran',
+            '/admin/kelas-siswa': 'kelas-siswa',
+            '/admin/penugasan-pembelajaran': 'penugasan-pembelajaran',
             '/admin/import-akun': 'import-akun',
         };
 
@@ -132,6 +138,10 @@ function App() {
 
         if (pathname === '/siswa/dashboard') {
             return <SiswaDashboard session={session} onLogout={onLogout} />;
+        }
+
+        if (pathname === '/siswa/profil') {
+            return <SiswaProfilePage session={session} onLogout={onLogout} />;
         }
 
         return <LoginPage session={session} onLogin={onLogin} />;

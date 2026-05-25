@@ -1,21 +1,30 @@
-export default function DashboardLayout({ title, user, navigation, onLogout, children }) {
+export default function DashboardLayout({ title, user, navigation, onLogout, profileHref, children }) {
     const currentPath = window.location.pathname;
+    const profileCard = (
+        <div className="flex items-center gap-4 rounded-3xl border border-white/10 bg-white/5 p-4 backdrop-blur transition hover:bg-white/10">
+            <div className="flex h-16 w-16 items-center justify-center rounded-full border border-white/15 bg-slate-800 text-sm font-semibold uppercase text-amber-300">
+                {user?.nama_lengkap ? user.nama_lengkap.slice(0, 2) : 'PR'}
+            </div>
+            <div>
+                <p className="text-xs uppercase tracking-[0.35em] text-slate-400">Profil</p>
+                <p className="mt-1 font-semibold text-white">{user?.nama_lengkap || 'Pengguna Aktif'}</p>
+                <p className="text-sm text-slate-400 capitalize">{user?.role || 'Akses Terbatas'}</p>
+            </div>
+        </div>
+    );
 
     return (
         <div className="min-h-screen bg-slate-100 text-slate-900">
             <div className="grid min-h-screen grid-cols-1 lg:h-screen lg:grid-cols-[280px_1fr] lg:overflow-hidden">
                 <aside className="flex flex-col bg-slate-950 text-slate-100 shadow-2xl shadow-slate-950/20 lg:sticky lg:top-0 lg:h-screen lg:overflow-y-auto">
                     <div className="border-b border-white/10 p-6">
-                        <div className="flex items-center gap-4 rounded-3xl border border-white/10 bg-white/5 p-4 backdrop-blur">
-                            <div className="flex h-16 w-16 items-center justify-center rounded-full border border-white/15 bg-slate-800 text-sm font-semibold uppercase text-amber-300">
-                                {user?.nama_lengkap ? user.nama_lengkap.slice(0, 2) : 'PR'}
-                            </div>
-                            <div>
-                                <p className="text-xs uppercase tracking-[0.35em] text-slate-400">Profil</p>
-                                <p className="mt-1 font-semibold text-white">{user?.nama_lengkap || 'Pengguna Aktif'}</p>
-                                <p className="text-sm text-slate-400 capitalize">{user?.role || 'Akses Terbatas'}</p>
-                            </div>
-                        </div>
+                        {profileHref ? (
+                            <a href={profileHref} aria-label="Buka halaman profil" className="block focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950">
+                                {profileCard}
+                            </a>
+                        ) : (
+                            profileCard
+                        )}
                     </div>
 
                     <nav className="flex-1 space-y-2 p-4">

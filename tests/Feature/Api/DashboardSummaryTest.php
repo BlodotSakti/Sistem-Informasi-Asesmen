@@ -9,8 +9,11 @@ use App\Models\BankSoal;
 use App\Models\CatatanPrivat;
 use App\Models\Guru;
 use App\Models\Kelas;
+use App\Models\KelasSiswa;
 use App\Models\MataPelajaran;
+use App\Models\PenugasanPembelajaran;
 use App\Models\Pengguna;
+use App\Models\RencanaBelajar;
 use App\Models\TahunAjaran;
 use App\Models\SesiAsesmen;
 use App\Models\Siswa;
@@ -27,10 +30,17 @@ class DashboardSummaryTest extends TestCase
         $guru = $this->makeUser('guru', 'guru01', 'Guru Satu', ['nip' => '198801012026010001']);
         $siswa = $this->makeUser('siswa', 'siswa01', 'Siswa Satu', ['nisn' => '1234567890']);
 
-        Kelas::create([
+        $kelas = Kelas::create([
             'id_guru_wali' => $guru->guru->id_guru,
             'nama_kelas' => 'XI IPA 1',
             'tahun_ajaran' => '2025/2026',
+        ]);
+
+        KelasSiswa::create([
+            'id_kelas' => $kelas->id_kelas,
+            'id_siswa' => $siswa->siswa->id_siswa,
+            'tahun_ajaran' => '2025/2026',
+            'is_aktif' => true,
         ]);
 
         TahunAjaran::create([
@@ -42,9 +52,17 @@ class DashboardSummaryTest extends TestCase
             'keterangan' => 'Periode aktif utama',
         ]);
 
-        MataPelajaran::create([
+        $mapel = MataPelajaran::create([
             'nama_mapel' => 'Matematika',
             'tingkat' => 'XI',
+        ]);
+
+        PenugasanPembelajaran::create([
+            'id_kelas' => $kelas->id_kelas,
+            'id_mapel' => $mapel->id_mapel,
+            'id_guru' => $guru->guru->id_guru,
+            'tahun_ajaran' => '2025/2026',
+            'is_aktif' => true,
         ]);
 
         $response = $this->withToken($this->loginToken('operator01'))->getJson('/api/admin/dashboard-summary');
@@ -55,6 +73,8 @@ class DashboardSummaryTest extends TestCase
         $response->assertJsonPath('cards.total_kelas', 1);
         $response->assertJsonPath('cards.total_tahun_ajaran', 1);
         $response->assertJsonPath('cards.total_mapel', 1);
+        $response->assertJsonPath('cards.total_kelas_siswa', 1);
+        $response->assertJsonPath('cards.total_penugasan_pembelajaran', 1);
         $response->assertJsonStructure(['cards', 'chart', 'recent_activities']);
     }
 
@@ -70,6 +90,14 @@ class DashboardSummaryTest extends TestCase
             'id_guru_wali' => $guru->guru->id_guru,
             'nama_kelas' => 'XI IPA 1',
             'tahun_ajaran' => '2025/2026',
+        ]);
+
+        PenugasanPembelajaran::create([
+            'id_kelas' => $kelas->id_kelas,
+            'id_mapel' => $mapel->id_mapel,
+            'id_guru' => $guru->guru->id_guru,
+            'tahun_ajaran' => '2025/2026',
+            'is_aktif' => true,
         ]);
 
         BankSoal::create([
@@ -105,7 +133,9 @@ class DashboardSummaryTest extends TestCase
         $response->assertOk();
         $response->assertJsonPath('cards.total_kelas', 1);
         $response->assertJsonPath('cards.total_bank_soal', 1);
+        $response->assertJsonPath('cards.total_penugasan', 1);
         $response->assertJsonPath('cards.total_berita_acara', 1);
+        $response->assertJsonCount(1, 'teaching_assignments');
         $response->assertJsonStructure(['cards', 'upcoming_schedules', 'quick_tips']);
     }
 
@@ -164,6 +194,30 @@ class DashboardSummaryTest extends TestCase
             'tahun_ajaran' => '2025/2026',
         ]);
 
+        KelasSiswa::create([
+            'id_kelas' => $kelas->id_kelas,
+            'id_siswa' => $siswa->siswa->id_siswa,
+            'tahun_ajaran' => '2025/2026',
+            'is_aktif' => true,
+            'tanggal_masuk' => now()->subMonths(2)->toDateString(),
+        ]);
+
+        PenugasanPembelajaran::create([
+            'id_kelas' => $kelas->id_kelas,
+            'id_mapel' => $mapel->id_mapel,
+            'id_guru' => $guru->guru->id_guru,
+            'tahun_ajaran' => '2025/2026',
+            'is_aktif' => true,
+        ]);
+
+        RencanaBelajar::create([
+            'id_siswa' => $siswa->siswa->id_siswa,
+            'id_mapel' => $mapel->id_mapel,
+            'sumber' => 'manual',
+            'status' => 'direncanakan',
+            'catatan' => 'Latihan tambahan sebelum ujian',
+        ]);
+
         $sesi = SesiAsesmen::create([
             'id_kelas' => $kelas->id_kelas,
             'id_mapel' => $mapel->id_mapel,
@@ -202,6 +256,8 @@ class DashboardSummaryTest extends TestCase
         $response->assertOk();
         $response->assertJsonPath('cards.apresiasi', 1);
         $response->assertJsonPath('cards.tugas_aktif', 0);
+        $response->assertJsonPath('profile.kelas_aktif.nama_kelas', 'XI IPA 1');
+        $response->assertJsonCount(1, 'available_subjects');
         $response->assertJsonStructure(['cards', 'trend', 'highlight']);
     }
 
@@ -220,8 +276,39 @@ class DashboardSummaryTest extends TestCase
             'tahun_ajaran' => '2025/2026',
         ]);
 
+        KelasSiswa::create([
+            'id_kelas' => $kelas->id_kelas,
+            'id_siswa' => $siswa->siswa->id_siswa,
+            'tahun_ajaran' => '2025/2026',
+            'is_aktif' => true,
+            'tanggal_masuk' => now()->subMonth()->toDateString(),
+        ]);
+
+        PenugasanPembelajaran::create([
+            'id_kelas' => $kelas->id_kelas,
+            'id_mapel' => $mapel->id_mapel,
+            'id_guru' => $guru->guru->id_guru,
+            'tahun_ajaran' => '2025/2026',
+            'is_aktif' => true,
+        ]);
+
         SesiAsesmen::create([
             'id_kelas' => $kelas->id_kelas,
+            'id_mapel' => $mapel->id_mapel,
+            'tipe_soal' => 'CBT',
+            'jenis_asesmen' => 'posttest',
+            'waktu_mulai' => now()->subHour(),
+            'durasi_menit' => 60,
+        ]);
+
+        $kelasLain = Kelas::create([
+            'id_guru_wali' => $guru->guru->id_guru,
+            'nama_kelas' => 'XI IPA 4',
+            'tahun_ajaran' => '2025/2026',
+        ]);
+
+        SesiAsesmen::create([
+            'id_kelas' => $kelasLain->id_kelas,
             'id_mapel' => $mapel->id_mapel,
             'tipe_soal' => 'CBT',
             'jenis_asesmen' => 'posttest',
@@ -234,6 +321,27 @@ class DashboardSummaryTest extends TestCase
         $response->assertOk();
         $response->assertJsonCount(1, 'data');
         $response->assertJsonStructure(['data']);
+    }
+
+    public function test_guru_cannot_create_bank_soal_for_unassigned_mapel(): void
+    {
+        $guru = $this->makeUser('guru', 'guru04', 'Guru Empat', ['nip' => '198801012026010004']);
+        $mapel = MataPelajaran::create([
+            'nama_mapel' => 'Sosiologi',
+            'tingkat' => 'XI',
+        ]);
+
+        $response = $this->withToken($this->loginToken('guru04'))->postJson('/api/guru/bank-soal', [
+            'id_mapel' => $mapel->id_mapel,
+            'isi_soal' => 'Contoh soal',
+            'jenis_soal' => 'esai',
+            'kunci_jawaban' => 'A',
+            'topik_materi' => 'Interaksi sosial',
+            'level_kognitif' => 'C1',
+        ]);
+
+        $response->assertStatus(422);
+        $response->assertJsonPath('message', 'Guru belum ditugaskan untuk mengampu mata pelajaran ini.');
     }
 
     protected function loginToken(string $username): string

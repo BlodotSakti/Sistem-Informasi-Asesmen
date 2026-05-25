@@ -24,7 +24,7 @@ export default function GuruDashboard({ session, onLogout }) {
                     setSummary(summaryPayload);
                     setDiagnostics(diagnosticsPayload);
                 }
-            } catch (exception) {
+                <StatCard label="Penugasan Aktif" value={loading ? '...' : summary?.cards?.total_penugasan ?? 0} description="Relasi mapel dan kelas" tone="rose" />
                 if (mounted) {
                     setError(exception.message || 'Gagal memuat ringkasan guru.');
                 }
@@ -193,6 +193,21 @@ export default function GuruDashboard({ session, onLogout }) {
                                     {tip}
                                 </div>
                             ))}
+                        </div>
+
+                        <div className="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">Mapel Diampu</p>
+                            <div className="mt-3 space-y-2 text-sm text-slate-700">
+                                {(summary?.teaching_assignments || []).slice(0, 4).map((item) => (
+                                    <div key={item.id_penugasan_pembelajaran} className="rounded-xl bg-white px-3 py-2">
+                                        <p className="font-medium text-slate-900">{item.nama_mapel || '-'}</p>
+                                        <p className="text-xs text-slate-500">{item.nama_kelas || '-'} • {item.tahun_ajaran || '-'}</p>
+                                    </div>
+                                ))}
+                                {!loading && (summary?.teaching_assignments || []).length === 0 ? (
+                                    <p className="text-sm text-slate-500">Belum ada penugasan pembelajaran aktif.</p>
+                                ) : null}
+                            </div>
                         </div>
                     </div>
                 </section>

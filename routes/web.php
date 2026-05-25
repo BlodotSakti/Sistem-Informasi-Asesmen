@@ -23,9 +23,12 @@ Route::view('/admin/pengguna', 'app');
 Route::view('/admin/tahun-ajaran', 'app');
 Route::view('/admin/kelas', 'app');
 Route::view('/admin/mata-pelajaran', 'app');
+Route::view('/admin/kelas-siswa', 'app');
+Route::view('/admin/penugasan-pembelajaran', 'app');
 Route::view('/admin/import-akun', 'app');
 Route::view('/guru/dashboard', 'app');
 Route::view('/siswa/dashboard', 'app');
+Route::view('/siswa/profil', 'app');
 
 Route::resource('pengguna', PenggunaController::class);
 Route::resource('admin', AdminController::class);

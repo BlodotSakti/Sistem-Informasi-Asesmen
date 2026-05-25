@@ -32,6 +32,8 @@ class AppShellTest extends TestCase
             '/admin/tahun-ajaran',
             '/admin/kelas',
             '/admin/mata-pelajaran',
+            '/admin/kelas-siswa',
+            '/admin/penugasan-pembelajaran',
             '/admin/import-akun',
         ];
 
@@ -41,5 +43,13 @@ class AppShellTest extends TestCase
             $response->assertOk();
             $response->assertSee('id="app"', false);
         }
+    }
+
+    public function test_student_profile_shell_is_served(): void
+    {
+        $response = $this->get('/siswa/profil');
+
+        $response->assertOk();
+        $response->assertSee('id="app"', false);
     }
 }

@@ -24,6 +24,14 @@ const MENU_META = {
         title: 'Mata Pelajaran',
         lead: 'Susun daftar mapel inti dengan tingkat kelas X, XI, dan XII.',
     },
+    'kelas-siswa': {
+        title: 'Penempatan Siswa-Kelas',
+        lead: 'Kelola relasi siswa dengan kelas aktif maupun riwayat kelas secara terstruktur.',
+    },
+    'penugasan-pembelajaran': {
+        title: 'Penugasan Guru-Mapel',
+        lead: 'Kelola penugasan guru mengampu mata pelajaran pada kelas tertentu.',
+    },
     'import-akun': {
         title: 'Import Akun',
         lead: 'Import akun guru dan siswa dari Excel dengan username otomatis dari NIP/NISN.',
@@ -40,7 +48,15 @@ function toInputDate(value) {
 
 export default function AdminWorkspacePage({ session, onLogout, mode = 'dashboard' }) {
     const [summary, setSummary] = useState(null);
-    const [masterData, setMasterData] = useState({ tahun_ajaran: [], kelas: [], mata_pelajaran: [], guru_options: [] });
+    const [masterData, setMasterData] = useState({
+        tahun_ajaran: [],
+        kelas: [],
+        mata_pelajaran: [],
+        kelas_siswa: [],
+        penugasan_pembelajaran: [],
+        guru_options: [],
+        siswa_options: [],
+    });
     const [users, setUsers] = useState({ data: [] });
     const [loading, setLoading] = useState(true);
     const [loadingUsers, setLoadingUsers] = useState(true);
@@ -76,6 +92,37 @@ export default function AdminWorkspacePage({ session, onLogout, mode = 'dashboar
     });
     const [mapelId, setMapelId] = useState(null);
 
+    const [classStudentFilters, setClassStudentFilters] = useState({
+        search: '',
+        status: 'all',
+    });
+    const [classStudentImport, setClassStudentImport] = useState({ file: null });
+
+    const [classStudentForm, setClassStudentForm] = useState({
+        id_kelas: '',
+        id_siswa: '',
+        tahun_ajaran: '',
+        is_aktif: true,
+        tanggal_masuk: '',
+        tanggal_keluar: '',
+    });
+    const [classStudentId, setClassStudentId] = useState(null);
+
+    const [teachingAssignmentFilters, setTeachingAssignmentFilters] = useState({
+        search: '',
+        status: 'all',
+    });
+    const [teachingAssignmentImport, setTeachingAssignmentImport] = useState({ file: null });
+
+    const [teachingAssignmentForm, setTeachingAssignmentForm] = useState({
+        id_kelas: '',
+        id_mapel: '',
+        id_guru: '',
+        tahun_ajaran: '',
+        is_aktif: true,
+    });
+    const [teachingAssignmentId, setTeachingAssignmentId] = useState(null);
+
     const [userTab, setUserTab] = useState(mode === 'import-akun' ? 'import' : 'manual');
     const [userForm, setUserForm] = useState({
         role: 'guru',
@@ -95,6 +142,50 @@ export default function AdminWorkspacePage({ session, onLogout, mode = 'dashboar
     const [importResult, setImportResult] = useState(null);
 
     const meta = MENU_META[mode] || MENU_META.dashboard;
+
+    const filteredClassStudents = useMemo(() => {
+        const search = classStudentFilters.search.trim().toLowerCase();
+
+        return (masterData.kelas_siswa || []).filter((item) => {
+            const matchesStatus = classStudentFilters.status === 'all'
+                || (classStudentFilters.status === 'active' && item.is_aktif)
+                || (classStudentFilters.status === 'inactive' && !item.is_aktif);
+
+            if (!matchesStatus) {
+                return false;
+            }
+
+            if (search === '') {
+                return true;
+            }
+
+            return [item.siswa?.nama_lengkap, item.siswa?.nisn, item.kelas?.nama_kelas, item.tahun_ajaran]
+                .filter(Boolean)
+                .some((value) => String(value).toLowerCase().includes(search));
+        });
+    }, [classStudentFilters, masterData.kelas_siswa]);
+
+    const filteredTeachingAssignments = useMemo(() => {
+        const search = teachingAssignmentFilters.search.trim().toLowerCase();
+
+        return (masterData.penugasan_pembelajaran || []).filter((item) => {
+            const matchesStatus = teachingAssignmentFilters.status === 'all'
+                || (teachingAssignmentFilters.status === 'active' && item.is_aktif)
+                || (teachingAssignmentFilters.status === 'inactive' && !item.is_aktif);
+
+            if (!matchesStatus) {
+                return false;
+            }
+
+            if (search === '') {
+                return true;
+            }
+
+            return [item.kelas?.nama_kelas, item.mata_pelajaran?.nama_mapel, item.guru?.nama_lengkap, item.tahun_ajaran]
+                .filter(Boolean)
+                .some((value) => String(value).toLowerCase().includes(search));
+        });
+    }, [masterData.penugasan_pembelajaran, teachingAssignmentFilters]);
 
     const showToast = (message, type = 'success') => {
         setToast({ message, type });
@@ -118,6 +209,8 @@ export default function AdminWorkspacePage({ session, onLogout, mode = 'dashboar
         { label: 'Tahun Ajaran', href: '/admin/tahun-ajaran', badge: 'Master' },
         { label: 'Kelas', href: '/admin/kelas', badge: 'CRUD' },
         { label: 'Mata Pelajaran', href: '/admin/mata-pelajaran', badge: 'CRUD' },
+        { label: 'Siswa-Kelas', href: '/admin/kelas-siswa', badge: 'Relasi' },
+        { label: 'Guru-Mapel', href: '/admin/penugasan-pembelajaran', badge: 'Relasi' },
         { label: 'Import Akun', href: '/admin/import-akun', badge: 'Excel' },
     ]), []);
 
@@ -187,6 +280,21 @@ export default function AdminWorkspacePage({ session, onLogout, mode = 'dashboar
                 id_guru_wali: current.id_guru_wali || masterPayload.guru_options?.[0]?.id_guru || '',
                 tahun_ajaran: current.tahun_ajaran || masterPayload.tahun_ajaran?.[0]?.periode_label || '',
             }));
+
+            setClassStudentForm((current) => ({
+                ...current,
+                id_kelas: current.id_kelas || masterPayload.kelas?.[0]?.id_kelas || '',
+                id_siswa: current.id_siswa || masterPayload.siswa_options?.[0]?.id_siswa || '',
+                tahun_ajaran: current.tahun_ajaran || masterPayload.kelas?.[0]?.tahun_ajaran || masterPayload.tahun_ajaran?.[0]?.periode_label || '',
+            }));
+
+            setTeachingAssignmentForm((current) => ({
+                ...current,
+                id_kelas: current.id_kelas || masterPayload.kelas?.[0]?.id_kelas || '',
+                id_mapel: current.id_mapel || masterPayload.mata_pelajaran?.[0]?.id_mapel || '',
+                id_guru: current.id_guru || masterPayload.guru_options?.[0]?.id_guru || '',
+                tahun_ajaran: current.tahun_ajaran || masterPayload.kelas?.[0]?.tahun_ajaran || masterPayload.tahun_ajaran?.[0]?.periode_label || '',
+            }));
         } catch (exception) {
             setError(exception.message || 'Gagal memuat data admin.');
         } finally {
@@ -228,6 +336,29 @@ export default function AdminWorkspacePage({ session, onLogout, mode = 'dashboar
     const resetMapelForm = () => {
         setMapelForm({ nama_mapel: '', tingkat: '' });
         setMapelId(null);
+    };
+
+    const resetClassStudentForm = () => {
+        setClassStudentForm({
+            id_kelas: masterData.kelas?.[0]?.id_kelas || '',
+            id_siswa: masterData.siswa_options?.[0]?.id_siswa || '',
+            tahun_ajaran: masterData.kelas?.[0]?.tahun_ajaran || masterData.tahun_ajaran?.[0]?.periode_label || '',
+            is_aktif: true,
+            tanggal_masuk: '',
+            tanggal_keluar: '',
+        });
+        setClassStudentId(null);
+    };
+
+    const resetTeachingAssignmentForm = () => {
+        setTeachingAssignmentForm({
+            id_kelas: masterData.kelas?.[0]?.id_kelas || '',
+            id_mapel: masterData.mata_pelajaran?.[0]?.id_mapel || '',
+            id_guru: masterData.guru_options?.[0]?.id_guru || '',
+            tahun_ajaran: masterData.kelas?.[0]?.tahun_ajaran || masterData.tahun_ajaran?.[0]?.periode_label || '',
+            is_aktif: true,
+        });
+        setTeachingAssignmentId(null);
     };
 
     const resetUserForm = () => {
@@ -316,6 +447,139 @@ export default function AdminWorkspacePage({ session, onLogout, mode = 'dashboar
 
         resetMapelForm();
         await refreshWorkspace();
+    };
+
+    const submitClassStudent = async (event) => {
+        event.preventDefault();
+
+        const payload = {
+            ...classStudentForm,
+            id_kelas: Number(classStudentForm.id_kelas),
+            id_siswa: Number(classStudentForm.id_siswa),
+            is_aktif: Boolean(classStudentForm.is_aktif),
+        };
+
+        if (classStudentId) {
+            await apiFetch(`/api/admin/kelas-siswa/${classStudentId}`, session, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+            });
+            showToast('Penempatan siswa-kelas berhasil diperbarui.');
+        } else {
+            await apiFetch('/api/admin/kelas-siswa', session, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+            });
+            showToast('Penempatan siswa-kelas berhasil ditambahkan.');
+        }
+
+        resetClassStudentForm();
+        await refreshWorkspace();
+    };
+
+    const submitTeachingAssignment = async (event) => {
+        event.preventDefault();
+
+        const payload = {
+            ...teachingAssignmentForm,
+            id_kelas: Number(teachingAssignmentForm.id_kelas),
+            id_mapel: Number(teachingAssignmentForm.id_mapel),
+            id_guru: Number(teachingAssignmentForm.id_guru),
+            is_aktif: Boolean(teachingAssignmentForm.is_aktif),
+        };
+
+        if (teachingAssignmentId) {
+            await apiFetch(`/api/admin/penugasan-pembelajaran/${teachingAssignmentId}`, session, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+            });
+            showToast('Penugasan pembelajaran berhasil diperbarui.');
+        } else {
+            await apiFetch('/api/admin/penugasan-pembelajaran', session, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+            });
+            showToast('Penugasan pembelajaran berhasil ditambahkan.');
+        }
+
+        resetTeachingAssignmentForm();
+        await refreshWorkspace();
+    };
+
+    const submitClassStudentImport = async (event) => {
+        event.preventDefault();
+
+        if (!classStudentImport.file) {
+            showToast('Pilih file import relasi siswa-kelas terlebih dahulu.', 'error');
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('file', classStudentImport.file);
+
+        const payload = await apiFetch('/api/admin/kelas-siswa/bulk-import', session, {
+            method: 'POST',
+            body: formData,
+        });
+
+        showToast(`${payload.message || 'Import relasi siswa-kelas selesai.'} Created: ${payload.created || 0}, Updated: ${payload.updated || 0}, Skipped: ${payload.skipped || 0}.`);
+        setClassStudentImport({ file: null });
+        await refreshWorkspace();
+    };
+
+    const submitTeachingAssignmentImport = async (event) => {
+        event.preventDefault();
+
+        if (!teachingAssignmentImport.file) {
+            showToast('Pilih file import penugasan pembelajaran terlebih dahulu.', 'error');
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('file', teachingAssignmentImport.file);
+
+        const payload = await apiFetch('/api/admin/penugasan-pembelajaran/bulk-import', session, {
+            method: 'POST',
+            body: formData,
+        });
+
+        showToast(`${payload.message || 'Import penugasan pembelajaran selesai.'} Created: ${payload.created || 0}, Updated: ${payload.updated || 0}, Skipped: ${payload.skipped || 0}.`);
+        setTeachingAssignmentImport({ file: null });
+        await refreshWorkspace();
+    };
+
+    const downloadImportTemplate = async (type, format) => {
+        try {
+            const response = await fetch(`${window.location.origin}/api/admin/import-templates/${type}/${format}`, {
+                method: 'GET',
+                headers: {
+                    Accept: 'application/octet-stream',
+                    Authorization: `Bearer ${session?.token}`,
+                    'X-CSRF-TOKEN': window.__APP_CSRF__,
+                },
+            });
+
+            if (!response.ok) {
+                throw new Error('Gagal mengunduh template.');
+            }
+
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `${type === 'kelas-siswa' ? 'template-relasi-siswa-kelas' : 'template-penugasan-pembelajaran'}.${format}`;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            window.URL.revokeObjectURL(url);
+            showToast('Template berhasil diunduh.');
+        } catch (exception) {
+            showToast(exception.message || 'Gagal mengunduh template.', 'error');
+        }
     };
 
     const submitUser = async (event) => {
@@ -461,11 +725,13 @@ export default function AdminWorkspacePage({ session, onLogout, mode = 'dashboar
                 </div>
             </section>
 
-            <section className="grid gap-4 md:grid-cols-4">
+            <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
                 <StatCard label="Total Guru" value={loading ? '...' : summary?.cards?.total_guru ?? 0} description="Guru aktif dalam sistem" tone="blue" />
                 <StatCard label="Total Siswa" value={loading ? '...' : summary?.cards?.total_siswa ?? 0} description="Data siswa terdaftar" tone="amber" />
                 <StatCard label="Total Kelas" value={loading ? '...' : summary?.cards?.total_kelas ?? 0} description="Kelas berjalan semester ini" tone="slate" />
                 <StatCard label="Tahun Ajaran" value={loading ? '...' : summary?.cards?.total_tahun_ajaran ?? 0} description="Riwayat periode akademik" tone="amber" />
+                <StatCard label="Relasi Siswa-Kelas" value={loading ? '...' : summary?.cards?.total_kelas_siswa ?? 0} description="Penempatan aktif dan riwayat" tone="rose" />
+                <StatCard label="Penugasan Mapel" value={loading ? '...' : summary?.cards?.total_penugasan_pembelajaran ?? 0} description="Guru mengampu kelas dan mapel" tone="blue" />
             </section>
 
             <section className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
@@ -690,6 +956,262 @@ export default function AdminWorkspacePage({ session, onLogout, mode = 'dashboar
         </div>
     );
 
+    const renderClassStudentPage = () => (
+        <div className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
+            <form onSubmit={submitClassStudent} className="space-y-4 rounded-3xl bg-slate-50 p-5">
+                <div className="grid gap-4">
+                    <label className="space-y-2 text-sm font-medium text-slate-700">
+                        <span>Kelas</span>
+                        <select value={classStudentForm.id_kelas} onChange={(event) => setClassStudentForm((current) => ({ ...current, id_kelas: event.target.value }))} className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-slate-900">
+                            <option value="">Pilih kelas</option>
+                            {(masterData.kelas || []).map((kelas) => <option key={kelas.id_kelas} value={kelas.id_kelas}>{kelas.nama_kelas} • {kelas.tahun_ajaran}</option>)}
+                        </select>
+                    </label>
+                    <label className="space-y-2 text-sm font-medium text-slate-700">
+                        <span>Siswa</span>
+                        <select value={classStudentForm.id_siswa} onChange={(event) => setClassStudentForm((current) => ({ ...current, id_siswa: event.target.value }))} className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-slate-900">
+                            <option value="">Pilih siswa</option>
+                            {(masterData.siswa_options || []).map((siswa) => <option key={siswa.id_siswa} value={siswa.id_siswa}>{siswa.nama_lengkap} {siswa.nisn ? `(${siswa.nisn})` : ''}</option>)}
+                        </select>
+                    </label>
+                    <label className="space-y-2 text-sm font-medium text-slate-700">
+                        <span>Tahun Ajaran</span>
+                        <input value={classStudentForm.tahun_ajaran} onChange={(event) => setClassStudentForm((current) => ({ ...current, tahun_ajaran: event.target.value }))} className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-slate-900" placeholder="2025/2026 - Semester Ganjil" />
+                    </label>
+                    <div className="grid gap-4 md:grid-cols-2">
+                        <label className="space-y-2 text-sm font-medium text-slate-700">
+                            <span>Tanggal Masuk</span>
+                            <input type="date" value={classStudentForm.tanggal_masuk} onChange={(event) => setClassStudentForm((current) => ({ ...current, tanggal_masuk: event.target.value }))} className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-slate-900" />
+                        </label>
+                        <label className="space-y-2 text-sm font-medium text-slate-700">
+                            <span>Tanggal Keluar</span>
+                            <input type="date" value={classStudentForm.tanggal_keluar} onChange={(event) => setClassStudentForm((current) => ({ ...current, tanggal_keluar: event.target.value }))} className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-slate-900" />
+                        </label>
+                    </div>
+                    <label className="flex items-center gap-3 rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-medium text-slate-700">
+                        <input type="checkbox" checked={Boolean(classStudentForm.is_aktif)} onChange={(event) => setClassStudentForm((current) => ({ ...current, is_aktif: event.target.checked }))} className="h-4 w-4 rounded border-slate-300 text-slate-950 focus:ring-slate-900" />
+                        Status relasi aktif
+                    </label>
+                </div>
+                <div className="flex flex-wrap gap-3">
+                    <button type="submit" className="rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800">{classStudentId ? 'Perbarui Relasi' : 'Simpan Relasi'}</button>
+                    {classStudentId ? <button type="button" onClick={resetClassStudentForm} className="rounded-full border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-100">Batal Edit</button> : null}
+                </div>
+            </form>
+
+            <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white">
+                <div className="border-b border-slate-200 px-5 py-4">
+                    <h4 className="text-lg font-semibold text-slate-900">Daftar Relasi Siswa-Kelas</h4>
+                    <p className="text-sm text-slate-500">Satu siswa dapat memiliki banyak riwayat kelas, tetapi hanya satu yang aktif.</p>
+                </div>
+                <div className="border-b border-slate-200 px-5 py-4">
+                    <div className="grid gap-3 lg:grid-cols-[1.3fr_0.8fr]">
+                        <label className="space-y-2 text-sm font-medium text-slate-700">
+                            <span>Cari relasi</span>
+                            <input
+                                value={classStudentFilters.search}
+                                onChange={(event) => setClassStudentFilters((current) => ({ ...current, search: event.target.value }))}
+                                className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-slate-900"
+                                placeholder="Nama siswa, kelas, atau tahun ajaran"
+                            />
+                        </label>
+                        <label className="space-y-2 text-sm font-medium text-slate-700">
+                            <span>Status</span>
+                            <select
+                                value={classStudentFilters.status}
+                                onChange={(event) => setClassStudentFilters((current) => ({ ...current, status: event.target.value }))}
+                                className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-slate-900"
+                            >
+                                <option value="all">Semua status</option>
+                                <option value="active">Aktif</option>
+                                <option value="inactive">Riwayat</option>
+                            </select>
+                        </label>
+                    </div>
+
+                    <form onSubmit={submitClassStudentImport} className="mt-4 flex flex-col gap-3 rounded-2xl bg-slate-50 p-4 lg:flex-row lg:items-end">
+                        <label className="flex-1 space-y-2 text-sm font-medium text-slate-700">
+                            <span>Bulk Import Relasi Siswa-Kelas</span>
+                            <input
+                                type="file"
+                                accept=".xlsx,.xls,.csv"
+                                onChange={(event) => setClassStudentImport({ file: event.target.files?.[0] || null })}
+                                className="w-full rounded-2xl border border-dashed border-slate-300 bg-white px-4 py-3 text-sm text-slate-600 outline-none transition file:mr-4 file:rounded-full file:border-0 file:bg-slate-950 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white"
+                            />
+                        </label>
+                        <button type="submit" className="rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800">
+                            Import Relasi
+                        </button>
+                    </form>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                        <button type="button" onClick={() => downloadImportTemplate('kelas-siswa', 'csv')} className="rounded-full border border-slate-300 px-4 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-100">
+                            Unduh Template CSV
+                        </button>
+                        <button type="button" onClick={() => downloadImportTemplate('kelas-siswa', 'xlsx')} className="rounded-full border border-slate-300 px-4 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-100">
+                            Unduh Template XLSX
+                        </button>
+                    </div>
+                </div>
+                <div className="divide-y divide-slate-100">
+                    {filteredClassStudents.map((item) => (
+                        <div key={item.id_kelas_siswa} className="flex flex-col gap-3 px-5 py-4 md:flex-row md:items-center md:justify-between">
+                            <div>
+                                <div className="flex items-center gap-2">
+                                    <p className="font-semibold text-slate-900">{item.siswa?.nama_lengkap || '-'}</p>
+                                    {item.is_aktif ? <span className="rounded-full bg-emerald-100 px-2 py-1 text-xs font-semibold text-emerald-700">Aktif</span> : <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-700">Riwayat</span>}
+                                </div>
+                                <p className="mt-1 text-sm text-slate-500">{item.kelas?.nama_kelas || '-'} • {item.tahun_ajaran || '-'}</p>
+                            </div>
+                            <div className="flex flex-wrap gap-2">
+                                <button type="button" onClick={() => {
+                                    setClassStudentId(item.id_kelas_siswa);
+                                    setClassStudentForm({
+                                        id_kelas: item.id_kelas || '',
+                                        id_siswa: item.id_siswa || '',
+                                        tahun_ajaran: item.tahun_ajaran || '',
+                                        is_aktif: Boolean(item.is_aktif),
+                                        tanggal_masuk: toInputDate(item.tanggal_masuk),
+                                        tanggal_keluar: toInputDate(item.tanggal_keluar),
+                                    });
+                                }} className="rounded-full border border-slate-300 px-4 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-100">Edit</button>
+                                <button type="button" onClick={() => deleteMaster(`/api/admin/kelas-siswa/${item.id_kelas_siswa}`, 'Relasi siswa-kelas')} className="rounded-full border border-rose-200 px-4 py-2 text-xs font-semibold text-rose-700 transition hover:bg-rose-50">Hapus</button>
+                            </div>
+                        </div>
+                    ))}
+                    {!loading && filteredClassStudents.length === 0 ? (
+                        <div className="px-5 py-6 text-sm text-slate-500">Tidak ada relasi siswa-kelas yang cocok dengan filter saat ini.</div>
+                    ) : null}
+                </div>
+            </div>
+        </div>
+    );
+
+    const renderTeachingAssignmentPage = () => (
+        <div className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
+            <form onSubmit={submitTeachingAssignment} className="space-y-4 rounded-3xl bg-slate-50 p-5">
+                <div className="grid gap-4">
+                    <label className="space-y-2 text-sm font-medium text-slate-700">
+                        <span>Kelas</span>
+                        <select value={teachingAssignmentForm.id_kelas} onChange={(event) => setTeachingAssignmentForm((current) => ({ ...current, id_kelas: event.target.value }))} className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-slate-900">
+                            <option value="">Pilih kelas</option>
+                            {(masterData.kelas || []).map((kelas) => <option key={kelas.id_kelas} value={kelas.id_kelas}>{kelas.nama_kelas} • {kelas.tahun_ajaran}</option>)}
+                        </select>
+                    </label>
+                    <label className="space-y-2 text-sm font-medium text-slate-700">
+                        <span>Mata Pelajaran</span>
+                        <select value={teachingAssignmentForm.id_mapel} onChange={(event) => setTeachingAssignmentForm((current) => ({ ...current, id_mapel: event.target.value }))} className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-slate-900">
+                            <option value="">Pilih mata pelajaran</option>
+                            {(masterData.mata_pelajaran || []).map((mapel) => <option key={mapel.id_mapel} value={mapel.id_mapel}>{mapel.nama_mapel} • Tingkat {mapel.tingkat}</option>)}
+                        </select>
+                    </label>
+                    <label className="space-y-2 text-sm font-medium text-slate-700">
+                        <span>Guru Pengampu</span>
+                        <select value={teachingAssignmentForm.id_guru} onChange={(event) => setTeachingAssignmentForm((current) => ({ ...current, id_guru: event.target.value }))} className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-slate-900">
+                            <option value="">Pilih guru</option>
+                            {(masterData.guru_options || []).map((guru) => <option key={guru.id_guru} value={guru.id_guru}>{guru.nama_lengkap} {guru.nip ? `(${guru.nip})` : ''}</option>)}
+                        </select>
+                    </label>
+                    <label className="space-y-2 text-sm font-medium text-slate-700">
+                        <span>Tahun Ajaran</span>
+                        <input value={teachingAssignmentForm.tahun_ajaran} onChange={(event) => setTeachingAssignmentForm((current) => ({ ...current, tahun_ajaran: event.target.value }))} className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-slate-900" placeholder="2025/2026 - Semester Ganjil" />
+                    </label>
+                    <label className="flex items-center gap-3 rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-medium text-slate-700">
+                        <input type="checkbox" checked={Boolean(teachingAssignmentForm.is_aktif)} onChange={(event) => setTeachingAssignmentForm((current) => ({ ...current, is_aktif: event.target.checked }))} className="h-4 w-4 rounded border-slate-300 text-slate-950 focus:ring-slate-900" />
+                        Status penugasan aktif
+                    </label>
+                </div>
+                <div className="flex flex-wrap gap-3">
+                    <button type="submit" className="rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800">{teachingAssignmentId ? 'Perbarui Penugasan' : 'Simpan Penugasan'}</button>
+                    {teachingAssignmentId ? <button type="button" onClick={resetTeachingAssignmentForm} className="rounded-full border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-100">Batal Edit</button> : null}
+                </div>
+            </form>
+
+            <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white">
+                <div className="border-b border-slate-200 px-5 py-4">
+                    <h4 className="text-lg font-semibold text-slate-900">Daftar Penugasan Guru-Mapel</h4>
+                    <p className="text-sm text-slate-500">Penugasan ini menjadi dasar validasi guru saat membuat bank soal dan sesi asesmen.</p>
+                </div>
+                <div className="border-b border-slate-200 px-5 py-4">
+                    <div className="grid gap-3 lg:grid-cols-[1.3fr_0.8fr]">
+                        <label className="space-y-2 text-sm font-medium text-slate-700">
+                            <span>Cari penugasan</span>
+                            <input
+                                value={teachingAssignmentFilters.search}
+                                onChange={(event) => setTeachingAssignmentFilters((current) => ({ ...current, search: event.target.value }))}
+                                className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-slate-900"
+                                placeholder="Nama mapel, kelas, guru, atau tahun ajaran"
+                            />
+                        </label>
+                        <label className="space-y-2 text-sm font-medium text-slate-700">
+                            <span>Status</span>
+                            <select
+                                value={teachingAssignmentFilters.status}
+                                onChange={(event) => setTeachingAssignmentFilters((current) => ({ ...current, status: event.target.value }))}
+                                className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-slate-900"
+                            >
+                                <option value="all">Semua status</option>
+                                <option value="active">Aktif</option>
+                                <option value="inactive">Nonaktif</option>
+                            </select>
+                        </label>
+                    </div>
+
+                    <form onSubmit={submitTeachingAssignmentImport} className="mt-4 flex flex-col gap-3 rounded-2xl bg-slate-50 p-4 lg:flex-row lg:items-end">
+                        <label className="flex-1 space-y-2 text-sm font-medium text-slate-700">
+                            <span>Bulk Import Penugasan Pembelajaran</span>
+                            <input
+                                type="file"
+                                accept=".xlsx,.xls,.csv"
+                                onChange={(event) => setTeachingAssignmentImport({ file: event.target.files?.[0] || null })}
+                                className="w-full rounded-2xl border border-dashed border-slate-300 bg-white px-4 py-3 text-sm text-slate-600 outline-none transition file:mr-4 file:rounded-full file:border-0 file:bg-slate-950 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white"
+                            />
+                        </label>
+                        <button type="submit" className="rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800">
+                            Import Penugasan
+                        </button>
+                    </form>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                        <button type="button" onClick={() => downloadImportTemplate('penugasan-pembelajaran', 'csv')} className="rounded-full border border-slate-300 px-4 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-100">
+                            Unduh Template CSV
+                        </button>
+                        <button type="button" onClick={() => downloadImportTemplate('penugasan-pembelajaran', 'xlsx')} className="rounded-full border border-slate-300 px-4 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-100">
+                            Unduh Template XLSX
+                        </button>
+                    </div>
+                </div>
+                <div className="divide-y divide-slate-100">
+                    {filteredTeachingAssignments.map((item) => (
+                        <div key={item.id_penugasan_pembelajaran} className="flex flex-col gap-3 px-5 py-4 md:flex-row md:items-center md:justify-between">
+                            <div>
+                                <div className="flex items-center gap-2">
+                                    <p className="font-semibold text-slate-900">{item.mata_pelajaran?.nama_mapel || '-'}</p>
+                                    {item.is_aktif ? <span className="rounded-full bg-emerald-100 px-2 py-1 text-xs font-semibold text-emerald-700">Aktif</span> : <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-700">Nonaktif</span>}
+                                </div>
+                                <p className="mt-1 text-sm text-slate-500">{item.kelas?.nama_kelas || '-'} • {item.guru?.nama_lengkap || '-'} • {item.tahun_ajaran || '-'}</p>
+                            </div>
+                            <div className="flex flex-wrap gap-2">
+                                <button type="button" onClick={() => {
+                                    setTeachingAssignmentId(item.id_penugasan_pembelajaran);
+                                    setTeachingAssignmentForm({
+                                        id_kelas: item.id_kelas || '',
+                                        id_mapel: item.id_mapel || '',
+                                        id_guru: item.id_guru || '',
+                                        tahun_ajaran: item.tahun_ajaran || '',
+                                        is_aktif: Boolean(item.is_aktif),
+                                    });
+                                }} className="rounded-full border border-slate-300 px-4 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-100">Edit</button>
+                                <button type="button" onClick={() => deleteMaster(`/api/admin/penugasan-pembelajaran/${item.id_penugasan_pembelajaran}`, 'Penugasan pembelajaran')} className="rounded-full border border-rose-200 px-4 py-2 text-xs font-semibold text-rose-700 transition hover:bg-rose-50">Hapus</button>
+                            </div>
+                        </div>
+                    ))}
+                    {!loading && filteredTeachingAssignments.length === 0 ? (
+                        <div className="px-5 py-6 text-sm text-slate-500">Tidak ada penugasan pembelajaran yang cocok dengan filter saat ini.</div>
+                    ) : null}
+                </div>
+            </div>
+        </div>
+    );
+
     const renderUserPage = () => (
         <div className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
             <div className="space-y-4 rounded-3xl bg-slate-50 p-5">
@@ -895,6 +1417,14 @@ export default function AdminWorkspacePage({ session, onLogout, mode = 'dashboar
 
         if (mode === 'mata-pelajaran') {
             return renderMapelPage();
+        }
+
+        if (mode === 'kelas-siswa') {
+            return renderClassStudentPage();
+        }
+
+        if (mode === 'penugasan-pembelajaran') {
+            return renderTeachingAssignmentPage();
         }
 
         return renderUserPage();
