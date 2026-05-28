@@ -6,6 +6,10 @@ import AdminWorkspacePage from './pages/AdminWorkspacePage';
 import GuruDashboard from './pages/GuruDashboard';
 import SiswaDashboard from './pages/SiswaDashboard';
 import SiswaProfilePage from './pages/SiswaProfilePage';
+import SiswaSessionsPage from './pages/SiswaSessionsPage';
+import SiswaLearningPlanPage from './pages/SiswaLearningPlanPage';
+import SiswaTrendPage from './pages/SiswaTrendPage';
+import SiswaAppreciationPage from './pages/SiswaAppreciationPage';
 
 const STORAGE_KEY = 'sia-session';
 
@@ -51,6 +55,10 @@ function App() {
             '/guru/dashboard',
             '/siswa/dashboard',
             '/siswa/profil',
+            '/siswa/sesi-aktif',
+            '/siswa/rencana-belajar',
+            '/siswa/tren-nilai',
+            '/siswa/apresiasi',
         ];
 
         if (protectedRoutes.includes(pathname) && !session?.token) {
@@ -142,6 +150,22 @@ function App() {
 
         if (pathname === '/siswa/profil') {
             return <SiswaProfilePage session={session} onLogout={onLogout} />;
+        }
+
+        if (pathname === '/siswa/sesi-aktif') {
+            return <SiswaSessionsPage session={session} onLogout={onLogout} />;
+        }
+
+        if (pathname === '/siswa/rencana-belajar') {
+            return <SiswaLearningPlanPage session={session} onLogout={onLogout} />;
+        }
+
+        if (pathname === '/siswa/tren-nilai') {
+            return <SiswaTrendPage session={session} onLogout={onLogout} />;
+        }
+
+        if (pathname === '/siswa/apresiasi') {
+            return <SiswaAppreciationPage session={session} onLogout={onLogout} />;
         }
 
         return <LoginPage session={session} onLogin={onLogin} />;

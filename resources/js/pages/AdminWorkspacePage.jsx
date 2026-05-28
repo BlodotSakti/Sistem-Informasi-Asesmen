@@ -46,6 +46,25 @@ function toInputDate(value) {
     return String(value).split('T')[0];
 }
 
+function toTahunAjaranValue(value) {
+    if (!value) {
+        return '';
+    }
+
+    return String(value).split(' - ')[0].trim();
+}
+
+const TABLE_HEAD_CLASS = 'border-b border-slate-200 bg-slate-50 text-xs uppercase tracking-[0.2em] text-slate-500';
+const TABLE_BODY_ROW_CLASS = 'align-top hover:bg-slate-50/70';
+const TABLE_TITLE_CELL_CLASS = 'px-5 py-4 font-semibold text-slate-900';
+const TABLE_CELL_CLASS = 'px-5 py-4 text-slate-600';
+const TABLE_NUMBER_CELL_CLASS = 'px-5 py-4 font-semibold text-slate-500';
+const TABLE_ACTION_HEAD_CLASS = 'px-5 py-4 font-semibold xl:text-right';
+const TABLE_ACTION_CELL_CLASS = 'px-5 py-4 xl:text-right';
+const TABLE_ACTION_WRAP_CLASS = 'flex flex-wrap gap-2 xl:justify-end';
+const TABLE_ACTION_PRIMARY_CLASS = 'rounded-full border border-slate-300 px-4 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-100';
+const TABLE_ACTION_DANGER_CLASS = 'rounded-full border border-rose-200 px-4 py-2 text-xs font-semibold text-rose-700 transition hover:bg-rose-50';
+
 export default function AdminWorkspacePage({ session, onLogout, mode = 'dashboard' }) {
     const [summary, setSummary] = useState(null);
     const [masterData, setMasterData] = useState({
@@ -96,6 +115,9 @@ export default function AdminWorkspacePage({ session, onLogout, mode = 'dashboar
         search: '',
         status: 'all',
     });
+    const [yearSearch, setYearSearch] = useState('');
+    const [classSearch, setClassSearch] = useState('');
+    const [mapelSearch, setMapelSearch] = useState('');
     const [classStudentImport, setClassStudentImport] = useState({ file: null });
 
     const [classStudentForm, setClassStudentForm] = useState({
@@ -164,6 +186,48 @@ export default function AdminWorkspacePage({ session, onLogout, mode = 'dashboar
                 .some((value) => String(value).toLowerCase().includes(search));
         });
     }, [classStudentFilters, masterData.kelas_siswa]);
+
+    const filteredYears = useMemo(() => {
+        const search = yearSearch.trim().toLowerCase();
+
+        return (masterData.tahun_ajaran || []).filter((item) => {
+            if (search === '') {
+                return true;
+            }
+
+            return [item.nama_tahun_ajaran, item.semester, item.keterangan, item.periode_label]
+                .filter(Boolean)
+                .some((value) => String(value).toLowerCase().includes(search));
+        });
+    }, [masterData.tahun_ajaran, yearSearch]);
+
+    const filteredClasses = useMemo(() => {
+        const search = classSearch.trim().toLowerCase();
+
+        return (masterData.kelas || []).filter((item) => {
+            if (search === '') {
+                return true;
+            }
+
+            return [item.nama_kelas, item.guru_wali?.nama_lengkap, item.tahun_ajaran]
+                .filter(Boolean)
+                .some((value) => String(value).toLowerCase().includes(search));
+        });
+    }, [classSearch, masterData.kelas]);
+
+    const filteredMapel = useMemo(() => {
+        const search = mapelSearch.trim().toLowerCase();
+
+        return (masterData.mata_pelajaran || []).filter((item) => {
+            if (search === '') {
+                return true;
+            }
+
+            return [item.nama_mapel, item.tingkat]
+                .filter(Boolean)
+                .some((value) => String(value).toLowerCase().includes(search));
+        });
+    }, [mapelSearch, masterData.mata_pelajaran]);
 
     const filteredTeachingAssignments = useMemo(() => {
         const search = teachingAssignmentFilters.search.trim().toLowerCase();
@@ -278,14 +342,14 @@ export default function AdminWorkspacePage({ session, onLogout, mode = 'dashboar
             setClassForm((current) => ({
                 ...current,
                 id_guru_wali: current.id_guru_wali || masterPayload.guru_options?.[0]?.id_guru || '',
-                tahun_ajaran: current.tahun_ajaran || masterPayload.tahun_ajaran?.[0]?.periode_label || '',
+                tahun_ajaran: toTahunAjaranValue(current.tahun_ajaran) || masterPayload.tahun_ajaran?.[0]?.nama_tahun_ajaran || '',
             }));
 
             setClassStudentForm((current) => ({
                 ...current,
                 id_kelas: current.id_kelas || masterPayload.kelas?.[0]?.id_kelas || '',
                 id_siswa: current.id_siswa || masterPayload.siswa_options?.[0]?.id_siswa || '',
-                tahun_ajaran: current.tahun_ajaran || masterPayload.kelas?.[0]?.tahun_ajaran || masterPayload.tahun_ajaran?.[0]?.periode_label || '',
+                tahun_ajaran: current.tahun_ajaran || masterPayload.kelas?.[0]?.tahun_ajaran || masterPayload.tahun_ajaran?.[0]?.nama_tahun_ajaran || '',
             }));
 
             setTeachingAssignmentForm((current) => ({
@@ -293,7 +357,7 @@ export default function AdminWorkspacePage({ session, onLogout, mode = 'dashboar
                 id_kelas: current.id_kelas || masterPayload.kelas?.[0]?.id_kelas || '',
                 id_mapel: current.id_mapel || masterPayload.mata_pelajaran?.[0]?.id_mapel || '',
                 id_guru: current.id_guru || masterPayload.guru_options?.[0]?.id_guru || '',
-                tahun_ajaran: current.tahun_ajaran || masterPayload.kelas?.[0]?.tahun_ajaran || masterPayload.tahun_ajaran?.[0]?.periode_label || '',
+                tahun_ajaran: current.tahun_ajaran || masterPayload.kelas?.[0]?.tahun_ajaran || masterPayload.tahun_ajaran?.[0]?.nama_tahun_ajaran || '',
             }));
         } catch (exception) {
             setError(exception.message || 'Gagal memuat data admin.');
@@ -328,7 +392,7 @@ export default function AdminWorkspacePage({ session, onLogout, mode = 'dashboar
         setClassForm({
             id_guru_wali: masterData.guru_options?.[0]?.id_guru || '',
             nama_kelas: '',
-            tahun_ajaran: masterData.tahun_ajaran?.[0]?.periode_label || '',
+            tahun_ajaran: masterData.tahun_ajaran?.[0]?.nama_tahun_ajaran || '',
         });
         setClassId(null);
     };
@@ -342,7 +406,7 @@ export default function AdminWorkspacePage({ session, onLogout, mode = 'dashboar
         setClassStudentForm({
             id_kelas: masterData.kelas?.[0]?.id_kelas || '',
             id_siswa: masterData.siswa_options?.[0]?.id_siswa || '',
-            tahun_ajaran: masterData.kelas?.[0]?.tahun_ajaran || masterData.tahun_ajaran?.[0]?.periode_label || '',
+            tahun_ajaran: masterData.kelas?.[0]?.tahun_ajaran || masterData.tahun_ajaran?.[0]?.nama_tahun_ajaran || '',
             is_aktif: true,
             tanggal_masuk: '',
             tanggal_keluar: '',
@@ -355,7 +419,7 @@ export default function AdminWorkspacePage({ session, onLogout, mode = 'dashboar
             id_kelas: masterData.kelas?.[0]?.id_kelas || '',
             id_mapel: masterData.mata_pelajaran?.[0]?.id_mapel || '',
             id_guru: masterData.guru_options?.[0]?.id_guru || '',
-            tahun_ajaran: masterData.kelas?.[0]?.tahun_ajaran || masterData.tahun_ajaran?.[0]?.periode_label || '',
+            tahun_ajaran: masterData.kelas?.[0]?.tahun_ajaran || masterData.tahun_ajaran?.[0]?.nama_tahun_ajaran || '',
             is_aktif: true,
         });
         setTeachingAssignmentId(null);
@@ -406,18 +470,23 @@ export default function AdminWorkspacePage({ session, onLogout, mode = 'dashboar
     const submitClass = async (event) => {
         event.preventDefault();
 
+        const payload = {
+            ...classForm,
+            tahun_ajaran: toTahunAjaranValue(classForm.tahun_ajaran),
+        };
+
         if (classId) {
             await apiFetch(`/api/admin/kelas/${classId}`, session, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(classForm),
+                body: JSON.stringify(payload),
             });
             showToast('Kelas berhasil diperbarui.');
         } else {
             await apiFetch('/api/admin/kelas', session, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(classForm),
+                body: JSON.stringify(payload),
             });
             showToast('Kelas berhasil ditambahkan.');
         }
@@ -776,7 +845,7 @@ export default function AdminWorkspacePage({ session, onLogout, mode = 'dashboar
     );
 
     const renderYearPage = () => (
-        <div className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
+        <div className="space-y-6">
             <form onSubmit={submitYear} className="space-y-4 rounded-3xl bg-slate-50 p-5">
                 <div className="grid gap-4 md:grid-cols-2">
                     <label className="space-y-2 text-sm font-medium text-slate-700 md:col-span-2">
@@ -818,41 +887,74 @@ export default function AdminWorkspacePage({ session, onLogout, mode = 'dashboar
                     <h4 className="text-lg font-semibold text-slate-900">Daftar Tahun Ajaran</h4>
                     <p className="text-sm text-slate-500">Gunakan satu data aktif untuk membantu filter kelas dan laporan.</p>
                 </div>
-                <div className="divide-y divide-slate-100">
-                    {(masterData.tahun_ajaran || []).map((item) => (
-                        <div key={item.id_tahun_ajaran} className="flex flex-col gap-3 px-5 py-4 md:flex-row md:items-center md:justify-between">
-                            <div>
-                                <div className="flex flex-wrap items-center gap-2">
-                                    <p className="font-semibold text-slate-900">{item.nama_tahun_ajaran}</p>
-                                    <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-700">Semester {String(item.semester || 'ganjil').toUpperCase()}</span>
-                                    {item.is_aktif ? <span className="rounded-full bg-emerald-100 px-2 py-1 text-xs font-semibold text-emerald-700">Aktif</span> : null}
-                                </div>
-                                <p className="mt-1 text-sm text-slate-500">{toInputDate(item.tanggal_mulai)} sampai {toInputDate(item.tanggal_selesai)}</p>
-                                {item.keterangan ? <p className="mt-1 text-sm text-slate-600">{item.keterangan}</p> : null}
-                            </div>
-                            <div className="flex flex-wrap gap-2">
-                                <button type="button" onClick={() => {
-                                    setYearId(item.id_tahun_ajaran);
-                                    setYearForm({
-                                        nama_tahun_ajaran: item.nama_tahun_ajaran || '',
-                                        semester: item.semester || 'ganjil',
-                                        tanggal_mulai: toInputDate(item.tanggal_mulai),
-                                        tanggal_selesai: toInputDate(item.tanggal_selesai),
-                                        is_aktif: Boolean(item.is_aktif),
-                                        keterangan: item.keterangan || '',
-                                    });
-                                }} className="rounded-full border border-slate-300 px-4 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-100">Edit</button>
-                                <button type="button" onClick={() => deleteMaster(`/api/admin/tahun-ajaran/${item.id_tahun_ajaran}`, 'Tahun ajaran')} className="rounded-full border border-rose-200 px-4 py-2 text-xs font-semibold text-rose-700 transition hover:bg-rose-50">Hapus</button>
-                            </div>
+                <div className="border-b border-slate-200 px-5 py-4">
+                    <div className="grid gap-3 lg:grid-cols-[0.8fr_1.2fr] lg:items-end">
+                        <div className="rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-600">
+                            <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Total Data</p>
+                            <p className="mt-1 font-semibold text-slate-900">{loading ? 'Memuat...' : `${filteredYears.length} data`}</p>
                         </div>
-                    ))}
+                        <label className="space-y-2 text-sm font-medium text-slate-700">
+                            <span>Cari tahun ajaran</span>
+                            <input value={yearSearch} onChange={(event) => setYearSearch(event.target.value)} className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-slate-900" placeholder="Nama tahun ajaran, semester, atau keterangan" />
+                        </label>
+                    </div>
+                </div>
+                <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-slate-200 text-left text-sm">
+                        <thead className={TABLE_HEAD_CLASS}>
+                            <tr>
+                                <th className="px-5 py-4 font-semibold">No</th>
+                                <th className="px-5 py-4 font-semibold">Tahun Ajaran</th>
+                                <th className="px-5 py-4 font-semibold">Semester</th>
+                                <th className="px-5 py-4 font-semibold">Periode</th>
+                                <th className="px-5 py-4 font-semibold">Status</th>
+                                <th className="px-5 py-4 font-semibold">Keterangan</th>
+                                <th className={TABLE_ACTION_HEAD_CLASS}>Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100 bg-white">
+                            {filteredYears.map((item, index) => (
+                                <tr key={item.id_tahun_ajaran} className={TABLE_BODY_ROW_CLASS}>
+                                    <td className={TABLE_NUMBER_CELL_CLASS}>{index + 1}</td>
+                                    <td className={TABLE_TITLE_CELL_CLASS}>{item.nama_tahun_ajaran}</td>
+                                    <td className={TABLE_CELL_CLASS}>Semester {String(item.semester || 'ganjil').toUpperCase()}</td>
+                                    <td className={TABLE_CELL_CLASS}>{toInputDate(item.tanggal_mulai)} sampai {toInputDate(item.tanggal_selesai)}</td>
+                                    <td className="px-5 py-4">
+                                        {item.is_aktif ? <span className="inline-flex rounded-full bg-emerald-100 px-2 py-1 text-xs font-semibold text-emerald-700">Aktif</span> : <span className="inline-flex rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-700">Nonaktif</span>}
+                                    </td>
+                                    <td className={TABLE_CELL_CLASS}>{item.keterangan || '-'}</td>
+                                    <td className={TABLE_ACTION_CELL_CLASS}>
+                                        <div className={TABLE_ACTION_WRAP_CLASS}>
+                                            <button type="button" onClick={() => {
+                                                setYearId(item.id_tahun_ajaran);
+                                                setYearForm({
+                                                    nama_tahun_ajaran: item.nama_tahun_ajaran || '',
+                                                    semester: item.semester || 'ganjil',
+                                                    tanggal_mulai: toInputDate(item.tanggal_mulai),
+                                                    tanggal_selesai: toInputDate(item.tanggal_selesai),
+                                                    is_aktif: Boolean(item.is_aktif),
+                                                    keterangan: item.keterangan || '',
+                                                });
+                                            }} className={TABLE_ACTION_PRIMARY_CLASS}>Edit</button>
+                                            <button type="button" onClick={() => deleteMaster(`/api/admin/tahun-ajaran/${item.id_tahun_ajaran}`, 'Tahun ajaran')} className={TABLE_ACTION_DANGER_CLASS}>Hapus</button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            ))}
+                            {!loading && filteredYears.length === 0 ? (
+                                <tr>
+                                    <td colSpan="7" className="px-5 py-6 text-sm text-slate-500">Tidak ada tahun ajaran yang cocok dengan pencarian.</td>
+                                </tr>
+                            ) : null}
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
     );
 
     const renderClassPage = () => (
-        <div className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
+        <div className="space-y-6">
             <form onSubmit={submitClass} className="space-y-4 rounded-3xl bg-slate-50 p-5">
                 <div className="grid gap-4">
                     <label className="space-y-2 text-sm font-medium text-slate-700">
@@ -868,9 +970,9 @@ export default function AdminWorkspacePage({ session, onLogout, mode = 'dashboar
                     </label>
                     <label className="space-y-2 text-sm font-medium text-slate-700">
                         <span>Tahun Ajaran</span>
-                        <select value={classForm.tahun_ajaran} onChange={(event) => setClassForm((current) => ({ ...current, tahun_ajaran: event.target.value }))} className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-slate-900">
+                        <select value={toTahunAjaranValue(classForm.tahun_ajaran)} onChange={(event) => setClassForm((current) => ({ ...current, tahun_ajaran: event.target.value }))} className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-slate-900">
                             <option value="">Pilih tahun ajaran</option>
-                            {(masterData.tahun_ajaran || []).map((item) => <option key={item.id_tahun_ajaran} value={item.periode_label || item.nama_tahun_ajaran}>{item.periode_label || item.nama_tahun_ajaran}</option>)}
+                            {(masterData.tahun_ajaran || []).map((item) => <option key={item.id_tahun_ajaran} value={item.nama_tahun_ajaran}>{item.periode_label || item.nama_tahun_ajaran}</option>)}
                         </select>
                     </label>
                 </div>
@@ -885,29 +987,61 @@ export default function AdminWorkspacePage({ session, onLogout, mode = 'dashboar
                     <h4 className="text-lg font-semibold text-slate-900">Daftar Kelas</h4>
                     <p className="text-sm text-slate-500">Gunakan daftar ini untuk melihat relasi guru wali dan periode kelas.</p>
                 </div>
-                <div className="divide-y divide-slate-100">
-                    {(masterData.kelas || []).map((item) => (
-                        <div key={item.id_kelas} className="flex flex-col gap-3 px-5 py-4 md:flex-row md:items-center md:justify-between">
-                            <div>
-                                <p className="font-semibold text-slate-900">{item.nama_kelas}</p>
-                                <p className="mt-1 text-sm text-slate-500">{item.guru_wali?.nama_lengkap || 'Belum ditentukan'} • {item.tahun_ajaran}</p>
-                            </div>
-                            <div className="flex flex-wrap gap-2">
-                                <button type="button" onClick={() => {
-                                    setClassId(item.id_kelas);
-                                    setClassForm({ id_guru_wali: item.id_guru_wali || '', nama_kelas: item.nama_kelas || '', tahun_ajaran: item.tahun_ajaran || '' });
-                                }} className="rounded-full border border-slate-300 px-4 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-100">Edit</button>
-                                <button type="button" onClick={() => deleteMaster(`/api/admin/kelas/${item.id_kelas}`, 'Kelas')} className="rounded-full border border-rose-200 px-4 py-2 text-xs font-semibold text-rose-700 transition hover:bg-rose-50">Hapus</button>
-                            </div>
+                <div className="border-b border-slate-200 px-5 py-4">
+                    <div className="grid gap-3 lg:grid-cols-[0.8fr_1.2fr] lg:items-end">
+                        <div className="rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-600">
+                            <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Total Data</p>
+                            <p className="mt-1 font-semibold text-slate-900">{loading ? 'Memuat...' : `${filteredClasses.length} data`}</p>
                         </div>
-                    ))}
+                        <label className="space-y-2 text-sm font-medium text-slate-700">
+                            <span>Cari kelas</span>
+                            <input value={classSearch} onChange={(event) => setClassSearch(event.target.value)} className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-slate-900" placeholder="Nama kelas, guru wali, atau tahun ajaran" />
+                        </label>
+                    </div>
+                </div>
+                <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-slate-200 text-left text-sm">
+                        <thead className={TABLE_HEAD_CLASS}>
+                            <tr>
+                                <th className="px-5 py-4 font-semibold">No</th>
+                                <th className="px-5 py-4 font-semibold">Kelas</th>
+                                <th className="px-5 py-4 font-semibold">Guru Wali</th>
+                                <th className="px-5 py-4 font-semibold">Tahun Ajaran</th>
+                                <th className={TABLE_ACTION_HEAD_CLASS}>Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100 bg-white">
+                            {filteredClasses.map((item, index) => (
+                                <tr key={item.id_kelas} className={TABLE_BODY_ROW_CLASS}>
+                                    <td className={TABLE_NUMBER_CELL_CLASS}>{index + 1}</td>
+                                    <td className={TABLE_TITLE_CELL_CLASS}>{item.nama_kelas}</td>
+                                    <td className={TABLE_CELL_CLASS}>{item.guru_wali?.nama_lengkap || 'Belum ditentukan'}</td>
+                                    <td className={TABLE_CELL_CLASS}>{item.tahun_ajaran}</td>
+                                    <td className={TABLE_ACTION_CELL_CLASS}>
+                                        <div className={TABLE_ACTION_WRAP_CLASS}>
+                                            <button type="button" onClick={() => {
+                                                setClassId(item.id_kelas);
+                                                setClassForm({ id_guru_wali: item.id_guru_wali || '', nama_kelas: item.nama_kelas || '', tahun_ajaran: toTahunAjaranValue(item.tahun_ajaran) || '' });
+                                            }} className={TABLE_ACTION_PRIMARY_CLASS}>Edit</button>
+                                            <button type="button" onClick={() => deleteMaster(`/api/admin/kelas/${item.id_kelas}`, 'Kelas')} className={TABLE_ACTION_DANGER_CLASS}>Hapus</button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            ))}
+                            {!loading && filteredClasses.length === 0 ? (
+                                <tr>
+                                    <td colSpan="5" className="px-5 py-6 text-sm text-slate-500">Tidak ada kelas yang cocok dengan pencarian.</td>
+                                </tr>
+                            ) : null}
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
     );
 
     const renderMapelPage = () => (
-        <div className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
+        <div className="space-y-6">
             <form onSubmit={submitMapel} className="space-y-4 rounded-3xl bg-slate-50 p-5">
                 <div className="grid gap-4">
                     <label className="space-y-2 text-sm font-medium text-slate-700">
@@ -935,29 +1069,59 @@ export default function AdminWorkspacePage({ session, onLogout, mode = 'dashboar
                     <h4 className="text-lg font-semibold text-slate-900">Daftar Mata Pelajaran</h4>
                     <p className="text-sm text-slate-500">Data mapel dipakai untuk bank soal dan jadwal sesi asesmen.</p>
                 </div>
-                <div className="divide-y divide-slate-100">
-                    {(masterData.mata_pelajaran || []).map((item) => (
-                        <div key={item.id_mapel} className="flex flex-col gap-3 px-5 py-4 md:flex-row md:items-center md:justify-between">
-                            <div>
-                                <p className="font-semibold text-slate-900">{item.nama_mapel}</p>
-                                <p className="mt-1 text-sm text-slate-500">Tingkat {item.tingkat}</p>
-                            </div>
-                            <div className="flex flex-wrap gap-2">
-                                <button type="button" onClick={() => {
-                                    setMapelId(item.id_mapel);
-                                    setMapelForm({ nama_mapel: item.nama_mapel || '', tingkat: item.tingkat || '' });
-                                }} className="rounded-full border border-slate-300 px-4 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-100">Edit</button>
-                                <button type="button" onClick={() => deleteMaster(`/api/admin/mata-pelajaran/${item.id_mapel}`, 'Mata pelajaran')} className="rounded-full border border-rose-200 px-4 py-2 text-xs font-semibold text-rose-700 transition hover:bg-rose-50">Hapus</button>
-                            </div>
+                <div className="border-b border-slate-200 px-5 py-4">
+                    <div className="grid gap-3 lg:grid-cols-[0.8fr_1.2fr] lg:items-end">
+                        <div className="rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-600">
+                            <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Total Data</p>
+                            <p className="mt-1 font-semibold text-slate-900">{loading ? 'Memuat...' : `${filteredMapel.length} data`}</p>
                         </div>
-                    ))}
+                        <label className="space-y-2 text-sm font-medium text-slate-700">
+                            <span>Cari mapel</span>
+                            <input value={mapelSearch} onChange={(event) => setMapelSearch(event.target.value)} className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-slate-900" placeholder="Nama mapel atau tingkat" />
+                        </label>
+                    </div>
+                </div>
+                <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-slate-200 text-left text-sm">
+                        <thead className={TABLE_HEAD_CLASS}>
+                            <tr>
+                                <th className="px-5 py-4 font-semibold">No</th>
+                                <th className="px-5 py-4 font-semibold">Mata Pelajaran</th>
+                                <th className="px-5 py-4 font-semibold">Tingkat</th>
+                                <th className={TABLE_ACTION_HEAD_CLASS}>Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100 bg-white">
+                            {filteredMapel.map((item, index) => (
+                                <tr key={item.id_mapel} className={TABLE_BODY_ROW_CLASS}>
+                                    <td className={TABLE_NUMBER_CELL_CLASS}>{index + 1}</td>
+                                    <td className={TABLE_TITLE_CELL_CLASS}>{item.nama_mapel}</td>
+                                    <td className={TABLE_CELL_CLASS}>Tingkat {item.tingkat}</td>
+                                    <td className={TABLE_ACTION_CELL_CLASS}>
+                                        <div className={TABLE_ACTION_WRAP_CLASS}>
+                                            <button type="button" onClick={() => {
+                                                setMapelId(item.id_mapel);
+                                                setMapelForm({ nama_mapel: item.nama_mapel || '', tingkat: item.tingkat || '' });
+                                            }} className={TABLE_ACTION_PRIMARY_CLASS}>Edit</button>
+                                            <button type="button" onClick={() => deleteMaster(`/api/admin/mata-pelajaran/${item.id_mapel}`, 'Mata pelajaran')} className={TABLE_ACTION_DANGER_CLASS}>Hapus</button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            ))}
+                            {!loading && filteredMapel.length === 0 ? (
+                                <tr>
+                                    <td colSpan="4" className="px-5 py-6 text-sm text-slate-500">Tidak ada mata pelajaran yang cocok dengan pencarian.</td>
+                                </tr>
+                            ) : null}
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
     );
 
     const renderClassStudentPage = () => (
-        <div className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
+        <div className="space-y-6">
             <form onSubmit={submitClassStudent} className="space-y-4 rounded-3xl bg-slate-50 p-5">
                 <div className="grid gap-4">
                     <label className="space-y-2 text-sm font-medium text-slate-700">
@@ -1006,6 +1170,10 @@ export default function AdminWorkspacePage({ session, onLogout, mode = 'dashboar
                 </div>
                 <div className="border-b border-slate-200 px-5 py-4">
                     <div className="grid gap-3 lg:grid-cols-[1.3fr_0.8fr]">
+                        <div className="rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-600 lg:col-span-2">
+                            <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Total Data</p>
+                            <p className="mt-1 font-semibold text-slate-900">{loading ? 'Memuat...' : `${filteredClassStudents.length} data`}</p>
+                        </div>
                         <label className="space-y-2 text-sm font-medium text-slate-700">
                             <span>Cari relasi</span>
                             <input
@@ -1052,42 +1220,65 @@ export default function AdminWorkspacePage({ session, onLogout, mode = 'dashboar
                         </button>
                     </div>
                 </div>
-                <div className="divide-y divide-slate-100">
-                    {filteredClassStudents.map((item) => (
-                        <div key={item.id_kelas_siswa} className="flex flex-col gap-3 px-5 py-4 md:flex-row md:items-center md:justify-between">
-                            <div>
-                                <div className="flex items-center gap-2">
-                                    <p className="font-semibold text-slate-900">{item.siswa?.nama_lengkap || '-'}</p>
-                                    {item.is_aktif ? <span className="rounded-full bg-emerald-100 px-2 py-1 text-xs font-semibold text-emerald-700">Aktif</span> : <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-700">Riwayat</span>}
-                                </div>
-                                <p className="mt-1 text-sm text-slate-500">{item.kelas?.nama_kelas || '-'} • {item.tahun_ajaran || '-'}</p>
-                            </div>
-                            <div className="flex flex-wrap gap-2">
-                                <button type="button" onClick={() => {
-                                    setClassStudentId(item.id_kelas_siswa);
-                                    setClassStudentForm({
-                                        id_kelas: item.id_kelas || '',
-                                        id_siswa: item.id_siswa || '',
-                                        tahun_ajaran: item.tahun_ajaran || '',
-                                        is_aktif: Boolean(item.is_aktif),
-                                        tanggal_masuk: toInputDate(item.tanggal_masuk),
-                                        tanggal_keluar: toInputDate(item.tanggal_keluar),
-                                    });
-                                }} className="rounded-full border border-slate-300 px-4 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-100">Edit</button>
-                                <button type="button" onClick={() => deleteMaster(`/api/admin/kelas-siswa/${item.id_kelas_siswa}`, 'Relasi siswa-kelas')} className="rounded-full border border-rose-200 px-4 py-2 text-xs font-semibold text-rose-700 transition hover:bg-rose-50">Hapus</button>
-                            </div>
-                        </div>
-                    ))}
-                    {!loading && filteredClassStudents.length === 0 ? (
-                        <div className="px-5 py-6 text-sm text-slate-500">Tidak ada relasi siswa-kelas yang cocok dengan filter saat ini.</div>
-                    ) : null}
+                <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-slate-200 text-left text-sm">
+                        <thead className={TABLE_HEAD_CLASS}>
+                            <tr>
+                                <th className="px-5 py-4 font-semibold">No</th>
+                                <th className="px-5 py-4 font-semibold">Siswa</th>
+                                <th className="px-5 py-4 font-semibold">Kelas</th>
+                                <th className="px-5 py-4 font-semibold">Tahun Ajaran</th>
+                                <th className="px-5 py-4 font-semibold">Status</th>
+                                <th className="px-5 py-4 font-semibold">Periode</th>
+                                <th className={TABLE_ACTION_HEAD_CLASS}>Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100 bg-white">
+                            {filteredClassStudents.map((item, index) => (
+                                <tr key={item.id_kelas_siswa} className={TABLE_BODY_ROW_CLASS}>
+                                    <td className={TABLE_NUMBER_CELL_CLASS}>{index + 1}</td>
+                                    <td className={TABLE_TITLE_CELL_CLASS}>{item.siswa?.nama_lengkap || '-'}</td>
+                                    <td className={TABLE_CELL_CLASS}>{item.kelas?.nama_kelas || '-'}</td>
+                                    <td className={TABLE_CELL_CLASS}>{item.tahun_ajaran || '-'}</td>
+                                    <td className="px-5 py-4">
+                                        {item.is_aktif ? <span className="inline-flex rounded-full bg-emerald-100 px-2 py-1 text-xs font-semibold text-emerald-700">Aktif</span> : <span className="inline-flex rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-700">Riwayat</span>}
+                                    </td>
+                                    <td className={TABLE_CELL_CLASS}>
+                                        <div>{toInputDate(item.tanggal_masuk) || '-'}</div>
+                                        <div>{toInputDate(item.tanggal_keluar) || '-'}</div>
+                                    </td>
+                                    <td className={TABLE_ACTION_CELL_CLASS}>
+                                        <div className={TABLE_ACTION_WRAP_CLASS}>
+                                            <button type="button" onClick={() => {
+                                                setClassStudentId(item.id_kelas_siswa);
+                                                setClassStudentForm({
+                                                    id_kelas: item.id_kelas || '',
+                                                    id_siswa: item.id_siswa || '',
+                                                    tahun_ajaran: item.tahun_ajaran || '',
+                                                    is_aktif: Boolean(item.is_aktif),
+                                                    tanggal_masuk: toInputDate(item.tanggal_masuk),
+                                                    tanggal_keluar: toInputDate(item.tanggal_keluar),
+                                                });
+                                            }} className={TABLE_ACTION_PRIMARY_CLASS}>Edit</button>
+                                            <button type="button" onClick={() => deleteMaster(`/api/admin/kelas-siswa/${item.id_kelas_siswa}`, 'Relasi siswa-kelas')} className={TABLE_ACTION_DANGER_CLASS}>Hapus</button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            ))}
+                            {!loading && filteredClassStudents.length === 0 ? (
+                                <tr>
+                                    <td colSpan="7" className="px-5 py-6 text-sm text-slate-500">Tidak ada relasi siswa-kelas yang cocok dengan filter saat ini.</td>
+                                </tr>
+                            ) : null}
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
     );
 
     const renderTeachingAssignmentPage = () => (
-        <div className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
+        <div className="space-y-6">
             <form onSubmit={submitTeachingAssignment} className="space-y-4 rounded-3xl bg-slate-50 p-5">
                 <div className="grid gap-4">
                     <label className="space-y-2 text-sm font-medium text-slate-700">
@@ -1133,6 +1324,10 @@ export default function AdminWorkspacePage({ session, onLogout, mode = 'dashboar
                 </div>
                 <div className="border-b border-slate-200 px-5 py-4">
                     <div className="grid gap-3 lg:grid-cols-[1.3fr_0.8fr]">
+                        <div className="rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-600 lg:col-span-2">
+                            <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Total Data</p>
+                            <p className="mt-1 font-semibold text-slate-900">{loading ? 'Memuat...' : `${filteredTeachingAssignments.length} data`}</p>
+                        </div>
                         <label className="space-y-2 text-sm font-medium text-slate-700">
                             <span>Cari penugasan</span>
                             <input
@@ -1179,41 +1374,61 @@ export default function AdminWorkspacePage({ session, onLogout, mode = 'dashboar
                         </button>
                     </div>
                 </div>
-                <div className="divide-y divide-slate-100">
-                    {filteredTeachingAssignments.map((item) => (
-                        <div key={item.id_penugasan_pembelajaran} className="flex flex-col gap-3 px-5 py-4 md:flex-row md:items-center md:justify-between">
-                            <div>
-                                <div className="flex items-center gap-2">
-                                    <p className="font-semibold text-slate-900">{item.mata_pelajaran?.nama_mapel || '-'}</p>
-                                    {item.is_aktif ? <span className="rounded-full bg-emerald-100 px-2 py-1 text-xs font-semibold text-emerald-700">Aktif</span> : <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-700">Nonaktif</span>}
-                                </div>
-                                <p className="mt-1 text-sm text-slate-500">{item.kelas?.nama_kelas || '-'} • {item.guru?.nama_lengkap || '-'} • {item.tahun_ajaran || '-'}</p>
-                            </div>
-                            <div className="flex flex-wrap gap-2">
-                                <button type="button" onClick={() => {
-                                    setTeachingAssignmentId(item.id_penugasan_pembelajaran);
-                                    setTeachingAssignmentForm({
-                                        id_kelas: item.id_kelas || '',
-                                        id_mapel: item.id_mapel || '',
-                                        id_guru: item.id_guru || '',
-                                        tahun_ajaran: item.tahun_ajaran || '',
-                                        is_aktif: Boolean(item.is_aktif),
-                                    });
-                                }} className="rounded-full border border-slate-300 px-4 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-100">Edit</button>
-                                <button type="button" onClick={() => deleteMaster(`/api/admin/penugasan-pembelajaran/${item.id_penugasan_pembelajaran}`, 'Penugasan pembelajaran')} className="rounded-full border border-rose-200 px-4 py-2 text-xs font-semibold text-rose-700 transition hover:bg-rose-50">Hapus</button>
-                            </div>
-                        </div>
-                    ))}
-                    {!loading && filteredTeachingAssignments.length === 0 ? (
-                        <div className="px-5 py-6 text-sm text-slate-500">Tidak ada penugasan pembelajaran yang cocok dengan filter saat ini.</div>
-                    ) : null}
+                <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-slate-200 text-left text-sm">
+                        <thead className={TABLE_HEAD_CLASS}>
+                            <tr>
+                                <th className="px-5 py-4 font-semibold">No</th>
+                                <th className="px-5 py-4 font-semibold">Mapel</th>
+                                <th className="px-5 py-4 font-semibold">Kelas</th>
+                                <th className="px-5 py-4 font-semibold">Guru</th>
+                                <th className="px-5 py-4 font-semibold">Tahun Ajaran</th>
+                                <th className="px-5 py-4 font-semibold">Status</th>
+                                <th className={TABLE_ACTION_HEAD_CLASS}>Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100 bg-white">
+                            {filteredTeachingAssignments.map((item, index) => (
+                                <tr key={item.id_penugasan_pembelajaran} className={TABLE_BODY_ROW_CLASS}>
+                                    <td className={TABLE_NUMBER_CELL_CLASS}>{index + 1}</td>
+                                    <td className={TABLE_TITLE_CELL_CLASS}>{item.mata_pelajaran?.nama_mapel || '-'}</td>
+                                    <td className={TABLE_CELL_CLASS}>{item.kelas?.nama_kelas || '-'}</td>
+                                    <td className={TABLE_CELL_CLASS}>{item.guru?.nama_lengkap || '-'}</td>
+                                    <td className={TABLE_CELL_CLASS}>{item.tahun_ajaran || '-'}</td>
+                                    <td className="px-5 py-4">
+                                        {item.is_aktif ? <span className="inline-flex rounded-full bg-emerald-100 px-2 py-1 text-xs font-semibold text-emerald-700">Aktif</span> : <span className="inline-flex rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-700">Nonaktif</span>}
+                                    </td>
+                                    <td className={TABLE_ACTION_CELL_CLASS}>
+                                        <div className={TABLE_ACTION_WRAP_CLASS}>
+                                            <button type="button" onClick={() => {
+                                                setTeachingAssignmentId(item.id_penugasan_pembelajaran);
+                                                setTeachingAssignmentForm({
+                                                    id_kelas: item.id_kelas || '',
+                                                    id_mapel: item.id_mapel || '',
+                                                    id_guru: item.id_guru || '',
+                                                    tahun_ajaran: item.tahun_ajaran || '',
+                                                    is_aktif: Boolean(item.is_aktif),
+                                                });
+                                            }} className={TABLE_ACTION_PRIMARY_CLASS}>Edit</button>
+                                            <button type="button" onClick={() => deleteMaster(`/api/admin/penugasan-pembelajaran/${item.id_penugasan_pembelajaran}`, 'Penugasan pembelajaran')} className={TABLE_ACTION_DANGER_CLASS}>Hapus</button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            ))}
+                            {!loading && filteredTeachingAssignments.length === 0 ? (
+                                <tr>
+                                    <td colSpan="7" className="px-5 py-6 text-sm text-slate-500">Tidak ada penugasan pembelajaran yang cocok dengan filter saat ini.</td>
+                                </tr>
+                            ) : null}
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
     );
 
     const renderUserPage = () => (
-        <div className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
+        <div className="space-y-6">
             <div className="space-y-4 rounded-3xl bg-slate-50 p-5">
                 <div className="flex gap-2 rounded-full bg-white p-1 text-sm font-medium text-slate-600">
                     <button type="button" onClick={() => setUserTab('manual')} className={`flex-1 rounded-full px-4 py-2 ${userTab === 'manual' ? 'bg-slate-950 text-white' : ''}`}>Manual</button>
@@ -1354,49 +1569,68 @@ export default function AdminWorkspacePage({ session, onLogout, mode = 'dashboar
                     </form>
                 </div>
 
-                <div className="divide-y divide-slate-100">
-                    {loadingUsers ? (
-                        <div className="px-5 py-6 text-sm text-slate-500">Memuat daftar pengguna...</div>
-                    ) : null}
-                    {(users?.data || []).map((item) => {
-                        const profile = item.admin || item.guru || item.siswa;
+                <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-slate-200 text-left text-sm">
+                        <thead className={TABLE_HEAD_CLASS}>
+                            <tr>
+                                <th className="px-5 py-4 font-semibold">No</th>
+                                <th className="px-5 py-4 font-semibold">Nama</th>
+                                <th className="px-5 py-4 font-semibold">Username</th>
+                                <th className="px-5 py-4 font-semibold">Role</th>
+                                <th className="px-5 py-4 font-semibold">Status</th>
+                                <th className={TABLE_ACTION_HEAD_CLASS}>Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100 bg-white">
+                            {loadingUsers ? (
+                                <tr>
+                                    <td colSpan="6" className="px-5 py-6 text-sm text-slate-500">Memuat daftar pengguna...</td>
+                                </tr>
+                            ) : null}
+                            {(users?.data || []).map((item, index) => {
+                                const profile = item.admin || item.guru || item.siswa;
 
-                        return (
-                            <div key={item.id_pengguna} className="flex flex-col gap-3 px-5 py-4 md:flex-row md:items-center md:justify-between">
-                                <div>
-                                    <div className="flex flex-wrap items-center gap-2">
-                                        <p className="font-semibold text-slate-900">{profile?.nama_lengkap || item.username}</p>
-                                        <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-700">{item.role}</span>
-                                        {item.is_aktif ? <span className="rounded-full bg-emerald-100 px-2 py-1 text-xs font-semibold text-emerald-700">Aktif</span> : <span className="rounded-full bg-rose-100 px-2 py-1 text-xs font-semibold text-rose-700">Diarsipkan</span>}
-                                    </div>
-                                    <p className="mt-1 text-sm text-slate-500">Username: {item.username}</p>
-                                </div>
-                                <div className="flex flex-wrap gap-2">
-                                    <button type="button" onClick={() => {
-                                        setUserId(item.id_pengguna);
-                                        setUserTab('manual');
-                                        setUserForm({
-                                            role: item.role,
-                                            nama_lengkap: profile?.nama_lengkap || '',
-                                            username: item.username || '',
-                                            password: '',
-                                            nip: item.guru?.nip || '',
-                                            nisn: item.siswa?.nisn || '',
-                                            is_aktif: Boolean(item.is_aktif),
-                                        });
-                                    }} className="rounded-full border border-slate-300 px-4 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-100">Edit</button>
-                                    {item.is_aktif ? (
-                                        <button type="button" onClick={() => archiveUser(item.id_pengguna, 'Diarsipkan oleh admin.')} className="rounded-full border border-amber-200 px-4 py-2 text-xs font-semibold text-amber-700 transition hover:bg-amber-50">Arsipkan</button>
-                                    ) : (
-                                        <button type="button" onClick={() => restoreUser(item.id_pengguna)} className="rounded-full border border-emerald-200 px-4 py-2 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-50">Aktifkan</button>
-                                    )}
-                                </div>
-                            </div>
-                        );
-                    })}
-                    {!loadingUsers && (users?.data || []).length === 0 ? (
-                        <div className="px-5 py-6 text-sm text-slate-500">Tidak ada pengguna yang cocok dengan filter saat ini.</div>
-                    ) : null}
+                                return (
+                                    <tr key={item.id_pengguna} className={TABLE_BODY_ROW_CLASS}>
+                                            <td className={TABLE_NUMBER_CELL_CLASS}>{index + 1}</td>
+                                            <td className={TABLE_TITLE_CELL_CLASS}>{profile?.nama_lengkap || item.username}</td>
+                                            <td className={TABLE_CELL_CLASS}>{item.username}</td>
+                                            <td className={TABLE_CELL_CLASS}><span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-700">{item.role}</span></td>
+                                            <td className={TABLE_CELL_CLASS}>
+                                            {item.is_aktif ? <span className="rounded-full bg-emerald-100 px-2 py-1 text-xs font-semibold text-emerald-700">Aktif</span> : <span className="rounded-full bg-rose-100 px-2 py-1 text-xs font-semibold text-rose-700">Diarsipkan</span>}
+                                        </td>
+                                            <td className={TABLE_ACTION_CELL_CLASS}>
+                                                <div className={TABLE_ACTION_WRAP_CLASS}>
+                                                <button type="button" onClick={() => {
+                                                    setUserId(item.id_pengguna);
+                                                    setUserTab('manual');
+                                                    setUserForm({
+                                                        role: item.role,
+                                                        nama_lengkap: profile?.nama_lengkap || '',
+                                                        username: item.username || '',
+                                                        password: '',
+                                                        nip: item.guru?.nip || '',
+                                                        nisn: item.siswa?.nisn || '',
+                                                        is_aktif: Boolean(item.is_aktif),
+                                                    });
+                                                    }} className={TABLE_ACTION_PRIMARY_CLASS}>Edit</button>
+                                                {item.is_aktif ? (
+                                                        <button type="button" onClick={() => archiveUser(item.id_pengguna, 'Diarsipkan oleh admin.')} className="rounded-full border border-amber-200 px-4 py-2 text-xs font-semibold text-amber-700 transition hover:bg-amber-50">Arsipkan</button>
+                                                ) : (
+                                                        <button type="button" onClick={() => restoreUser(item.id_pengguna)} className="rounded-full border border-emerald-200 px-4 py-2 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-50">Aktifkan</button>
+                                                )}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                );
+                            })}
+                            {!loadingUsers && (users?.data || []).length === 0 ? (
+                                <tr>
+                                    <td colSpan="6" className="px-5 py-6 text-sm text-slate-500">Tidak ada pengguna yang cocok dengan filter saat ini.</td>
+                                </tr>
+                            ) : null}
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>

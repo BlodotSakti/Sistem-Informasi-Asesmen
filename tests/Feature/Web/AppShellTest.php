@@ -52,4 +52,22 @@ class AppShellTest extends TestCase
         $response->assertOk();
         $response->assertSee('id="app"', false);
     }
+
+    public function test_student_pages_are_served(): void
+    {
+        $pages = [
+            '/siswa/dashboard',
+            '/siswa/sesi-aktif',
+            '/siswa/rencana-belajar',
+            '/siswa/tren-nilai',
+            '/siswa/apresiasi',
+        ];
+
+        foreach ($pages as $page) {
+            $response = $this->get($page);
+
+            $response->assertOk();
+            $response->assertSee('id="app"', false);
+        }
+    }
 }

@@ -2,11 +2,15 @@ import { useEffect, useMemo, useState } from 'react';
 import DashboardLayout from '../components/layout/DashboardLayout';
 import StatCard from '../components/ui/StatCard';
 import { apiFetch } from '../lib/api';
+import { siswaNavigation } from './siswa/siswaNavigation';
 
 export default function SiswaProfilePage({ session, onLogout }) {
     const [summary, setSummary] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
+    const [classHistorySearch, setClassHistorySearch] = useState('');
+    const [subjectSearch, setSubjectSearch] = useState('');
+    const [learningPlanSearch, setLearningPlanSearch] = useState('');
 
     useEffect(() => {
         let mounted = true;
@@ -44,17 +48,50 @@ export default function SiswaProfilePage({ session, onLogout }) {
     const learningPlans = useMemo(() => profile.rencana_belajar || [], [profile]);
     const classHistory = useMemo(() => profile.riwayat_kelas || [], [profile]);
 
-    const navigation = [
-        { label: 'Dashboard', href: '/siswa/dashboard', badge: 'Home' },
-        { label: 'Profil', href: '/siswa/profil', badge: 'Data' },
-        { label: 'Sesi Aktif', href: '/siswa/dashboard#sesi', badge: 'CBT' },
-        { label: 'Rencana Belajar', href: '/siswa/dashboard#rencana', badge: 'Plan' },
-        { label: 'Tren Nilai', href: '/siswa/dashboard#tren', badge: 'Grafik' },
-        { label: 'Apresiasi', href: '/siswa/dashboard#badge', badge: 'Badge' },
-    ];
+    const filteredClassHistory = useMemo(() => {
+        const search = classHistorySearch.trim().toLowerCase();
+
+        return classHistory.filter((item) => {
+            if (search === '') {
+                return true;
+            }
+
+            return [item.nama_kelas, item.tahun_ajaran, item.is_aktif ? 'aktif' : 'riwayat']
+                .filter(Boolean)
+                .some((value) => String(value).toLowerCase().includes(search));
+        });
+    }, [classHistory, classHistorySearch]);
+
+    const filteredSubjects = useMemo(() => {
+        const search = subjectSearch.trim().toLowerCase();
+
+        return subjects.filter((item) => {
+            if (search === '') {
+                return true;
+            }
+
+            return [item.nama_mapel, item.guru, item.tahun_ajaran]
+                .filter(Boolean)
+                .some((value) => String(value).toLowerCase().includes(search));
+        });
+    }, [subjectSearch, subjects]);
+
+    const filteredLearningPlans = useMemo(() => {
+        const search = learningPlanSearch.trim().toLowerCase();
+
+        return learningPlans.filter((item) => {
+            if (search === '') {
+                return true;
+            }
+
+            return [item.nama_mapel, item.status, item.sumber]
+                .filter(Boolean)
+                .some((value) => String(value).toLowerCase().includes(search));
+        });
+    }, [learningPlanSearch, learningPlans]);
 
     return (
-        <DashboardLayout title="Profil Siswa" user={session?.user} navigation={navigation} onLogout={onLogout} profileHref="/siswa/dashboard">
+        <DashboardLayout title="Profil Siswa" user={session?.user} navigation={siswaNavigation} onLogout={onLogout} profileHref="/siswa/dashboard">
             <div className="space-y-6">
                 <section className="rounded-3xl border border-slate-200 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800 p-6 text-white shadow-sm">
                     <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
@@ -115,19 +152,39 @@ export default function SiswaProfilePage({ session, onLogout }) {
                             <p className="text-sm font-medium uppercase tracking-[0.3em] text-slate-500">Riwayat Kelas</p>
                             <h3 className="mt-2 text-xl font-semibold text-slate-900">Perpindahan dan histori kelas</h3>
 
-                            <div className="mt-6 space-y-3">
-                                {classHistory.slice(0, 6).map((item) => (
-                                    <div key={item.id_kelas_siswa} className="flex items-center justify-between gap-3 rounded-2xl bg-slate-50 px-4 py-3">
-                                        <div>
-                                            <p className="font-semibold text-slate-900">{item.nama_kelas || '-'}</p>
-                                            <p className="text-sm text-slate-500">{item.tahun_ajaran || '-'}</p>
-                                        </div>
-                                        <span className={`rounded-full px-3 py-1 text-xs font-semibold ${item.is_aktif ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-700'}`}>
-                                            {item.is_aktif ? 'Aktif' : 'Riwayat'}
-                                        </span>
-                                    </div>
-                                ))}
-                                {classHistory.length === 0 ? <div className="rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-500">Belum ada riwayat kelas.</div> : null}
+                            <label className="mt-4 block space-y-2 text-sm font-medium text-slate-700">
+                                <span>Cari riwayat kelas</span>
+                                <input value={classHistorySearch} onChange={(event) => setClassHistorySearch(event.target.value)} className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-slate-900" placeholder="Nama kelas, tahun ajaran, atau status" />
+                            </label>
+
+                            <div className="mt-6 overflow-x-auto rounded-3xl border border-slate-200">
+                                <table className="min-w-full divide-y divide-slate-200 text-left text-sm">
+                                    <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase tracking-[0.2em] text-slate-500">
+                                        <tr>
+                                            <th className="px-4 py-3 font-semibold">Kelas</th>
+                                            <th className="px-4 py-3 font-semibold">Tahun Ajaran</th>
+                                            <th className="px-4 py-3 font-semibold">Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-100 bg-white">
+                                        {filteredClassHistory.map((item) => (
+                                            <tr key={item.id_kelas_siswa} className="align-top hover:bg-slate-50/70">
+                                                <td className="px-4 py-3 font-semibold text-slate-900">{item.nama_kelas || '-'}</td>
+                                                <td className="px-4 py-3 text-slate-600">{item.tahun_ajaran || '-'}</td>
+                                                <td className="px-4 py-3">
+                                                    <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${item.is_aktif ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-700'}`}>
+                                                        {item.is_aktif ? 'Aktif' : 'Riwayat'}
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                        {filteredClassHistory.length === 0 ? (
+                                            <tr>
+                                                <td colSpan="3" className="px-4 py-4 text-sm text-slate-500">Belum ada riwayat kelas.</td>
+                                            </tr>
+                                        ) : null}
+                                    </tbody>
+                                </table>
                             </div>
                         </div>
                     </div>
@@ -137,14 +194,35 @@ export default function SiswaProfilePage({ session, onLogout }) {
                             <p className="text-sm font-medium uppercase tracking-[0.3em] text-slate-500">Mapel Aktif</p>
                             <h3 className="mt-2 text-xl font-semibold text-slate-900">Mata pelajaran yang terhubung ke kelas aktif</h3>
 
-                            <div className="mt-6 grid gap-3 md:grid-cols-2">
-                                {subjects.slice(0, 6).map((item) => (
-                                    <div key={item.id_penugasan_pembelajaran} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                                        <p className="font-semibold text-slate-900">{item.nama_mapel || '-'}</p>
-                                        <p className="mt-1 text-sm text-slate-500">{item.guru || '-'} • {item.tahun_ajaran || '-'}</p>
-                                    </div>
-                                ))}
-                                {subjects.length === 0 ? <div className="rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-500 md:col-span-2">Belum ada penugasan mapel untuk kelas aktif.</div> : null}
+                            <label className="mt-4 block space-y-2 text-sm font-medium text-slate-700">
+                                <span>Cari mapel aktif</span>
+                                <input value={subjectSearch} onChange={(event) => setSubjectSearch(event.target.value)} className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-slate-900" placeholder="Mata pelajaran, guru, atau tahun ajaran" />
+                            </label>
+
+                            <div className="mt-6 overflow-x-auto rounded-3xl border border-slate-200">
+                                <table className="min-w-full divide-y divide-slate-200 text-left text-sm">
+                                    <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase tracking-[0.2em] text-slate-500">
+                                        <tr>
+                                            <th className="px-4 py-3 font-semibold">Mata Pelajaran</th>
+                                            <th className="px-4 py-3 font-semibold">Guru</th>
+                                            <th className="px-4 py-3 font-semibold">Tahun Ajaran</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-100 bg-white">
+                                        {filteredSubjects.map((item) => (
+                                            <tr key={item.id_penugasan_pembelajaran} className="align-top hover:bg-slate-50/70">
+                                                <td className="px-4 py-3 font-semibold text-slate-900">{item.nama_mapel || '-'}</td>
+                                                <td className="px-4 py-3 text-slate-600">{item.guru || '-'}</td>
+                                                <td className="px-4 py-3 text-slate-600">{item.tahun_ajaran || '-'}</td>
+                                            </tr>
+                                        ))}
+                                        {filteredSubjects.length === 0 ? (
+                                            <tr>
+                                                <td colSpan="3" className="px-4 py-4 text-sm text-slate-500">Belum ada penugasan mapel untuk kelas aktif.</td>
+                                            </tr>
+                                        ) : null}
+                                    </tbody>
+                                </table>
                             </div>
                         </div>
 
@@ -152,17 +230,35 @@ export default function SiswaProfilePage({ session, onLogout }) {
                             <p className="text-sm font-medium uppercase tracking-[0.3em] text-slate-500">Rencana Belajar</p>
                             <h3 className="mt-2 text-xl font-semibold text-slate-900">Kartu belajar yang sudah disimpan</h3>
 
-                            <div className="mt-6 space-y-3">
-                                {learningPlans.slice(0, 6).map((item) => (
-                                    <div key={item.id_rencana_belajar} className="flex items-center justify-between gap-3 rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-600">
-                                        <div>
-                                            <p className="font-semibold text-slate-900">{item.nama_mapel || '-'}</p>
-                                            <p className="text-xs text-slate-500">{item.status} • {item.sumber}</p>
-                                        </div>
-                                        <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-slate-600">Rencana</span>
-                                    </div>
-                                ))}
-                                {learningPlans.length === 0 ? <div className="rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-500">Belum ada kartu rencana belajar.</div> : null}
+                            <label className="mt-4 block space-y-2 text-sm font-medium text-slate-700">
+                                <span>Cari rencana belajar</span>
+                                <input value={learningPlanSearch} onChange={(event) => setLearningPlanSearch(event.target.value)} className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-slate-900" placeholder="Mapel, status, atau sumber" />
+                            </label>
+
+                            <div className="mt-6 overflow-x-auto rounded-3xl border border-slate-200">
+                                <table className="min-w-full divide-y divide-slate-200 text-left text-sm">
+                                    <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase tracking-[0.2em] text-slate-500">
+                                        <tr>
+                                            <th className="px-4 py-3 font-semibold">Mapel</th>
+                                            <th className="px-4 py-3 font-semibold">Status</th>
+                                            <th className="px-4 py-3 font-semibold">Sumber</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-100 bg-white">
+                                        {filteredLearningPlans.map((item) => (
+                                            <tr key={item.id_rencana_belajar} className="align-top hover:bg-slate-50/70">
+                                                <td className="px-4 py-3 font-semibold text-slate-900">{item.nama_mapel || '-'}</td>
+                                                <td className="px-4 py-3 text-slate-600">{item.status || '-'}</td>
+                                                <td className="px-4 py-3 text-slate-600">{item.sumber || '-'}</td>
+                                            </tr>
+                                        ))}
+                                        {filteredLearningPlans.length === 0 ? (
+                                            <tr>
+                                                <td colSpan="3" className="px-4 py-4 text-sm text-slate-500">Belum ada kartu rencana belajar.</td>
+                                            </tr>
+                                        ) : null}
+                                    </tbody>
+                                </table>
                             </div>
                         </div>
                     </div>

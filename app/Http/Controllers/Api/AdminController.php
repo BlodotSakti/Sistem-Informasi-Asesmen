@@ -605,8 +605,10 @@ class AdminController extends Controller
         $data = $request->validate([
             'id_guru_wali' => ['required', 'integer', 'exists:guru,id_guru'],
             'nama_kelas' => ['required', 'string', 'max:100'],
-            'tahun_ajaran' => ['required', 'string', 'max:20'],
+            'tahun_ajaran' => ['required', 'string', 'max:255'],
         ]);
+
+        $data['tahun_ajaran'] = $this->normalizeTahunAjaran($data['tahun_ajaran']);
 
         return response()->json(Kelas::create($data), 201);
     }
@@ -621,8 +623,12 @@ class AdminController extends Controller
         $data = $request->validate([
             'id_guru_wali' => ['sometimes', 'integer', 'exists:guru,id_guru'],
             'nama_kelas' => ['sometimes', 'string', 'max:100'],
-            'tahun_ajaran' => ['sometimes', 'string', 'max:20'],
+            'tahun_ajaran' => ['sometimes', 'string', 'max:255'],
         ]);
+
+        if (array_key_exists('tahun_ajaran', $data)) {
+            $data['tahun_ajaran'] = $this->normalizeTahunAjaran($data['tahun_ajaran']);
+        }
 
         $kelas->update($data);
 
@@ -927,6 +933,19 @@ class AdminController extends Controller
         $value = trim((string) $value);
 
         return $value !== '' ? $value : null;
+    }
+
+    protected function normalizeTahunAjaran(mixed $value): string
+    {
+        $value = trim((string) $value);
+
+        if ($value === '') {
+            return $value;
+        }
+
+        $shortValue = explode(' - ', $value, 2)[0] ?? $value;
+
+        return trim($shortValue);
     }
 
     protected function deactivateOtherKelasSiswaAssignments(int $idSiswa, ?int $exceptId = null): void

@@ -79,6 +79,36 @@ class AdminMasterDataTest extends TestCase
         $invalid->assertJsonValidationErrors(['tingkat']);
     }
 
+    public function test_admin_can_create_kelas_with_long_tahun_ajaran_label(): void
+    {
+        $this->createAdminUser();
+        $token = $this->loginToken('operator01');
+
+        $guruUser = Pengguna::create([
+            'username' => '198801012026010781',
+            'password' => 'secret123',
+            'role' => 'guru',
+        ]);
+        $guru = $guruUser->guru()->create([
+            'nama_lengkap' => 'Guru Kelas Uji',
+            'nip' => '198801012026010781',
+        ]);
+
+        $create = $this->withToken($token)->postJson('/api/admin/kelas', [
+            'id_guru_wali' => $guru->id_guru,
+            'nama_kelas' => 'XI IPA 9',
+            'tahun_ajaran' => '2026/2027 - Semester Ganjil',
+        ]);
+
+        $create->assertCreated();
+        $create->assertJsonPath('tahun_ajaran', '2026/2027');
+
+        $this->assertDatabaseHas('kelas', [
+            'nama_kelas' => 'XI IPA 9',
+            'tahun_ajaran' => '2026/2027',
+        ]);
+    }
+
     public function test_bulk_import_creates_guru_and_siswa_accounts_from_excel(): void
     {
         $this->createAdminUser();

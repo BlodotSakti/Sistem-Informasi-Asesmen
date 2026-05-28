@@ -29,6 +29,10 @@ Route::view('/admin/import-akun', 'app');
 Route::view('/guru/dashboard', 'app');
 Route::view('/siswa/dashboard', 'app');
 Route::view('/siswa/profil', 'app');
+Route::view('/siswa/sesi-aktif', 'app');
+Route::view('/siswa/rencana-belajar', 'app');
+Route::view('/siswa/tren-nilai', 'app');
+Route::view('/siswa/apresiasi', 'app');
 
 Route::resource('pengguna', PenggunaController::class);
 Route::resource('admin', AdminController::class);

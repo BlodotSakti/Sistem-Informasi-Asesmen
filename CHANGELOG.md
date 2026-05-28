@@ -15,3 +15,4 @@
 - Added search/filter controls and Excel/CSV bulk import for Siswa-Kelas and Guru-Mapel relation management.
 - Surfaced relation counts on the admin and guru dashboards so the latest assignment data is visible at a glance.
 - Added downloadable CSV/XLSX templates for Siswa-Kelas and Guru-Mapel bulk import flows.
+- Split student navigation into separate route-based pages for dashboard, profile, sessions, learning plans, trends, and appreciation.
