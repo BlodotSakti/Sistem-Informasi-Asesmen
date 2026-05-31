@@ -8,29 +8,149 @@ use App\Models\Apresiasi;
 use App\Models\BankSoal;
 use App\Models\BeritaAcara;
 use App\Models\CatatanPrivat;
+use App\Models\KelasSiswa;
 use App\Models\Kelas;
 use App\Models\PenugasanPembelajaran;
 use App\Models\SesiAsesmen;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class GuruController extends Controller
 {
+    public function workspaceData(Request $request): JsonResponse
+    {
+        $guruId = $request->user()->guru->id_guru;
+
+        $assignments = PenugasanPembelajaran::query()
+            ->with(['kelas', 'mataPelajaran'])
+            ->where('id_guru', $guruId)
+            ->where('is_aktif', true)
+            ->orderByDesc('id_penugasan_pembelajaran')
+            ->get();
+
+        $kelasIds = $assignments->pluck('id_kelas')->unique()->values();
+
+        $activeClassStudents = KelasSiswa::query()
+            ->with('siswa')
+            ->whereIn('id_kelas', $kelasIds)
+            ->where('is_aktif', true)
+            ->orderBy('id_kelas')
+            ->get();
+
+        $studentsByClass = $activeClassStudents
+            ->groupBy('id_kelas')
+            ->map(fn (Collection $items): array => $items
+                ->map(fn (KelasSiswa $item): array => [
+                    'id_siswa' => $item->id_siswa,
+                    'nama_lengkap' => $item->siswa?->nama_lengkap,
+                    'nisn' => $item->siswa?->nisn,
+                ])
+                ->values()
+                ->all())
+            ->all();
+
+        $bankSoal = BankSoal::query()
+            ->with('mataPelajaran')
+            ->where('id_guru', $guruId)
+            ->latest('id_soal')
+            ->limit(30)
+            ->get();
+
+        $beritaAcara = BeritaAcara::query()
+            ->with(['kelas', 'mataPelajaran'])
+            ->where('id_guru', $guruId)
+            ->latest('tanggal')
+            ->latest('id_berita_acara')
+            ->limit(30)
+            ->get();
+
+        return response()->json([
+            'teaching_assignments' => $assignments,
+            'kelas_options' => $assignments
+                ->map(fn (PenugasanPembelajaran $item): array => [
+                    'id_kelas' => $item->id_kelas,
+                    'nama_kelas' => $item->kelas?->nama_kelas,
+                    'tahun_ajaran' => $item->tahun_ajaran,
+                ])
+                ->unique('id_kelas')
+                ->values(),
+            'mapel_options' => $assignments
+                ->map(fn (PenugasanPembelajaran $item): array => [
+                    'id_mapel' => $item->id_mapel,
+                    'nama_mapel' => $item->mataPelajaran?->nama_mapel,
+                    'tingkat' => $item->mataPelajaran?->tingkat,
+                ])
+                ->unique('id_mapel')
+                ->values(),
+            'students_by_class' => $studentsByClass,
+            'bank_soal' => $bankSoal,
+            'berita_acara' => $beritaAcara,
+        ]);
+    }
+
+    public function bankSoalIndex(Request $request): JsonResponse
+    {
+        $guruId = $request->user()->guru->id_guru;
+
+        return response()->json(
+            BankSoal::query()
+                ->with('mataPelajaran')
+                ->where('id_guru', $guruId)
+                ->latest('id_soal')
+                ->paginate(15)
+        );
+    }
+
     public function bankSoalStore(Request $request): JsonResponse
     {
-        $data = $request->validate([
+        $validator = validator($request->all(), [
             'id_mapel' => ['required', 'integer', 'exists:mata_pelajaran,id_mapel'],
             'isi_soal' => ['required', 'string'],
             'jenis_soal' => ['required', 'in:pilihan_ganda,esai'],
             'kunci_jawaban' => ['required', 'string'],
             'topik_materi' => ['required', 'string', 'max:255'],
             'level_kognitif' => ['required', 'in:C1,C2,C3,C4,C5,C6'],
+            'opsi_jawaban' => ['nullable', 'array'],
+            'opsi_jawaban.*' => ['nullable', 'string', 'max:255'],
         ]);
+
+        $validator->after(function ($validator) use ($request): void {
+            $jenisSoal = $request->input('jenis_soal');
+            $opsi = collect($request->input('opsi_jawaban', []))
+                ->map(fn ($item) => trim((string) $item))
+                ->filter()
+                ->values();
+
+            if ($jenisSoal === 'pilihan_ganda') {
+                if ($opsi->count() < 2) {
+                    $validator->errors()->add('opsi_jawaban', 'Minimal dua opsi jawaban diperlukan untuk soal pilihan ganda.');
+                }
+
+                if ($opsi->count() > 0 && ! $opsi->contains(trim((string) $request->input('kunci_jawaban')))) {
+                    $validator->errors()->add('kunci_jawaban', 'Kunci jawaban harus sesuai salah satu opsi pilihan ganda.');
+                }
+            }
+        });
+
+        $data = $validator->validate();
 
         $guruId = $request->user()->guru->id_guru;
         $this->ensureGuruMengampuMapel($guruId, (int) $data['id_mapel']);
 
+        $cleanOptions = collect($data['opsi_jawaban'] ?? [])
+            ->map(fn ($item) => trim((string) $item))
+            ->filter()
+            ->values()
+            ->all();
+
+        if ($data['jenis_soal'] === 'esai') {
+            $cleanOptions = [];
+        }
+
         $data['id_guru'] = $guruId;
+        $data['opsi_jawaban'] = $cleanOptions;
 
         return response()->json(BankSoal::create($data), 201);
     }
@@ -54,17 +174,41 @@ class GuruController extends Controller
 
     public function beritaAcaraStore(Request $request): JsonResponse
     {
+        $guruId = $request->user()->guru->id_guru;
+
         $data = $request->validate([
             'id_kelas' => ['required', 'integer', 'exists:kelas,id_kelas'],
+            'id_mapel' => ['required', 'integer', 'exists:mata_pelajaran,id_mapel'],
             'pertemuan_ke' => ['required', 'integer', 'min:1'],
             'tanggal' => ['required', 'date'],
             'materi_bahasan' => ['required', 'string', 'max:255'],
+            'evaluasi_kendala' => ['required', 'string'],
             'catatan_kelas' => ['required', 'string'],
+            'kehadiran_siswa' => ['required', 'array', 'min:1'],
+            'kehadiran_siswa.*.id_siswa' => ['required', 'integer', 'exists:siswa,id_siswa'],
+            'kehadiran_siswa.*.status_kehadiran' => ['required', Rule::in(['hadir', 'izin', 'sakit', 'alpa'])],
         ]);
 
-        $data['id_guru'] = $request->user()->guru->id_guru;
+        $this->ensureGuruMengampuKelasDanMapel($guruId, (int) $data['id_kelas'], (int) $data['id_mapel']);
+        $this->validateKehadiranLengkap((int) $data['id_kelas'], $data['kehadiran_siswa']);
+
+        $data['id_guru'] = $guruId;
 
         return response()->json(BeritaAcara::create($data), 201);
+    }
+
+    public function beritaAcaraIndex(Request $request): JsonResponse
+    {
+        $guruId = $request->user()->guru->id_guru;
+
+        return response()->json(
+            BeritaAcara::query()
+                ->with(['kelas', 'mataPelajaran'])
+                ->where('id_guru', $guruId)
+                ->latest('tanggal')
+                ->latest('id_berita_acara')
+                ->paginate(15)
+        );
     }
 
     public function catatanPrivatStore(Request $request): JsonResponse
@@ -195,6 +339,49 @@ class GuruController extends Controller
         if (! $exists) {
             abort(response()->json([
                 'message' => 'Guru belum ditugaskan untuk kelas dan mata pelajaran tersebut.',
+            ], 422));
+        }
+    }
+
+    protected function validateKehadiranLengkap(int $idKelas, array $kehadiran): void
+    {
+        $aktifSiswaIds = KelasSiswa::query()
+            ->where('id_kelas', $idKelas)
+            ->where('is_aktif', true)
+            ->pluck('id_siswa')
+            ->map(fn ($item) => (int) $item)
+            ->values();
+
+        if ($aktifSiswaIds->isEmpty()) {
+            abort(response()->json([
+                'message' => 'Kelas belum memiliki siswa aktif untuk dicatat pada berita acara.',
+            ], 422));
+        }
+
+        $submittedIds = collect($kehadiran)
+            ->pluck('id_siswa')
+            ->map(fn ($item) => (int) $item)
+            ->values();
+
+        if ($submittedIds->count() !== $submittedIds->unique()->count()) {
+            abort(response()->json([
+                'message' => 'Data kehadiran tidak boleh memiliki siswa duplikat.',
+            ], 422));
+        }
+
+        $missingIds = $aktifSiswaIds->diff($submittedIds)->values();
+
+        if ($missingIds->isNotEmpty()) {
+            abort(response()->json([
+                'message' => 'Presensi tidak lengkap. Semua siswa aktif di kelas harus dicatat kehadirannya.',
+            ], 422));
+        }
+
+        $invalidIds = $submittedIds->diff($aktifSiswaIds)->values();
+
+        if ($invalidIds->isNotEmpty()) {
+            abort(response()->json([
+                'message' => 'Terdapat siswa yang tidak termasuk kelas aktif ini pada data kehadiran.',
             ], 422));
         }
     }

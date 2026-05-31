@@ -27,6 +27,8 @@ Route::view('/admin/kelas-siswa', 'app');
 Route::view('/admin/penugasan-pembelajaran', 'app');
 Route::view('/admin/import-akun', 'app');
 Route::view('/guru/dashboard', 'app');
+Route::view('/guru/bank-soal', 'app');
+Route::view('/guru/berita-acara', 'app');
 Route::view('/siswa/dashboard', 'app');
 Route::view('/siswa/profil', 'app');
 Route::view('/siswa/sesi-aktif', 'app');

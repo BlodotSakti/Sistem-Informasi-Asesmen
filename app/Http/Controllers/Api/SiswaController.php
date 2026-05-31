@@ -5,7 +5,9 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\AnalisisDiagnostik;
 use App\Models\Apresiasi;
+use App\Models\BeritaAcara;
 use App\Models\CatatanPrivat;
+use App\Models\KelasSiswa;
 use App\Models\JawabanSiswa;
 use App\Models\PenugasanPembelajaran;
 use App\Models\RencanaBelajar;
@@ -188,6 +190,104 @@ class SiswaController extends Controller
                 'nama_mapel' => $item->mataPelajaran?->nama_mapel,
                 'guru' => $item->guru?->nama_lengkap,
             ])->values(),
+        ]);
+    }
+
+    public function riwayatPembelajaran(Request $request): JsonResponse
+    {
+        $pengguna = $request->user()->loadMissing([
+            'siswa.kelasRiwayat.kelas.guruWali',
+            'siswa.kelasAktifAssignment.kelas.guruWali',
+        ]);
+
+        $siswa = $pengguna->siswa;
+        $idSiswa = $siswa->id_siswa;
+
+        $kelasAssignments = $siswa->kelasRiwayat()
+            ->with('kelas.guruWali')
+            ->orderByDesc('tanggal_masuk')
+            ->get();
+
+        $kelasIds = $kelasAssignments->pluck('id_kelas')->unique()->values();
+
+        $beritaAcara = BeritaAcara::query()
+            ->with(['kelas', 'mataPelajaran'])
+            ->when($kelasIds->isNotEmpty(), fn ($query) => $query->whereIn('id_kelas', $kelasIds))
+            ->orderByDesc('tanggal')
+            ->orderByDesc('pertemuan_ke')
+            ->get()
+            ->filter(function (BeritaAcara $item) use ($kelasAssignments, $idSiswa): bool {
+                $matchingAssignments = $kelasAssignments->where('id_kelas', $item->id_kelas);
+                $attendance = collect($item->kehadiran_siswa ?? [])->first(fn ($row): bool => (string) ($row['id_siswa'] ?? '') === (string) $idSiswa);
+
+                if ($matchingAssignments->isEmpty()) {
+                    return (bool) $attendance;
+                }
+
+                $tanggal = $item->tanggal?->toDateString();
+
+                foreach ($matchingAssignments as $assignment) {
+                    $masuk = $assignment->tanggal_masuk?->toDateString();
+                    $keluar = $assignment->tanggal_keluar?->toDateString();
+
+                    if ($masuk && $tanggal < $masuk) {
+                        continue;
+                    }
+
+                    if ($keluar && $tanggal > $keluar) {
+                        continue;
+                    }
+
+                    return true;
+                }
+
+                return (bool) $attendance;
+            })
+            ->map(function (BeritaAcara $item) use ($idSiswa): array {
+                $attendance = collect($item->kehadiran_siswa ?? [])->first(fn ($row): bool => (string) ($row['id_siswa'] ?? '') === (string) $idSiswa);
+
+                return [
+                    'id_berita_acara' => $item->id_berita_acara,
+                    'id_kelas' => $item->id_kelas,
+                    'nama_kelas' => $item->kelas?->nama_kelas,
+                    'tahun_ajaran' => $item->kelas?->tahun_ajaran,
+                    'id_mapel' => $item->id_mapel,
+                    'nama_mapel' => $item->mataPelajaran?->nama_mapel,
+                    'pertemuan_ke' => $item->pertemuan_ke,
+                    'tanggal' => $item->tanggal?->format('d/m/Y'),
+                    'tanggal_raw' => $item->tanggal?->toDateString(),
+                    'materi_bahasan' => $item->materi_bahasan,
+                    'evaluasi_kendala' => $item->evaluasi_kendala,
+                    'catatan_kelas' => $item->catatan_kelas,
+                    'status_kehadiran' => $attendance['status_kehadiran'] ?? 'belum_dicatat',
+                ];
+            })
+            ->values();
+
+        $subjectSummary = $beritaAcara
+            ->groupBy('id_mapel')
+            ->map(function ($items) {
+                $first = $items->first();
+
+                return [
+                    'id_mapel' => $first['id_mapel'],
+                    'nama_mapel' => $first['nama_mapel'],
+                    'total_pertemuan' => $items->count(),
+                    'pertemuan_terakhir' => $first['tanggal'],
+                ];
+            })
+            ->values();
+
+        return response()->json([
+            'total_pertemuan' => $beritaAcara->count(),
+            'summary_kehadiran' => [
+                'hadir' => $beritaAcara->where('status_kehadiran', 'hadir')->count(),
+                'izin' => $beritaAcara->where('status_kehadiran', 'izin')->count(),
+                'sakit' => $beritaAcara->where('status_kehadiran', 'sakit')->count(),
+                'alpa' => $beritaAcara->where('status_kehadiran', 'alpa')->count(),
+            ],
+            'mata_pelajaran' => $subjectSummary,
+            'data' => $beritaAcara,
         ]);
     }
 

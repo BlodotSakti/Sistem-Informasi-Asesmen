@@ -53,6 +53,22 @@ class AppShellTest extends TestCase
         $response->assertSee('id="app"', false);
     }
 
+    public function test_guru_pages_are_served(): void
+    {
+        $pages = [
+            '/guru/dashboard',
+            '/guru/bank-soal',
+            '/guru/berita-acara',
+        ];
+
+        foreach ($pages as $page) {
+            $response = $this->get($page);
+
+            $response->assertOk();
+            $response->assertSee('id="app"', false);
+        }
+    }
+
     public function test_student_pages_are_served(): void
     {
         $pages = [

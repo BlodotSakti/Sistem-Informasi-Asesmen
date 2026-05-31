@@ -53,9 +53,14 @@ class BankSoal extends Model
         'id_mapel',
         'isi_soal',
         'jenis_soal',
+        'opsi_jawaban',
         'kunci_jawaban',
         'topik_materi',
         'level_kognitif',
+    ];
+
+    protected $casts = [
+        'opsi_jawaban' => 'array',
     ];
 
     public function guru(): BelongsTo

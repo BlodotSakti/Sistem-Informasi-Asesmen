@@ -16,3 +16,8 @@
 - Surfaced relation counts on the admin and guru dashboards so the latest assignment data is visible at a glance.
 - Added downloadable CSV/XLSX templates for Siswa-Kelas and Guru-Mapel bulk import flows.
 - Split student navigation into separate route-based pages for dashboard, profile, sessions, learning plans, trends, and appreciation.
+- Added dedicated guru pages for Bank Soal and Berita Acara with route-based navigation and user-friendly forms.
+- Enhanced Bank Soal validation with mandatory topik materi + Bloom level (C1-C6), pilihan ganda option checks, and assignment-aware mapel validation.
+- Enhanced Berita Acara with per-student attendance input, meeting evaluation/kendala notes, and strict validation requiring complete attendance for all active class students.
+- Added guru workspace API endpoints to serve assignment-based options and recent Bank Soal/Berita Acara data for integrated UI flows.
+- Added feature tests for new guru Bank Soal and Berita Acara behavior, plus web shell tests for new guru routes.

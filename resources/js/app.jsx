@@ -53,6 +53,8 @@ function App() {
             '/admin/penugasan-pembelajaran',
             '/admin/import-akun',
             '/guru/dashboard',
+            '/guru/bank-soal',
+            '/guru/berita-acara',
             '/siswa/dashboard',
             '/siswa/profil',
             '/siswa/sesi-aktif',
@@ -140,8 +142,14 @@ function App() {
             return <AdminWorkspacePage session={session} onLogout={onLogout} mode={adminRouteMap[pathname]} />;
         }
 
-        if (pathname === '/guru/dashboard') {
-            return <GuruDashboard session={session} onLogout={onLogout} />;
+        const guruRouteMap = {
+            '/guru/dashboard': 'dashboard',
+            '/guru/bank-soal': 'bank-soal',
+            '/guru/berita-acara': 'berita-acara',
+        };
+
+        if (guruRouteMap[pathname]) {
+            return <GuruDashboard session={session} onLogout={onLogout} mode={guruRouteMap[pathname]} />;
         }
 
         if (pathname === '/siswa/dashboard') {

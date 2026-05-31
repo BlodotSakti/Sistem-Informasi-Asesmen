@@ -323,6 +323,129 @@ class DashboardSummaryTest extends TestCase
         $response->assertJsonStructure(['data']);
     }
 
+    public function test_siswa_riwayat_pembelajaran_returns_bap_with_attendance_status(): void
+    {
+        $siswa = $this->makeUser('siswa', 'siswa05', 'Siswa Lima', ['nisn' => '1234567894']);
+        $guru = $this->makeUser('guru', 'guru05', 'Guru Lima', ['nip' => '198801012026010005']);
+        $mapel = MataPelajaran::create([
+            'nama_mapel' => 'Geografi',
+            'tingkat' => 'XI',
+        ]);
+
+        $kelas = Kelas::create([
+            'id_guru_wali' => $guru->guru->id_guru,
+            'nama_kelas' => 'XI IPS 2',
+            'tahun_ajaran' => '2025/2026',
+        ]);
+
+        KelasSiswa::create([
+            'id_kelas' => $kelas->id_kelas,
+            'id_siswa' => $siswa->siswa->id_siswa,
+            'tahun_ajaran' => '2025/2026',
+            'is_aktif' => true,
+            'tanggal_masuk' => now()->subMonths(2)->toDateString(),
+        ]);
+
+        PenugasanPembelajaran::create([
+            'id_kelas' => $kelas->id_kelas,
+            'id_mapel' => $mapel->id_mapel,
+            'id_guru' => $guru->guru->id_guru,
+            'tahun_ajaran' => '2025/2026',
+            'is_aktif' => true,
+        ]);
+
+        BeritaAcara::create([
+            'id_kelas' => $kelas->id_kelas,
+            'id_guru' => $guru->guru->id_guru,
+            'id_mapel' => $mapel->id_mapel,
+            'pertemuan_ke' => 3,
+            'tanggal' => now()->toDateString(),
+            'materi_bahasan' => 'Peta Dunia',
+            'evaluasi_kendala' => 'Perlu penguatan simbol peta.',
+            'catatan_kelas' => 'Diskusi berjalan aktif.',
+            'kehadiran_siswa' => [
+                [
+                    'id_siswa' => $siswa->siswa->id_siswa,
+                    'status_kehadiran' => 'hadir',
+                ],
+            ],
+        ]);
+
+        $response = $this->withToken($this->loginToken('siswa05'))->getJson('/api/siswa/riwayat-pembelajaran');
+
+        $response->assertOk();
+        $response->assertJsonPath('total_pertemuan', 1);
+        $response->assertJsonPath('summary_kehadiran.hadir', 1);
+        $response->assertJsonPath('data.0.nama_mapel', 'Geografi');
+        $response->assertJsonPath('data.0.status_kehadiran', 'hadir');
+        $response->assertJsonPath('data.0.materi_bahasan', 'Peta Dunia');
+    }
+
+    public function test_siswa_riwayat_pembelajaran_keeps_bap_for_multiple_class_periods_in_same_class(): void
+    {
+        $siswa = $this->makeUser('siswa', 'siswa05b', 'Siswa Lima B', ['nisn' => '1234567895']);
+        $guru = $this->makeUser('guru', 'guru05b', 'Guru Lima B', ['nip' => '198801012026010055']);
+        $mapel = MataPelajaran::create([
+            'nama_mapel' => 'Geografi',
+            'tingkat' => 'XI',
+        ]);
+
+        $kelas = Kelas::create([
+            'id_guru_wali' => $guru->guru->id_guru,
+            'nama_kelas' => 'XI IPS 3',
+            'tahun_ajaran' => '2025/2026',
+        ]);
+
+        KelasSiswa::create([
+            'id_kelas' => $kelas->id_kelas,
+            'id_siswa' => $siswa->siswa->id_siswa,
+            'tahun_ajaran' => '2024/2025',
+            'is_aktif' => false,
+            'tanggal_masuk' => '2024-01-01',
+            'tanggal_keluar' => '2024-06-01',
+        ]);
+
+        KelasSiswa::create([
+            'id_kelas' => $kelas->id_kelas,
+            'id_siswa' => $siswa->siswa->id_siswa,
+            'tahun_ajaran' => '2025/2026',
+            'is_aktif' => true,
+            'tanggal_masuk' => '2025-01-01',
+        ]);
+
+        PenugasanPembelajaran::create([
+            'id_kelas' => $kelas->id_kelas,
+            'id_mapel' => $mapel->id_mapel,
+            'id_guru' => $guru->guru->id_guru,
+            'tahun_ajaran' => '2025/2026',
+            'is_aktif' => true,
+        ]);
+
+        BeritaAcara::create([
+            'id_kelas' => $kelas->id_kelas,
+            'id_guru' => $guru->guru->id_guru,
+            'id_mapel' => $mapel->id_mapel,
+            'pertemuan_ke' => 2,
+            'tanggal' => '2025-05-15',
+            'materi_bahasan' => 'Atlas dan peta',
+            'evaluasi_kendala' => 'Perlu latihan membaca skala.',
+            'catatan_kelas' => 'Siswa cukup aktif.',
+            'kehadiran_siswa' => [
+                [
+                    'id_siswa' => $siswa->siswa->id_siswa,
+                    'status_kehadiran' => 'hadir',
+                ],
+            ],
+        ]);
+
+        $response = $this->withToken($this->loginToken('siswa05b'))->getJson('/api/siswa/riwayat-pembelajaran');
+
+        $response->assertOk();
+        $response->assertJsonPath('total_pertemuan', 1);
+        $response->assertJsonPath('data.0.materi_bahasan', 'Atlas dan peta');
+        $response->assertJsonPath('data.0.status_kehadiran', 'hadir');
+    }
+
     public function test_guru_cannot_create_bank_soal_for_unassigned_mapel(): void
     {
         $guru = $this->makeUser('guru', 'guru04', 'Guru Empat', ['nip' => '198801012026010004']);

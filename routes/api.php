@@ -62,8 +62,11 @@ Route::middleware('auth:sanctum')->group(function (): void {
 
 		Route::prefix('guru')->as('api.guru.')->middleware('role:guru')->group(function (): void {
 			Route::get('/dashboard-summary', [GuruController::class, 'dashboardSummary'])->name('dashboard-summary');
+			Route::get('/workspace-data', [GuruController::class, 'workspaceData'])->name('workspace-data');
+			Route::get('/bank-soal', [GuruController::class, 'bankSoalIndex'])->name('bank-soal.index');
 			Route::post('/bank-soal', [GuruController::class, 'bankSoalStore'])->name('bank-soal.store');
 			Route::post('/sesi-asesmen', [GuruController::class, 'sesiAsesmenStore'])->name('sesi-asesmen.store');
+			Route::get('/berita-acara', [GuruController::class, 'beritaAcaraIndex'])->name('berita-acara.index');
 			Route::post('/berita-acara', [GuruController::class, 'beritaAcaraStore'])->name('berita-acara.store');
 			Route::post('/catatan-privat', [GuruController::class, 'catatanPrivatStore'])->name('catatan-privat.store');
 			Route::post('/apresiasi', [GuruController::class, 'apresiasiStore'])->name('apresiasi.store');

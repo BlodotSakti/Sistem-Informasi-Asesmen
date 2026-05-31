@@ -5,14 +5,18 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use App\Models\MataPelajaran;
 
 /**
  * @property int $id_berita_acara
  * @property int $id_kelas
  * @property int $id_guru
+ * @property int $id_mapel
  * @property int $pertemuan_ke
  * @property \Illuminate\Support\Carbon $tanggal
  * @property string $materi_bahasan
+ * @property array<int, array<string, mixed>> $kehadiran_siswa
+ * @property string $evaluasi_kendala
  * @property string $catatan_kelas
  * @property \Illuminate\Support\Carbon|null $created_at
  * @property \Illuminate\Support\Carbon|null $updated_at
@@ -43,14 +47,18 @@ class BeritaAcara extends Model
     protected $fillable = [
         'id_kelas',
         'id_guru',
+        'id_mapel',
         'pertemuan_ke',
         'tanggal',
         'materi_bahasan',
+        'kehadiran_siswa',
+        'evaluasi_kendala',
         'catatan_kelas',
     ];
 
     protected $casts = [
         'tanggal' => 'date',
+        'kehadiran_siswa' => 'array',
     ];
 
     public function kelas(): BelongsTo
@@ -61,5 +69,10 @@ class BeritaAcara extends Model
     public function guru(): BelongsTo
     {
         return $this->belongsTo(Guru::class, 'id_guru', 'id_guru');
+    }
+
+    public function mataPelajaran(): BelongsTo
+    {
+        return $this->belongsTo(MataPelajaran::class, 'id_mapel', 'id_mapel');
     }
 }

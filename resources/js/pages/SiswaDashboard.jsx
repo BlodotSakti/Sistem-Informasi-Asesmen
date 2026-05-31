@@ -41,6 +41,11 @@ export default function SiswaDashboard({ session, onLogout }) {
                         <h3 className="mt-2 text-xl font-semibold text-slate-900">Kelola kartu belajar pribadi</h3>
                         <p className="mt-2 text-sm text-slate-500">Tambah dan lihat daftar rencana belajar.</p>
                     </a>
+                    <a href="/siswa/riwayat-pembelajaran" className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
+                        <p className="text-sm font-medium uppercase tracking-[0.3em] text-slate-500">Riwayat</p>
+                        <h3 className="mt-2 text-xl font-semibold text-slate-900">Lihat BAP dan kehadiran per pertemuan</h3>
+                        <p className="mt-2 text-sm text-slate-500">Topik, mapel, kelas, dan status kehadiran tampil terpisah per pertemuan.</p>
+                    </a>
                     <a href="/siswa/tren-nilai" className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
                         <p className="text-sm font-medium uppercase tracking-[0.3em] text-slate-500">Tren</p>
                         <h3 className="mt-2 text-xl font-semibold text-slate-900">Pantau grafik nilai</h3>
