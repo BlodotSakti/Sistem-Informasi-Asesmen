@@ -2,8 +2,14 @@ import { useEffect, useMemo, useState } from 'react';
 import DashboardLayout from '../components/layout/DashboardLayout';
 import StatCard from '../components/ui/StatCard';
 import { apiFetch } from '../lib/api';
+import { formatDateLabel } from '../lib/date';
 
 const BLOOM_OPTIONS = ['C1', 'C2', 'C3', 'C4', 'C5', 'C6'];
+const BADGE_OPTIONS = [
+    { value: 'emas', label: 'Emas' },
+    { value: 'perak', label: 'Perak' },
+    { value: 'perunggu', label: 'Perunggu' },
+];
 const ATTENDANCE_OPTIONS = [
     { value: 'hadir', label: 'Hadir' },
     { value: 'izin', label: 'Izin' },
@@ -26,6 +32,7 @@ export default function GuruDashboard({ session, onLogout, mode = 'dashboard' })
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [toast, setToast] = useState('');
+    const [successPopup, setSuccessPopup] = useState(null);
 
     const [bankForm, setBankForm] = useState({
         id_mapel: '',
@@ -51,7 +58,10 @@ export default function GuruDashboard({ session, onLogout, mode = 'dashboard' })
         catatan_kelas: '',
     });
     const [attendanceMap, setAttendanceMap] = useState({});
+    const [studentNoteMap, setStudentNoteMap] = useState({});
+    const [studentBadgeMap, setStudentBadgeMap] = useState({});
     const [beritaSearch, setBeritaSearch] = useState('');
+    const [editingBeritaId, setEditingBeritaId] = useState(null);
 
     useEffect(() => {
         let mounted = true;
@@ -120,6 +130,26 @@ export default function GuruDashboard({ session, onLogout, mode = 'dashboard' })
             });
             return next;
         });
+
+        setStudentNoteMap((current) => {
+            const next = {};
+
+            students.forEach((item) => {
+                next[item.id_siswa] = current[item.id_siswa] || '';
+            });
+
+            return next;
+        });
+
+        setStudentBadgeMap((current) => {
+            const next = {};
+
+            students.forEach((item) => {
+                next[item.id_siswa] = current[item.id_siswa] || '';
+            });
+
+            return next;
+        });
     }, [beritaForm.id_kelas, workspace.students_by_class]);
 
     const reloadWorkspace = async () => {
@@ -130,6 +160,66 @@ export default function GuruDashboard({ session, onLogout, mode = 'dashboard' })
     const showToast = (message) => {
         setToast(message);
         window.setTimeout(() => setToast(''), 3200);
+    };
+
+    const showSuccessPopup = (title, message) => {
+        setSuccessPopup({ title, message });
+    };
+
+    const closeSuccessPopup = () => {
+        setSuccessPopup(null);
+    };
+
+    const resetBeritaForm = () => {
+        setEditingBeritaId(null);
+        setBeritaForm((current) => ({
+            ...current,
+            pertemuan_ke: 1,
+            tanggal: '',
+            materi_bahasan: '',
+            evaluasi_kendala: '',
+            catatan_kelas: '',
+        }));
+        setAttendanceMap({});
+        setStudentNoteMap({});
+        setStudentBadgeMap({});
+    };
+
+    const openEditBeritaAcara = (item) => {
+        setEditingBeritaId(item.id_berita_acara);
+        setBeritaForm({
+            id_kelas: String(item.id_kelas || ''),
+            id_mapel: String(item.id_mapel || ''),
+            pertemuan_ke: item.pertemuan_ke || 1,
+            tanggal: item.tanggal_raw || '',
+            materi_bahasan: item.materi_bahasan || '',
+            evaluasi_kendala: item.evaluasi_kendala || '',
+            catatan_kelas: item.catatan_kelas || '',
+        });
+
+        const attendanceRows = item.kehadiran_siswa || [];
+        const emptyStudentMap = (workspace.students_by_class?.[item.id_kelas] || []).reduce((accumulator, student) => {
+            accumulator[student.id_siswa] = '';
+            return accumulator;
+        }, {});
+
+        setAttendanceMap(attendanceRows.reduce((accumulator, row) => {
+            accumulator[row.id_siswa] = row.status_kehadiran || 'hadir';
+            return accumulator;
+        }, {}));
+
+        setStudentNoteMap(attendanceRows.reduce((accumulator, row) => {
+            accumulator[row.id_siswa] = row.catatan_pribadi || '';
+            return accumulator;
+        }, { ...emptyStudentMap }));
+
+        setStudentBadgeMap(attendanceRows.reduce((accumulator, row) => {
+            accumulator[row.id_siswa] = row.jenis_badge || '';
+            return accumulator;
+        }, { ...emptyStudentMap }));
+
+        setError('');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
     const bankRows = useMemo(() => {
@@ -160,12 +250,18 @@ export default function GuruDashboard({ session, onLogout, mode = 'dashboard' })
                 return true;
             }
 
+            const noteAndBadgeText = (item.kehadiran_siswa || [])
+                .map((row) => [row.catatan_pribadi, row.jenis_badge].filter(Boolean).join(' '))
+                .join(' ');
+
             return [
                 item.kelas?.nama_kelas,
                 item.mata_pelajaran?.nama_mapel,
                 item.materi_bahasan,
                 item.evaluasi_kendala,
-                item.tanggal,
+                item.catatan_kelas,
+                formatDateLabel(item.tanggal),
+                noteAndBadgeText,
             ]
                 .filter(Boolean)
                 .some((value) => String(value).toLowerCase().includes(search));
@@ -195,6 +291,22 @@ export default function GuruDashboard({ session, onLogout, mode = 'dashboard' })
         });
 
         return `H:${grouped.hadir} I:${grouped.izin} S:${grouped.sakit} A:${grouped.alpa}`;
+    };
+
+    const optionalSummary = (items) => {
+        const grouped = { catatan: 0, badge: 0 };
+
+        (items || []).forEach((row) => {
+            if (String(row.catatan_pribadi || '').trim()) {
+                grouped.catatan += 1;
+            }
+
+            if (String(row.jenis_badge || '').trim()) {
+                grouped.badge += 1;
+            }
+        });
+
+        return `Catatan:${grouped.catatan} Badge:${grouped.badge}`;
     };
 
     const submitBankSoal = async (event) => {
@@ -255,6 +367,8 @@ export default function GuruDashboard({ session, onLogout, mode = 'dashboard' })
             const attendancePayload = siswaBySelectedClass.map((item) => ({
                 id_siswa: item.id_siswa,
                 status_kehadiran: attendanceMap[item.id_siswa] || 'hadir',
+                catatan_pribadi: studentNoteMap[item.id_siswa]?.trim() || null,
+                jenis_badge: studentBadgeMap[item.id_siswa] || null,
             }));
 
             if (attendancePayload.length === 0) {
@@ -262,8 +376,11 @@ export default function GuruDashboard({ session, onLogout, mode = 'dashboard' })
                 return;
             }
 
-            await apiFetch('/api/guru/berita-acara', session, {
-                method: 'POST',
+            const isEditing = editingBeritaId !== null;
+            const responseMessage = isEditing ? 'Berita acara berhasil diperbarui.' : 'Berita acara berhasil disimpan.';
+
+            await apiFetch(isEditing ? `/api/guru/berita-acara/${editingBeritaId}` : '/api/guru/berita-acara', session, {
+                method: isEditing ? 'PATCH' : 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     id_kelas: Number(beritaForm.id_kelas),
@@ -277,16 +394,9 @@ export default function GuruDashboard({ session, onLogout, mode = 'dashboard' })
                 }),
             });
 
-            showToast('Berita acara berhasil disimpan.');
-
-            setBeritaForm((current) => ({
-                ...current,
-                pertemuan_ke: 1,
-                tanggal: '',
-                materi_bahasan: '',
-                evaluasi_kendala: '',
-                catatan_kelas: '',
-            }));
+            showToast(responseMessage);
+            showSuccessPopup(isEditing ? 'BAP berhasil diubah' : 'BAP berhasil dibuat', responseMessage);
+            resetBeritaForm();
 
             await reloadWorkspace();
         } catch (exception) {
@@ -326,7 +436,7 @@ export default function GuruDashboard({ session, onLogout, mode = 'dashboard' })
                     <h3 className="mt-3 text-2xl font-semibold">Alur kerja guru</h3>
                     <div className="mt-6 grid gap-3 sm:grid-cols-2">
                         <div className="rounded-2xl bg-white/5 p-4"><p className="text-sm text-slate-300">1. Buat Bank Soal</p><p className="mt-1 text-sm text-slate-400">Isi topik materi dan Bloom C1-C6.</p></div>
-                        <div className="rounded-2xl bg-white/5 p-4"><p className="text-sm text-slate-300">2. Catat Berita Acara</p><p className="mt-1 text-sm text-slate-400">Presensi lengkap per kelas dan evaluasi.</p></div>
+                        <div className="rounded-2xl bg-white/5 p-4"><p className="text-sm text-slate-300">2. Catat Berita Acara</p><p className="mt-1 text-sm text-slate-400">Presensi lengkap per kelas, evaluasi, dan penguatan siswa opsional.</p></div>
                         <div className="rounded-2xl bg-white/5 p-4"><p className="text-sm text-slate-300">3. Sinkron dengan Admin</p><p className="mt-1 text-sm text-slate-400">Data kelas/mapel mengikuti penugasan aktif.</p></div>
                         <div className="rounded-2xl bg-white/5 p-4"><p className="text-sm text-slate-300">4. Dampak ke Siswa</p><p className="mt-1 text-sm text-slate-400">Instrumen dan pembelajaran terdokumentasi rapi.</p></div>
                     </div>
@@ -516,7 +626,8 @@ export default function GuruDashboard({ session, onLogout, mode = 'dashboard' })
         <section className="space-y-6">
             <form onSubmit={submitBeritaAcara} className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
                 <p className="text-sm font-medium uppercase tracking-[0.3em] text-slate-500">Berita Acara Digital</p>
-                <h3 className="mt-2 text-2xl font-semibold text-slate-900">Presensi dan evaluasi pertemuan kelas</h3>
+                <h3 className="mt-2 text-2xl font-semibold text-slate-900">{editingBeritaId ? 'Ubah presensi dan evaluasi pertemuan kelas' : 'Presensi dan evaluasi pertemuan kelas'}</h3>
+                <p className="mt-2 text-sm text-slate-500">{editingBeritaId ? 'Mode edit aktif. Simpan perubahan untuk memperbarui BAP yang sudah ada.' : 'Isi data pertemuan, lalu tambahkan penguatan siswa jika diperlukan.'}</p>
 
                 <div className="mt-6 grid gap-4 md:grid-cols-2">
                     <label className="space-y-2 text-sm font-medium text-slate-700">
@@ -622,13 +733,18 @@ export default function GuruDashboard({ session, onLogout, mode = 'dashboard' })
 
                 <div className="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-4">
                     <p className="text-sm font-semibold text-slate-900">Presensi Siswa</p>
-                    <p className="mt-1 text-sm text-slate-500">Semua siswa aktif di kelas harus memiliki status kehadiran.</p>
+                    <p className="mt-1 text-sm text-slate-500">Semua siswa aktif di kelas harus memiliki status kehadiran. Catatan pribadi dan lencana apresiasi bersifat opsional.</p>
                     <div className="mt-4 grid gap-3 md:grid-cols-2">
                         {siswaBySelectedClass.map((item) => (
-                            <label key={item.id_siswa} className="space-y-2 rounded-2xl border border-slate-200 bg-white p-3 text-sm font-medium text-slate-700">
-                                <span>
-                                    {item.nama_lengkap} {item.nisn ? `(${item.nisn})` : ''}
-                                </span>
+                            <div key={item.id_siswa} className="space-y-3 rounded-2xl border border-slate-200 bg-white p-3 text-sm font-medium text-slate-700">
+                                <div className="flex items-start justify-between gap-3">
+                                    <span>
+                                        {item.nama_lengkap} {item.nisn ? `(${item.nisn})` : ''}
+                                    </span>
+                                    <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                                        {ATTENDANCE_OPTIONS.find((option) => option.value === (attendanceMap[item.id_siswa] || 'hadir'))?.label || 'Hadir'}
+                                    </span>
+                                </div>
                                 <select
                                     value={attendanceMap[item.id_siswa] || 'hadir'}
                                     onChange={(event) =>
@@ -645,7 +761,44 @@ export default function GuruDashboard({ session, onLogout, mode = 'dashboard' })
                                         </option>
                                     ))}
                                 </select>
-                            </label>
+                                <div className="grid gap-3 md:grid-cols-2">
+                                    <label className="space-y-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                                        <span>Catatan pribadi opsional</span>
+                                        <textarea
+                                            rows="2"
+                                            value={studentNoteMap[item.id_siswa] || ''}
+                                            onChange={(event) =>
+                                                setStudentNoteMap((current) => ({
+                                                    ...current,
+                                                    [item.id_siswa]: event.target.value,
+                                                }))
+                                            }
+                                            className="w-full rounded-2xl border border-slate-300 bg-white px-3 py-2 text-sm font-normal text-slate-700 outline-none transition focus:border-slate-900"
+                                            placeholder="Tambahkan penguatan singkat untuk siswa"
+                                        />
+                                    </label>
+                                    <label className="space-y-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                                        <span>Lencana apresiasi opsional</span>
+                                        <select
+                                            value={studentBadgeMap[item.id_siswa] || ''}
+                                            onChange={(event) =>
+                                                setStudentBadgeMap((current) => ({
+                                                    ...current,
+                                                    [item.id_siswa]: event.target.value,
+                                                }))
+                                            }
+                                            className="w-full rounded-2xl border border-slate-300 bg-white px-3 py-2 text-sm font-normal text-slate-700 outline-none transition focus:border-slate-900"
+                                        >
+                                            <option value="">Tanpa lencana</option>
+                                            {BADGE_OPTIONS.map((option) => (
+                                                <option key={option.value} value={option.value}>
+                                                    {option.label}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </label>
+                                </div>
+                            </div>
                         ))}
                         {siswaBySelectedClass.length === 0 ? (
                             <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-500 md:col-span-2">Belum ada siswa aktif pada kelas ini.</div>
@@ -655,8 +808,13 @@ export default function GuruDashboard({ session, onLogout, mode = 'dashboard' })
 
                 <div className="mt-4 flex flex-wrap gap-3">
                     <button type="submit" className="rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800">
-                        Simpan Berita Acara
+                        {editingBeritaId ? 'Simpan Perubahan' : 'Simpan Berita Acara'}
                     </button>
+                    {editingBeritaId ? (
+                        <button type="button" onClick={resetBeritaForm} className="rounded-full border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
+                            Batal Edit
+                        </button>
+                    ) : null}
                 </div>
             </form>
 
@@ -693,22 +851,51 @@ export default function GuruDashboard({ session, onLogout, mode = 'dashboard' })
                                 <th className="px-5 py-4 font-semibold">Pertemuan</th>
                                 <th className="px-5 py-4 font-semibold">Topik</th>
                                 <th className="px-5 py-4 font-semibold">Rekap Presensi</th>
+                                <th className="px-5 py-4 font-semibold">Catatan / Badge</th>
+                                <th className="px-5 py-4 font-semibold">Aksi</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100 bg-white">
                             {beritaRows.map((item, index) => (
                                 <tr key={item.id_berita_acara} className="align-top hover:bg-slate-50/70">
                                     <td className="px-5 py-4 font-semibold text-slate-500">{index + 1}</td>
-                                    <td className="px-5 py-4 text-slate-600">{item.tanggal}</td>
+                                    <td className="px-5 py-4 text-slate-600">{formatDateLabel(item.tanggal)}</td>
                                     <td className="px-5 py-4 font-semibold text-slate-900">{item.kelas?.nama_kelas || '-'}</td>
                                     <td className="px-5 py-4 text-slate-600">{item.mata_pelajaran?.nama_mapel || '-'}</td>
-                                    <td className="px-5 py-4 text-slate-600">Ke-{item.pertemuan_ke}</td>
+                                    <td className="px-5 py-4 text-slate-600">Pertemuan ke-{item.pertemuan_ke}</td>
                                     <td className="px-5 py-4 text-slate-600">{item.materi_bahasan}</td>
-                                    <td className="px-5 py-4 text-slate-600">{attendanceSummary(item.kehadiran_siswa)}</td>
+                                    <td className="px-5 py-4 text-slate-600">
+                                        <div className="font-medium text-slate-900">{attendanceSummary(item.kehadiran_siswa)}</div>
+                                        <div className="mt-1 text-xs text-slate-500">{optionalSummary(item.kehadiran_siswa)}</div>
+                                    </td>
+                                    <td className="px-5 py-4 text-slate-600">
+                                        {(item.kehadiran_siswa || []).some((row) => String(row.catatan_pribadi || '').trim() || String(row.jenis_badge || '').trim()) ? (
+                                            <div className="space-y-2">
+                                                {(item.kehadiran_siswa || []).filter((row) => String(row.catatan_pribadi || '').trim() || String(row.jenis_badge || '').trim()).map((row) => (
+                                                    <div key={`${item.id_berita_acara}-${row.id_siswa}`} className="rounded-2xl bg-slate-50 px-3 py-2 text-xs text-slate-600">
+                                                        <p className="font-semibold text-slate-900">Siswa {row.id_siswa}</p>
+                                                        {row.catatan_pribadi ? <p className="mt-1">Catatan: {row.catatan_pribadi}</p> : null}
+                                                        {row.jenis_badge ? <p className="mt-1">Badge: {row.jenis_badge}</p> : null}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <span className="text-slate-400">Tidak ada penguatan</span>
+                                        )}
+                                    </td>
+                                    <td className="px-5 py-4 text-slate-600">
+                                        <button
+                                            type="button"
+                                            onClick={() => openEditBeritaAcara(item)}
+                                            className="rounded-full border border-slate-300 px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-700 transition hover:bg-slate-50"
+                                        >
+                                            Edit
+                                        </button>
+                                    </td>
                                 </tr>
                             ))}
                             {!loading && beritaRows.length === 0 ? (
-                                <tr><td colSpan="7" className="px-5 py-6 text-sm text-slate-500">Belum ada data berita acara yang cocok.</td></tr>
+                                <tr><td colSpan="9" className="px-5 py-6 text-sm text-slate-500">Belum ada data berita acara yang cocok.</td></tr>
                             ) : null}
                         </tbody>
                     </table>
@@ -737,6 +924,22 @@ export default function GuruDashboard({ session, onLogout, mode = 'dashboard' })
                 ) : null}
                 {toast ? (
                     <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{toast}</div>
+                ) : null}
+
+                {successPopup ? (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 px-4">
+                        <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl">
+                            <div className="rounded-2xl bg-emerald-50 px-4 py-3 text-emerald-800">
+                                <p className="text-sm font-semibold uppercase tracking-[0.2em]">{successPopup.title}</p>
+                                <p className="mt-2 text-sm">{successPopup.message}</p>
+                            </div>
+                            <div className="mt-4 flex justify-end">
+                                <button type="button" onClick={closeSuccessPopup} className="rounded-full bg-slate-950 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800">
+                                    Tutup
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                 ) : null}
 
                 {renderContent()}

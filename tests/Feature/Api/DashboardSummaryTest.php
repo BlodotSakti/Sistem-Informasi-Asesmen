@@ -354,7 +354,7 @@ class DashboardSummaryTest extends TestCase
             'is_aktif' => true,
         ]);
 
-        BeritaAcara::create([
+        $beritaAcara = BeritaAcara::create([
             'id_kelas' => $kelas->id_kelas,
             'id_guru' => $guru->guru->id_guru,
             'id_mapel' => $mapel->id_mapel,
@@ -367,8 +367,27 @@ class DashboardSummaryTest extends TestCase
                 [
                     'id_siswa' => $siswa->siswa->id_siswa,
                     'status_kehadiran' => 'hadir',
+                    'catatan_pribadi' => 'Aktif bertanya selama diskusi.',
+                    'jenis_badge' => 'emas',
                 ],
             ],
+        ]);
+
+        CatatanPrivat::create([
+            'id_guru' => $guru->guru->id_guru,
+            'id_siswa' => $siswa->siswa->id_siswa,
+            'id_berita_acara' => $beritaAcara->id_berita_acara,
+            'tanggal' => now()->toDateString(),
+            'isi_pesan' => 'Aktif bertanya selama diskusi.',
+        ]);
+
+        Apresiasi::create([
+            'id_guru' => $guru->guru->id_guru,
+            'id_siswa' => $siswa->siswa->id_siswa,
+            'id_berita_acara' => $beritaAcara->id_berita_acara,
+            'tanggal' => now()->toDateString(),
+            'jenis_badge' => 'emas',
+            'topik_materi' => 'Peta Dunia',
         ]);
 
         $response = $this->withToken($this->loginToken('siswa05'))->getJson('/api/siswa/riwayat-pembelajaran');
@@ -379,6 +398,182 @@ class DashboardSummaryTest extends TestCase
         $response->assertJsonPath('data.0.nama_mapel', 'Geografi');
         $response->assertJsonPath('data.0.status_kehadiran', 'hadir');
         $response->assertJsonPath('data.0.materi_bahasan', 'Peta Dunia');
+        $response->assertJsonPath('data.0.catatan_pribadi.isi_pesan', 'Aktif bertanya selama diskusi.');
+        $response->assertJsonPath('data.0.apresiasi.jenis_badge', 'emas');
+        $response->assertJsonPath('mata_pelajaran.0.hadir', 1);
+        $response->assertJsonPath('mata_pelajaran.0.catatan_pribadi', 1);
+    }
+
+    public function test_guru_berita_acara_store_can_create_optional_student_notes_and_badges(): void
+    {
+        $guru = $this->makeUser('guru', 'guru06', 'Guru Enam', ['nip' => '198801012026010006']);
+        $siswa = $this->makeUser('siswa', 'siswa06', 'Siswa Enam', ['nisn' => '1234567896']);
+        $mapel = MataPelajaran::create([
+            'nama_mapel' => 'Sejarah',
+            'tingkat' => 'X',
+        ]);
+
+        $kelas = Kelas::create([
+            'id_guru_wali' => $guru->guru->id_guru,
+            'nama_kelas' => 'X IPS 1',
+            'tahun_ajaran' => '2025/2026',
+        ]);
+
+        KelasSiswa::create([
+            'id_kelas' => $kelas->id_kelas,
+            'id_siswa' => $siswa->siswa->id_siswa,
+            'tahun_ajaran' => '2025/2026',
+            'is_aktif' => true,
+            'tanggal_masuk' => now()->subMonths(1)->toDateString(),
+        ]);
+
+        PenugasanPembelajaran::create([
+            'id_kelas' => $kelas->id_kelas,
+            'id_mapel' => $mapel->id_mapel,
+            'id_guru' => $guru->guru->id_guru,
+            'tahun_ajaran' => '2025/2026',
+            'is_aktif' => true,
+        ]);
+
+        $response = $this->withToken($this->loginToken('guru06'))->postJson('/api/guru/berita-acara', [
+            'id_kelas' => $kelas->id_kelas,
+            'id_mapel' => $mapel->id_mapel,
+            'pertemuan_ke' => 1,
+            'tanggal' => now()->toDateString(),
+            'materi_bahasan' => 'Proklamasi Kemerdekaan',
+            'evaluasi_kendala' => 'Perlu penguatan kronologi.',
+            'catatan_kelas' => 'Diskusi berjalan aktif.',
+            'kehadiran_siswa' => [
+                [
+                    'id_siswa' => $siswa->siswa->id_siswa,
+                    'status_kehadiran' => 'hadir',
+                    'catatan_pribadi' => 'Berani menjawab pertanyaan kelas.',
+                    'jenis_badge' => 'perak',
+                ],
+            ],
+        ]);
+
+        $response->assertCreated();
+        $response->assertJsonPath('kehadiran_siswa.0.catatan_pribadi', 'Berani menjawab pertanyaan kelas.');
+        $response->assertJsonPath('kehadiran_siswa.0.jenis_badge', 'perak');
+
+        $idBeritaAcara = $response->json('id_berita_acara');
+
+        $this->assertDatabaseHas('catatan_privat', [
+            'id_berita_acara' => $idBeritaAcara,
+            'id_siswa' => $siswa->siswa->id_siswa,
+            'isi_pesan' => 'Berani menjawab pertanyaan kelas.',
+        ]);
+
+        $this->assertDatabaseHas('apresiasi', [
+            'id_berita_acara' => $idBeritaAcara,
+            'id_siswa' => $siswa->siswa->id_siswa,
+            'jenis_badge' => 'perak',
+            'topik_materi' => 'Proklamasi Kemerdekaan',
+        ]);
+    }
+
+    public function test_guru_can_update_existing_berita_acara_and_refresh_linked_notes(): void
+    {
+        $guru = $this->makeUser('guru', 'guru07', 'Guru Tujuh', ['nip' => '198801012026010007']);
+        $siswa = $this->makeUser('siswa', 'siswa07', 'Siswa Tujuh', ['nisn' => '1234567897']);
+        $mapel = MataPelajaran::create([
+            'nama_mapel' => 'Bahasa Indonesia',
+            'tingkat' => 'XI',
+        ]);
+
+        $kelas = Kelas::create([
+            'id_guru_wali' => $guru->guru->id_guru,
+            'nama_kelas' => 'XI IPA 1',
+            'tahun_ajaran' => '2025/2026',
+        ]);
+
+        KelasSiswa::create([
+            'id_kelas' => $kelas->id_kelas,
+            'id_siswa' => $siswa->siswa->id_siswa,
+            'tahun_ajaran' => '2025/2026',
+            'is_aktif' => true,
+            'tanggal_masuk' => now()->subMonths(1)->toDateString(),
+        ]);
+
+        PenugasanPembelajaran::create([
+            'id_kelas' => $kelas->id_kelas,
+            'id_mapel' => $mapel->id_mapel,
+            'id_guru' => $guru->guru->id_guru,
+            'tahun_ajaran' => '2025/2026',
+            'is_aktif' => true,
+        ]);
+
+        $beritaAcara = BeritaAcara::create([
+            'id_kelas' => $kelas->id_kelas,
+            'id_guru' => $guru->guru->id_guru,
+            'id_mapel' => $mapel->id_mapel,
+            'pertemuan_ke' => 1,
+            'tanggal' => now()->subDay()->toDateString(),
+            'materi_bahasan' => 'Teks prosedur',
+            'evaluasi_kendala' => 'Awal masih kaku.',
+            'catatan_kelas' => 'Pertemuan awal.',
+            'kehadiran_siswa' => [
+                [
+                    'id_siswa' => $siswa->siswa->id_siswa,
+                    'status_kehadiran' => 'hadir',
+                    'catatan_pribadi' => 'Aktif pada awal pembelajaran.',
+                    'jenis_badge' => 'perunggu',
+                ],
+            ],
+        ]);
+
+        CatatanPrivat::create([
+            'id_guru' => $guru->guru->id_guru,
+            'id_siswa' => $siswa->siswa->id_siswa,
+            'id_berita_acara' => $beritaAcara->id_berita_acara,
+            'tanggal' => now()->subDay()->toDateString(),
+            'isi_pesan' => 'Aktif pada awal pembelajaran.',
+        ]);
+
+        Apresiasi::create([
+            'id_guru' => $guru->guru->id_guru,
+            'id_siswa' => $siswa->siswa->id_siswa,
+            'id_berita_acara' => $beritaAcara->id_berita_acara,
+            'tanggal' => now()->subDay()->toDateString(),
+            'jenis_badge' => 'perunggu',
+            'topik_materi' => 'Teks prosedur',
+        ]);
+
+        $response = $this->withToken($this->loginToken('guru07'))->patchJson('/api/guru/berita-acara/' . $beritaAcara->id_berita_acara, [
+            'id_kelas' => $kelas->id_kelas,
+            'id_mapel' => $mapel->id_mapel,
+            'pertemuan_ke' => 2,
+            'tanggal' => now()->toDateString(),
+            'materi_bahasan' => 'Teks eksplanasi',
+            'evaluasi_kendala' => 'Perlu latihan struktur.',
+            'catatan_kelas' => 'Pertemuan kedua.',
+            'kehadiran_siswa' => [
+                [
+                    'id_siswa' => $siswa->siswa->id_siswa,
+                    'status_kehadiran' => 'hadir',
+                    'catatan_pribadi' => 'Menjawab dengan lebih yakin.',
+                    'jenis_badge' => 'emas',
+                ],
+            ],
+        ]);
+
+        $response->assertOk();
+        $response->assertJsonPath('pertemuan_ke', 2);
+        $response->assertJsonPath('kehadiran_siswa.0.catatan_pribadi', 'Menjawab dengan lebih yakin.');
+        $response->assertJsonPath('kehadiran_siswa.0.jenis_badge', 'emas');
+
+        $this->assertDatabaseCount('catatan_privat', 1);
+        $this->assertDatabaseCount('apresiasi', 1);
+        $this->assertDatabaseHas('catatan_privat', [
+            'id_berita_acara' => $beritaAcara->id_berita_acara,
+            'isi_pesan' => 'Menjawab dengan lebih yakin.',
+        ]);
+        $this->assertDatabaseHas('apresiasi', [
+            'id_berita_acara' => $beritaAcara->id_berita_acara,
+            'jenis_badge' => 'emas',
+            'topik_materi' => 'Teks eksplanasi',
+        ]);
     }
 
     public function test_siswa_riwayat_pembelajaran_keeps_bap_for_multiple_class_periods_in_same_class(): void

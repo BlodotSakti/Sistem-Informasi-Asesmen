@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-06-03
+
+- Added optional per-student catatan pribadi and apresiasi badges in guru BAP, linked to the saved berita acara.
+- Strengthened student learning history with per-meeting note/badge details, better subject summaries, and human-readable dates.
+- Fixed guru and student history tables to display formatted dates instead of raw ISO timestamps.
+- Reflowed student learning-history and appreciation sections into a vertical layout.
+- Added BAP edit actions, PATCH support, and success popup/toast feedback for guru create/update flows.
+
 ## 2026-05-25
 
 - Added master data management for Tahun Ajaran with full CRUD API and admin UI.

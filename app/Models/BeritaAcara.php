@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use App\Models\MataPelajaran;
 
 /**
@@ -74,5 +75,15 @@ class BeritaAcara extends Model
     public function mataPelajaran(): BelongsTo
     {
         return $this->belongsTo(MataPelajaran::class, 'id_mapel', 'id_mapel');
+    }
+
+    public function catatanPrivat(): HasMany
+    {
+        return $this->hasMany(CatatanPrivat::class, 'id_berita_acara', 'id_berita_acara');
+    }
+
+    public function apresiasi(): HasMany
+    {
+        return $this->hasMany(Apresiasi::class, 'id_berita_acara', 'id_berita_acara');
     }
 }

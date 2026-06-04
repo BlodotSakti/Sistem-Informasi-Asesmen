@@ -211,7 +211,7 @@ class SiswaController extends Controller
         $kelasIds = $kelasAssignments->pluck('id_kelas')->unique()->values();
 
         $beritaAcara = BeritaAcara::query()
-            ->with(['kelas', 'mataPelajaran'])
+            ->with(['kelas', 'mataPelajaran', 'catatanPrivat.guru', 'apresiasi.guru'])
             ->when($kelasIds->isNotEmpty(), fn ($query) => $query->whereIn('id_kelas', $kelasIds))
             ->orderByDesc('tanggal')
             ->orderByDesc('pertemuan_ke')
@@ -245,6 +245,8 @@ class SiswaController extends Controller
             })
             ->map(function (BeritaAcara $item) use ($idSiswa): array {
                 $attendance = collect($item->kehadiran_siswa ?? [])->first(fn ($row): bool => (string) ($row['id_siswa'] ?? '') === (string) $idSiswa);
+                $catatanPribadi = $item->catatanPrivat->first(fn ($note): bool => (int) $note->id_siswa === (int) $idSiswa);
+                $apresiasi = $item->apresiasi->first(fn ($badge): bool => (int) $badge->id_siswa === (int) $idSiswa);
 
                 return [
                     'id_berita_acara' => $item->id_berita_acara,
@@ -254,12 +256,30 @@ class SiswaController extends Controller
                     'id_mapel' => $item->id_mapel,
                     'nama_mapel' => $item->mataPelajaran?->nama_mapel,
                     'pertemuan_ke' => $item->pertemuan_ke,
+                    'pertemuan_label' => 'Pertemuan ke-' . $item->pertemuan_ke,
                     'tanggal' => $item->tanggal?->format('d/m/Y'),
                     'tanggal_raw' => $item->tanggal?->toDateString(),
                     'materi_bahasan' => $item->materi_bahasan,
                     'evaluasi_kendala' => $item->evaluasi_kendala,
                     'catatan_kelas' => $item->catatan_kelas,
                     'status_kehadiran' => $attendance['status_kehadiran'] ?? 'belum_dicatat',
+                    'catatan_pribadi' => $catatanPribadi ? [
+                        'id_catatan' => $catatanPribadi->id_catatan,
+                        'isi_pesan' => $catatanPribadi->isi_pesan,
+                        'guru' => [
+                            'nama_lengkap' => $catatanPribadi->guru?->nama_lengkap,
+                        ],
+                        'tanggal' => $catatanPribadi->tanggal?->format('d/m/Y'),
+                    ] : null,
+                    'apresiasi' => $apresiasi ? [
+                        'id_apresiasi' => $apresiasi->id_apresiasi,
+                        'jenis_badge' => $apresiasi->jenis_badge,
+                        'topik_materi' => $apresiasi->topik_materi,
+                        'guru' => [
+                            'nama_lengkap' => $apresiasi->guru?->nama_lengkap,
+                        ],
+                        'tanggal' => $apresiasi->tanggal?->format('d/m/Y'),
+                    ] : null,
                 ];
             })
             ->values();
@@ -274,6 +294,13 @@ class SiswaController extends Controller
                     'nama_mapel' => $first['nama_mapel'],
                     'total_pertemuan' => $items->count(),
                     'pertemuan_terakhir' => $first['tanggal'],
+                    'topik_terakhir' => $first['materi_bahasan'],
+                    'hadir' => $items->where('status_kehadiran', 'hadir')->count(),
+                    'izin' => $items->where('status_kehadiran', 'izin')->count(),
+                    'sakit' => $items->where('status_kehadiran', 'sakit')->count(),
+                    'alpa' => $items->where('status_kehadiran', 'alpa')->count(),
+                    'catatan_pribadi' => $items->filter(fn (array $item): bool => filled($item['catatan_pribadi'] ?? null))->count(),
+                    'apresiasi' => $items->filter(fn (array $item): bool => filled($item['apresiasi'] ?? null))->count(),
                 ];
             })
             ->values();

@@ -8,6 +8,7 @@ import SiswaDashboard from './pages/SiswaDashboard';
 import SiswaProfilePage from './pages/SiswaProfilePage';
 import SiswaSessionsPage from './pages/SiswaSessionsPage';
 import SiswaLearningPlanPage from './pages/SiswaLearningPlanPage';
+import SiswaLearningHistoryPage from './pages/SiswaLearningHistoryPage';
 import SiswaTrendPage from './pages/SiswaTrendPage';
 import SiswaAppreciationPage from './pages/SiswaAppreciationPage';
 
@@ -59,6 +60,7 @@ function App() {
             '/siswa/profil',
             '/siswa/sesi-aktif',
             '/siswa/rencana-belajar',
+            '/siswa/riwayat-pembelajaran',
             '/siswa/tren-nilai',
             '/siswa/apresiasi',
         ];
@@ -166,6 +168,10 @@ function App() {
 
         if (pathname === '/siswa/rencana-belajar') {
             return <SiswaLearningPlanPage session={session} onLogout={onLogout} />;
+        }
+
+        if (pathname === '/siswa/riwayat-pembelajaran') {
+            return <SiswaLearningHistoryPage session={session} onLogout={onLogout} />;
         }
 
         if (pathname === '/siswa/tren-nilai') {

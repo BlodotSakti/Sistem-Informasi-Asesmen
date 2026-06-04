@@ -16,6 +16,7 @@ use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
+use Illuminate\Support\Facades\DB;
 
 class GuruController extends Controller
 {
@@ -187,6 +188,8 @@ class GuruController extends Controller
             'kehadiran_siswa' => ['required', 'array', 'min:1'],
             'kehadiran_siswa.*.id_siswa' => ['required', 'integer', 'exists:siswa,id_siswa'],
             'kehadiran_siswa.*.status_kehadiran' => ['required', Rule::in(['hadir', 'izin', 'sakit', 'alpa'])],
+            'kehadiran_siswa.*.catatan_pribadi' => ['nullable', 'string', 'max:1000'],
+            'kehadiran_siswa.*.jenis_badge' => ['nullable', Rule::in(['emas', 'perak', 'perunggu'])],
         ]);
 
         $this->ensureGuruMengampuKelasDanMapel($guruId, (int) $data['id_kelas'], (int) $data['id_mapel']);
@@ -194,7 +197,130 @@ class GuruController extends Controller
 
         $data['id_guru'] = $guruId;
 
-        return response()->json(BeritaAcara::create($data), 201);
+        $beritaAcara = DB::transaction(function () use ($data, $guruId): BeritaAcara {
+            $kehadiranSiswa = collect($data['kehadiran_siswa'])
+                ->map(function (array $row): array {
+                    $catatanPribadi = trim((string) ($row['catatan_pribadi'] ?? ''));
+                    $jenisBadge = trim((string) ($row['jenis_badge'] ?? ''));
+
+                    return [
+                        'id_siswa' => (int) $row['id_siswa'],
+                        'status_kehadiran' => $row['status_kehadiran'],
+                        'catatan_pribadi' => $catatanPribadi !== '' ? $catatanPribadi : null,
+                        'jenis_badge' => $jenisBadge !== '' ? $jenisBadge : null,
+                    ];
+                })
+                ->values()
+                ->all();
+
+            $beritaAcara = BeritaAcara::create([
+                ...$data,
+                'kehadiran_siswa' => $kehadiranSiswa,
+            ]);
+
+            foreach ($kehadiranSiswa as $row) {
+                if (! empty($row['catatan_pribadi'])) {
+                    CatatanPrivat::create([
+                        'id_guru' => $guruId,
+                        'id_siswa' => $row['id_siswa'],
+                        'id_berita_acara' => $beritaAcara->id_berita_acara,
+                        'tanggal' => $data['tanggal'],
+                        'isi_pesan' => $row['catatan_pribadi'],
+                    ]);
+                }
+
+                if (! empty($row['jenis_badge'])) {
+                    Apresiasi::create([
+                        'id_guru' => $guruId,
+                        'id_siswa' => $row['id_siswa'],
+                        'id_berita_acara' => $beritaAcara->id_berita_acara,
+                        'tanggal' => $data['tanggal'],
+                        'jenis_badge' => $row['jenis_badge'],
+                        'topik_materi' => $data['materi_bahasan'],
+                    ]);
+                }
+            }
+
+            return $beritaAcara->load(['kelas', 'mataPelajaran', 'catatanPrivat.guru', 'apresiasi.guru']);
+        });
+
+        return response()->json($beritaAcara, 201);
+    }
+
+    public function beritaAcaraUpdate(Request $request, int $id_berita_acara): JsonResponse
+    {
+        $guruId = $request->user()->guru->id_guru;
+        $beritaAcara = BeritaAcara::query()->where('id_guru', $guruId)->findOrFail($id_berita_acara);
+
+        $data = $request->validate([
+            'id_kelas' => ['required', 'integer', 'exists:kelas,id_kelas'],
+            'id_mapel' => ['required', 'integer', 'exists:mata_pelajaran,id_mapel'],
+            'pertemuan_ke' => ['required', 'integer', 'min:1'],
+            'tanggal' => ['required', 'date'],
+            'materi_bahasan' => ['required', 'string', 'max:255'],
+            'evaluasi_kendala' => ['required', 'string'],
+            'catatan_kelas' => ['required', 'string'],
+            'kehadiran_siswa' => ['required', 'array', 'min:1'],
+            'kehadiran_siswa.*.id_siswa' => ['required', 'integer', 'exists:siswa,id_siswa'],
+            'kehadiran_siswa.*.status_kehadiran' => ['required', Rule::in(['hadir', 'izin', 'sakit', 'alpa'])],
+            'kehadiran_siswa.*.catatan_pribadi' => ['nullable', 'string', 'max:1000'],
+            'kehadiran_siswa.*.jenis_badge' => ['nullable', Rule::in(['emas', 'perak', 'perunggu'])],
+        ]);
+
+        $this->ensureGuruMengampuKelasDanMapel($guruId, (int) $data['id_kelas'], (int) $data['id_mapel']);
+        $this->validateKehadiranLengkap((int) $data['id_kelas'], $data['kehadiran_siswa']);
+
+        $updatedBeritaAcara = DB::transaction(function () use ($beritaAcara, $data, $guruId): BeritaAcara {
+            $kehadiranSiswa = collect($data['kehadiran_siswa'])
+                ->map(function (array $row): array {
+                    $catatanPribadi = trim((string) ($row['catatan_pribadi'] ?? ''));
+                    $jenisBadge = trim((string) ($row['jenis_badge'] ?? ''));
+
+                    return [
+                        'id_siswa' => (int) $row['id_siswa'],
+                        'status_kehadiran' => $row['status_kehadiran'],
+                        'catatan_pribadi' => $catatanPribadi !== '' ? $catatanPribadi : null,
+                        'jenis_badge' => $jenisBadge !== '' ? $jenisBadge : null,
+                    ];
+                })
+                ->values()
+                ->all();
+
+            $beritaAcara->update([
+                ...$data,
+                'kehadiran_siswa' => $kehadiranSiswa,
+            ]);
+
+            $beritaAcara->catatanPrivat()->delete();
+            $beritaAcara->apresiasi()->delete();
+
+            foreach ($kehadiranSiswa as $row) {
+                if (! empty($row['catatan_pribadi'])) {
+                    CatatanPrivat::create([
+                        'id_guru' => $guruId,
+                        'id_siswa' => $row['id_siswa'],
+                        'id_berita_acara' => $beritaAcara->id_berita_acara,
+                        'tanggal' => $data['tanggal'],
+                        'isi_pesan' => $row['catatan_pribadi'],
+                    ]);
+                }
+
+                if (! empty($row['jenis_badge'])) {
+                    Apresiasi::create([
+                        'id_guru' => $guruId,
+                        'id_siswa' => $row['id_siswa'],
+                        'id_berita_acara' => $beritaAcara->id_berita_acara,
+                        'tanggal' => $data['tanggal'],
+                        'jenis_badge' => $row['jenis_badge'],
+                        'topik_materi' => $data['materi_bahasan'],
+                    ]);
+                }
+            }
+
+            return $beritaAcara->fresh()->load(['kelas', 'mataPelajaran', 'catatanPrivat.guru', 'apresiasi.guru']);
+        });
+
+        return response()->json($updatedBeritaAcara);
     }
 
     public function beritaAcaraIndex(Request $request): JsonResponse

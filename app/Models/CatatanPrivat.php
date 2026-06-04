@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property int $id_catatan
  * @property int $id_guru
  * @property int $id_siswa
+ * @property int|null $id_berita_acara
  * @property \Illuminate\Support\Carbon $tanggal
  * @property string $isi_pesan
  * @property \Illuminate\Support\Carbon|null $created_at
@@ -39,6 +40,7 @@ class CatatanPrivat extends Model
     protected $fillable = [
         'id_guru',
         'id_siswa',
+        'id_berita_acara',
         'tanggal',
         'isi_pesan',
     ];
@@ -55,5 +57,10 @@ class CatatanPrivat extends Model
     public function siswa(): BelongsTo
     {
         return $this->belongsTo(Siswa::class, 'id_siswa', 'id_siswa');
+    }
+
+    public function beritaAcara(): BelongsTo
+    {
+        return $this->belongsTo(BeritaAcara::class, 'id_berita_acara', 'id_berita_acara');
     }
 }

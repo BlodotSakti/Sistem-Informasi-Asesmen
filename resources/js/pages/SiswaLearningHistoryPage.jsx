@@ -2,25 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import DashboardLayout from '../components/layout/DashboardLayout';
 import StatCard from '../components/ui/StatCard';
 import { apiFetch } from '../lib/api';
+import { formatDateLabel } from '../lib/date';
 import { siswaNavigation } from './siswa/siswaNavigation';
-
-function formatDateLabel(value) {
-    if (!value) {
-        return '-';
-    }
-
-    const parsed = new Date(value);
-
-    if (Number.isNaN(parsed.getTime())) {
-        return value;
-    }
-
-    return new Intl.DateTimeFormat('id-ID', {
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric',
-    }).format(parsed);
-}
 
 export default function SiswaLearningHistoryPage({ session, onLogout }) {
     const [history, setHistory] = useState(null);
@@ -80,8 +63,13 @@ export default function SiswaLearningHistoryPage({ session, onLogout }) {
                 item.materi_bahasan,
                 item.status_kehadiran,
                 item.tanggal,
+                item.tanggal_raw,
                 item.evaluasi_kendala,
                 item.catatan_kelas,
+                item.pertemuan_label,
+                item.catatan_pribadi?.isi_pesan,
+                item.apresiasi?.jenis_badge,
+                item.apresiasi?.topik_materi,
             ]
                 .filter(Boolean)
                 .some((value) => String(value).toLowerCase().includes(query));
@@ -114,12 +102,12 @@ export default function SiswaLearningHistoryPage({ session, onLogout }) {
 
                 {error ? <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div> : null}
 
-                <section className="grid gap-6 xl:grid-cols-[0.82fr_1.18fr]">
+                <section className="space-y-6">
                     <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
                         <p className="text-sm font-medium uppercase tracking-[0.3em] text-slate-500">Filter Mapel</p>
                         <h3 className="mt-2 text-xl font-semibold text-slate-900">Saring riwayat per mata pelajaran</h3>
 
-                        <div className="mt-4 space-y-3">
+                        <div className="mt-4 grid gap-3 md:grid-cols-2">
                             <label className="block space-y-2 text-sm font-medium text-slate-700">
                                 <span>Cari riwayat</span>
                                 <input value={search} onChange={(event) => setSearch(event.target.value)} className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-slate-900" placeholder="Kelas, mapel, topik, status, atau catatan" />
@@ -135,6 +123,11 @@ export default function SiswaLearningHistoryPage({ session, onLogout }) {
                                 </select>
                             </label>
                         </div>
+                    </div>
+
+                    <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+                        <p className="text-sm font-medium uppercase tracking-[0.3em] text-slate-500">Ringkasan Mapel</p>
+                        <h3 className="mt-2 text-xl font-semibold text-slate-900">Topik terakhir dan jumlah pertemuan</h3>
 
                         <div className="mt-6 overflow-hidden rounded-3xl border border-slate-200">
                             <table className="min-w-full divide-y divide-slate-200 text-left text-sm">
@@ -147,8 +140,15 @@ export default function SiswaLearningHistoryPage({ session, onLogout }) {
                                 <tbody className="divide-y divide-slate-100 bg-white">
                                     {subjects.map((item) => (
                                         <tr key={item.id_mapel} className="align-top hover:bg-slate-50/70">
-                                            <td className="px-4 py-3 font-semibold text-slate-900">{item.nama_mapel || '-'}</td>
-                                            <td className="px-4 py-3 text-slate-600">{item.total_pertemuan}</td>
+                                            <td className="px-4 py-3 font-semibold text-slate-900">
+                                                <div>{item.nama_mapel || '-'}</div>
+                                                <div className="mt-1 text-xs font-normal text-slate-500">Topik terakhir: {item.topik_terakhir || '-'}</div>
+                                            </td>
+                                            <td className="px-4 py-3 text-slate-600">
+                                                <div className="font-semibold text-slate-900">{item.total_pertemuan} pertemuan</div>
+                                                <div className="mt-1 text-xs text-slate-500">Terakhir {item.pertemuan_terakhir || '-'}</div>
+                                                <div className="mt-1 text-xs text-slate-500">H:{item.hadir} I:{item.izin} S:{item.sakit} A:{item.alpa}</div>
+                                            </td>
                                         </tr>
                                     ))}
                                     {subjects.length === 0 ? (
@@ -174,19 +174,42 @@ export default function SiswaLearningHistoryPage({ session, onLogout }) {
                                         <th className="px-4 py-3 font-semibold">Mapel</th>
                                         <th className="px-4 py-3 font-semibold">Pertemuan</th>
                                         <th className="px-4 py-3 font-semibold">Topik</th>
+                                        <th className="px-4 py-3 font-semibold">Penguatan</th>
                                         <th className="px-4 py-3 font-semibold">Status</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-100 bg-white">
                                     {filteredRows.map((item) => (
                                         <tr key={item.id_berita_acara} className="align-top hover:bg-slate-50/70">
-                                            <td className="px-4 py-3 text-slate-600">{item.tanggal || '-'}</td>
+                                            <td className="px-4 py-3 text-slate-600">{formatDateLabel(item.tanggal || item.tanggal_raw)}</td>
                                             <td className="px-4 py-3 font-semibold text-slate-900">{item.nama_kelas || '-'}</td>
                                             <td className="px-4 py-3 text-slate-600">{item.nama_mapel || '-'}</td>
-                                            <td className="px-4 py-3 text-slate-600">Ke-{item.pertemuan_ke}</td>
+                                            <td className="px-4 py-3 text-slate-600">{item.pertemuan_label || `Pertemuan ke-${item.pertemuan_ke}`}</td>
                                             <td className="px-4 py-3 text-slate-600">
                                                 <p className="font-medium text-slate-900">{item.materi_bahasan}</p>
                                                 <p className="mt-1 text-xs text-slate-500">{item.evaluasi_kendala || '-'}</p>
+                                            </td>
+                                            <td className="px-4 py-3 text-slate-600">
+                                                {item.catatan_pribadi || item.apresiasi ? (
+                                                    <div className="space-y-2">
+                                                        {item.catatan_pribadi ? (
+                                                            <div className="rounded-2xl bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                                                                <p className="font-semibold">Catatan pribadi</p>
+                                                                <p className="mt-1">{item.catatan_pribadi.isi_pesan}</p>
+                                                                <p className="mt-1 text-amber-700">{item.catatan_pribadi.guru?.nama_lengkap || '-'} • {item.catatan_pribadi.tanggal || '-'}</p>
+                                                            </div>
+                                                        ) : null}
+                                                        {item.apresiasi ? (
+                                                            <div className="rounded-2xl bg-emerald-50 px-3 py-2 text-xs text-emerald-800">
+                                                                <p className="font-semibold">Apresiasi</p>
+                                                                <p className="mt-1">{item.apresiasi.jenis_badge} • {item.apresiasi.topik_materi}</p>
+                                                                <p className="mt-1 text-emerald-700">{item.apresiasi.guru?.nama_lengkap || '-'} • {item.apresiasi.tanggal || '-'}</p>
+                                                            </div>
+                                                        ) : null}
+                                                    </div>
+                                                ) : (
+                                                    <span className="text-slate-400">Belum ada penguatan</span>
+                                                )}
                                             </td>
                                             <td className="px-4 py-3">
                                                 <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${item.status_kehadiran === 'hadir' ? 'bg-emerald-100 text-emerald-700' : item.status_kehadiran === 'izin' ? 'bg-amber-100 text-amber-800' : item.status_kehadiran === 'sakit' ? 'bg-sky-100 text-sky-700' : item.status_kehadiran === 'alpa' ? 'bg-rose-100 text-rose-700' : 'bg-slate-200 text-slate-700'}`}>
@@ -197,7 +220,7 @@ export default function SiswaLearningHistoryPage({ session, onLogout }) {
                                     ))}
                                     {!loading && filteredRows.length === 0 ? (
                                         <tr>
-                                            <td colSpan="6" className="px-4 py-4 text-sm text-slate-500">Belum ada riwayat pembelajaran yang cocok.</td>
+                                            <td colSpan="7" className="px-4 py-4 text-sm text-slate-500">Belum ada riwayat pembelajaran yang cocok.</td>
                                         </tr>
                                     ) : null}
                                 </tbody>

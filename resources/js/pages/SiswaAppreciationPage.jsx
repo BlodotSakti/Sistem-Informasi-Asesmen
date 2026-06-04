@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import DashboardLayout from '../components/layout/DashboardLayout';
 import StatCard from '../components/ui/StatCard';
+import { formatDateLabel } from '../lib/date';
 import { siswaNavigation } from './siswa/siswaNavigation';
 import { useSiswaData } from './siswa/useSiswaData';
 
@@ -17,7 +18,7 @@ export default function SiswaAppreciationPage({ session, onLogout }) {
                 return true;
             }
 
-            return [note.guru?.nama_lengkap, note.isi_pesan, note.tanggal]
+            return [note.guru?.nama_lengkap, note.isi_pesan, note.tanggal, formatDateLabel(note.tanggal)]
                 .filter(Boolean)
                 .some((value) => String(value).toLowerCase().includes(search));
         });
@@ -41,7 +42,7 @@ export default function SiswaAppreciationPage({ session, onLogout }) {
 
                 {error ? <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div> : null}
 
-                <section className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
+                <section className="space-y-6">
                     <div className="rounded-3xl border border-slate-200 bg-slate-950 p-6 text-white shadow-sm">
                         <p className="text-sm font-medium uppercase tracking-[0.3em] text-slate-400">Badge Terbaru</p>
                         <h3 className="mt-2 text-2xl font-semibold">Apresiasi terakhir</h3>
@@ -80,7 +81,7 @@ export default function SiswaAppreciationPage({ session, onLogout }) {
                                         <tr key={`${note.tanggal}-${note.id_catatan}`} className="align-top hover:bg-slate-50/70">
                                             <td className="px-4 py-3 font-semibold text-slate-900">{note.guru?.nama_lengkap || '-'}</td>
                                             <td className="px-4 py-3 text-slate-600">{note.isi_pesan}</td>
-                                            <td className="px-4 py-3 text-slate-600">{note.tanggal}</td>
+                                            <td className="px-4 py-3 text-slate-600">{formatDateLabel(note.tanggal)}</td>
                                         </tr>
                                     ))}
                                     {filteredNotes.length === 0 ? (

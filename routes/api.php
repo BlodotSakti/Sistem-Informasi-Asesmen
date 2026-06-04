@@ -68,6 +68,7 @@ Route::middleware('auth:sanctum')->group(function (): void {
 			Route::post('/sesi-asesmen', [GuruController::class, 'sesiAsesmenStore'])->name('sesi-asesmen.store');
 			Route::get('/berita-acara', [GuruController::class, 'beritaAcaraIndex'])->name('berita-acara.index');
 			Route::post('/berita-acara', [GuruController::class, 'beritaAcaraStore'])->name('berita-acara.store');
+			Route::patch('/berita-acara/{id_berita_acara}', [GuruController::class, 'beritaAcaraUpdate'])->name('berita-acara.update');
 			Route::post('/catatan-privat', [GuruController::class, 'catatanPrivatStore'])->name('catatan-privat.store');
 			Route::post('/apresiasi', [GuruController::class, 'apresiasiStore'])->name('apresiasi.store');
 			Route::get('/analisis-diagnostik', [GuruController::class, 'analisisDiagnostikIndex'])->name('analisis-diagnostik.index');
@@ -78,6 +79,7 @@ Route::middleware('auth:sanctum')->group(function (): void {
 			Route::get('/sesi-asesmen/aktif', [SiswaController::class, 'activeSessions'])->name('sesi-asesmen.aktif');
 			Route::post('/jawaban-siswa', [SiswaController::class, 'submitJawaban'])->name('jawaban-siswa.store');
 			Route::get('/tren-nilai', [SiswaController::class, 'trendNilai'])->name('tren-nilai.index');
+			Route::get('/riwayat-pembelajaran', [SiswaController::class, 'riwayatPembelajaran'])->name('riwayat-pembelajaran.index');
 			Route::get('/catatan-privat', [SiswaController::class, 'catatanPrivat'])->name('catatan-privat.index');
 			Route::get('/apresiasi', [SiswaController::class, 'apresiasi'])->name('apresiasi.index');
 			Route::get('/rencana-belajar', [SiswaController::class, 'rencanaBelajarIndex'])->name('rencana-belajar.index');
