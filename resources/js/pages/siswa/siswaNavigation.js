@@ -2,6 +2,7 @@ export const siswaNavigation = [
     { label: 'Dashboard', href: '/siswa/dashboard', badge: 'Home' },
     { label: 'Profil', href: '/siswa/profil', badge: 'Data' },
     { label: 'Sesi Aktif', href: '/siswa/sesi-aktif', badge: 'CBT' },
+    { label: 'Riwayat CBT', href: '/siswa/riwayat-cbt', badge: 'Nilai' },
     { label: 'Rencana Belajar', href: '/siswa/rencana-belajar', badge: 'Plan' },
     { label: 'Riwayat Pembelajaran', href: '/siswa/riwayat-pembelajaran', badge: 'BAP' },
     { label: 'Tren Nilai', href: '/siswa/tren-nilai', badge: 'Grafik' },

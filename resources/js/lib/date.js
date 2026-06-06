@@ -19,3 +19,23 @@ export function formatDateLabel(value) {
         year: 'numeric',
     }).format(parsed);
 }
+
+export function formatDateTimeLabel(value) {
+    if (!value) {
+        return '-';
+    }
+
+    const parsed = new Date(value);
+
+    if (Number.isNaN(parsed.getTime())) {
+        return value;
+    }
+
+    return new Intl.DateTimeFormat('id-ID', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+    }).format(parsed).replace(/\./g, ':');
+}

@@ -8,6 +8,7 @@ use App\Models\Apresiasi;
 use App\Models\BankSoal;
 use App\Models\BeritaAcara;
 use App\Models\CatatanPrivat;
+use App\Models\JawabanSiswa;
 use App\Models\KelasSiswa;
 use App\Models\Kelas;
 use App\Models\PenugasanPembelajaran;
@@ -109,8 +110,8 @@ class GuruController extends Controller
         $validator = validator($request->all(), [
             'id_mapel' => ['required', 'integer', 'exists:mata_pelajaran,id_mapel'],
             'isi_soal' => ['required', 'string'],
-            'jenis_soal' => ['required', 'in:pilihan_ganda,esai'],
-            'kunci_jawaban' => ['required', 'string'],
+            'jenis_soal' => ['required', 'in:pilihan_ganda,esai,pilihan_ganda_kompleks'],
+            'kunci_jawaban' => ['required'],
             'topik_materi' => ['required', 'string', 'max:255'],
             'level_kognitif' => ['required', 'in:C1,C2,C3,C4,C5,C6'],
             'opsi_jawaban' => ['nullable', 'array'],
@@ -132,6 +133,22 @@ class GuruController extends Controller
                 if ($opsi->count() > 0 && ! $opsi->contains(trim((string) $request->input('kunci_jawaban')))) {
                     $validator->errors()->add('kunci_jawaban', 'Kunci jawaban harus sesuai salah satu opsi pilihan ganda.');
                 }
+            } elseif ($jenisSoal === 'pilihan_ganda_kompleks') {
+                if ($opsi->count() < 2) {
+                    $validator->errors()->add('opsi_jawaban', 'Minimal dua opsi jawaban diperlukan untuk soal pilihan ganda kompleks.');
+                }
+                
+                $kunciArr = $request->input('kunci_jawaban');
+                if (!is_array($kunciArr) || count($kunciArr) === 0) {
+                    $validator->errors()->add('kunci_jawaban', 'Minimal satu kunci jawaban diperlukan.');
+                } else {
+                    foreach ($kunciArr as $k) {
+                        if (! $opsi->contains(trim((string) $k))) {
+                            $validator->errors()->add('kunci_jawaban', 'Semua kunci jawaban harus terdapat pada opsi jawaban.');
+                            break;
+                        }
+                    }
+                }
             }
         });
 
@@ -148,12 +165,229 @@ class GuruController extends Controller
 
         if ($data['jenis_soal'] === 'esai') {
             $cleanOptions = [];
+            $data['kunci_jawaban'] = trim((string) $data['kunci_jawaban']);
+        } elseif ($data['jenis_soal'] === 'pilihan_ganda_kompleks') {
+            $data['kunci_jawaban'] = json_encode(array_values(array_filter(array_map('trim', (array) $data['kunci_jawaban']))));
+        } else {
+            $data['kunci_jawaban'] = trim((string) $data['kunci_jawaban']);
         }
 
         $data['id_guru'] = $guruId;
         $data['opsi_jawaban'] = $cleanOptions;
 
         return response()->json(BankSoal::create($data), 201);
+    }
+
+    public function bankSoalUpdate(Request $request, int $id_soal): JsonResponse
+    {
+        $guruId = $request->user()->guru->id_guru;
+        $bankSoal = BankSoal::query()->where('id_guru', $guruId)->findOrFail($id_soal);
+
+        $validator = validator($request->all(), [
+            'id_mapel' => ['required', 'integer', 'exists:mata_pelajaran,id_mapel'],
+            'isi_soal' => ['required', 'string'],
+            'jenis_soal' => ['required', 'in:pilihan_ganda,esai,pilihan_ganda_kompleks'],
+            'kunci_jawaban' => ['required'],
+            'topik_materi' => ['required', 'string', 'max:255'],
+            'level_kognitif' => ['required', 'in:C1,C2,C3,C4,C5,C6'],
+            'opsi_jawaban' => ['nullable', 'array'],
+            'opsi_jawaban.*' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        $validator->after(function ($validator) use ($request): void {
+            $jenisSoal = $request->input('jenis_soal');
+            $opsi = collect($request->input('opsi_jawaban', []))
+                ->map(fn ($item) => trim((string) $item))
+                ->filter()
+                ->values();
+
+            if ($jenisSoal === 'pilihan_ganda') {
+                if ($opsi->count() < 2) {
+                    $validator->errors()->add('opsi_jawaban', 'Minimal dua opsi jawaban diperlukan untuk soal pilihan ganda.');
+                }
+                if ($opsi->count() > 0 && ! $opsi->contains(trim((string) $request->input('kunci_jawaban')))) {
+                    $validator->errors()->add('kunci_jawaban', 'Kunci jawaban harus sesuai salah satu opsi pilihan ganda.');
+                }
+            } elseif ($jenisSoal === 'pilihan_ganda_kompleks') {
+                if ($opsi->count() < 2) {
+                    $validator->errors()->add('opsi_jawaban', 'Minimal dua opsi jawaban diperlukan untuk soal pilihan ganda kompleks.');
+                }
+                
+                $kunciArr = $request->input('kunci_jawaban');
+                if (!is_array($kunciArr) || count($kunciArr) === 0) {
+                    $validator->errors()->add('kunci_jawaban', 'Minimal satu kunci jawaban diperlukan.');
+                } else {
+                    foreach ($kunciArr as $k) {
+                        if (! $opsi->contains(trim((string) $k))) {
+                            $validator->errors()->add('kunci_jawaban', 'Semua kunci jawaban harus terdapat pada opsi jawaban.');
+                            break;
+                        }
+                    }
+                }
+            }
+        });
+
+        $data = $validator->validate();
+        $this->ensureGuruMengampuMapel($guruId, (int) $data['id_mapel']);
+
+        $cleanOptions = collect($data['opsi_jawaban'] ?? [])
+            ->map(fn ($item) => trim((string) $item))
+            ->filter()
+            ->values()
+            ->all();
+
+        if ($data['jenis_soal'] === 'esai') {
+            $cleanOptions = [];
+            $data['kunci_jawaban'] = trim((string) $data['kunci_jawaban']);
+        } elseif ($data['jenis_soal'] === 'pilihan_ganda_kompleks') {
+            $data['kunci_jawaban'] = json_encode(array_values(array_filter(array_map('trim', (array) $data['kunci_jawaban']))));
+        } else {
+            $data['kunci_jawaban'] = trim((string) $data['kunci_jawaban']);
+        }
+
+        $data['opsi_jawaban'] = $cleanOptions;
+        $bankSoal->update($data);
+
+        return response()->json($bankSoal->fresh());
+    }
+
+    public function bankSoalDestroy(Request $request, int $id_soal): JsonResponse
+    {
+        $guruId = $request->user()->guru->id_guru;
+        $bankSoal = BankSoal::query()->where('id_guru', $guruId)->findOrFail($id_soal);
+
+        try {
+            $bankSoal->delete();
+            return response()->json(['message' => 'Soal berhasil dihapus.']);
+        } catch (\Illuminate\Database\QueryException $e) {
+            if ($e->getCode() === '23000') {
+                return response()->json(['message' => 'Soal tidak dapat dihapus karena sudah digunakan dalam Jadwal CBT aktif/riwayat ujian siswa.'], 400);
+            }
+            throw $e;
+        }
+    }
+
+    public function sesiAsesmenDetail(Request $request, int $id_sesi): JsonResponse
+    {
+        $guruId = $request->user()->guru->id_guru;
+
+        $sesi = SesiAsesmen::query()
+            ->with(['kelas', 'mataPelajaran', 'detailSesiSoal.bankSoal'])
+            ->findOrFail($id_sesi);
+
+        // Get all students in this class
+        $siswaAssignments = KelasSiswa::query()
+            ->where('id_kelas', $sesi->id_kelas)
+            ->where('is_aktif', true)
+            ->with('siswa')
+            ->get();
+
+        $detailIds = $sesi->detailSesiSoal->pluck('id_detail');
+
+        // Get all answers for this session from all students
+        $allJawaban = JawabanSiswa::whereIn('id_detail', $detailIds)
+            ->get()
+            ->groupBy('id_siswa');
+
+        // Build soal list with correct answers
+        $soalList = $sesi->detailSesiSoal->map(function ($detail) {
+            $bs = $detail->bankSoal;
+            return [
+                'id_detail' => $detail->id_detail,
+                'isi_soal' => $bs->isi_soal,
+                'jenis_soal' => $bs->jenis_soal,
+                'opsi_jawaban' => $bs->opsi_jawaban,
+                'kunci_jawaban' => $bs->kunci_jawaban,
+                'bobot_nilai' => $detail->bobot_nilai,
+            ];
+        })->values();
+
+        // Build student results
+        $totalBobot = $sesi->detailSesiSoal->sum('bobot_nilai');
+        $siswaResults = [];
+        $skorSemua = [];
+
+        foreach ($siswaAssignments as $assignment) {
+            $siswa = $assignment->siswa;
+            if (!$siswa) continue;
+
+            $jawabanSiswa = $allJawaban->get($siswa->id_siswa, collect());
+            $sudahMengerjakan = $jawabanSiswa->isNotEmpty();
+            $totalSkor = $jawabanSiswa->sum('skor_diperoleh');
+            $jumlahBenar = $jawabanSiswa->where('is_correct', true)->count();
+
+            $detailJawaban = null;
+            if ($sudahMengerjakan) {
+                $skorSemua[] = (float) $totalSkor;
+                $jawabanByDetail = $jawabanSiswa->keyBy('id_detail');
+                $detailJawaban = $sesi->detailSesiSoal->map(function ($detail) use ($jawabanByDetail) {
+                    $jawab = $jawabanByDetail->get($detail->id_detail);
+                    return [
+                        'id_detail' => $detail->id_detail,
+                        'jawaban_siswa' => $jawab?->teks_jawaban,
+                        'is_correct' => $jawab?->is_correct ?? false,
+                        'skor_diperoleh' => $jawab ? (float) $jawab->skor_diperoleh : 0,
+                    ];
+                })->values();
+            }
+
+            $siswaResults[] = [
+                'id_siswa' => $siswa->id_siswa,
+                'nama_lengkap' => $siswa->nama_lengkap,
+                'nisn' => $siswa->nisn,
+                'status' => $sudahMengerjakan ? 'sudah' : 'belum',
+                'total_skor' => round($totalSkor, 2),
+                'jumlah_benar' => $jumlahBenar,
+                'jumlah_dijawab' => $jawabanSiswa->count(),
+                'detail_jawaban' => $detailJawaban,
+            ];
+        }
+
+        $sudahCount = count(array_filter($siswaResults, fn($s) => $s['status'] === 'sudah'));
+        $belumCount = count($siswaResults) - $sudahCount;
+        $rataRata = count($skorSemua) > 0 ? round(array_sum($skorSemua) / count($skorSemua), 2) : 0;
+
+        return response()->json([
+            'sesi' => [
+                'id_sesi' => $sesi->id_sesi,
+                'mata_pelajaran' => $sesi->mataPelajaran?->nama_mapel,
+                'kelas' => $sesi->kelas?->nama_kelas,
+                'jenis_asesmen' => $sesi->jenis_asesmen,
+                'tipe_soal' => $sesi->tipe_soal,
+                'waktu_mulai' => $sesi->waktu_mulai,
+                'durasi_menit' => $sesi->durasi_menit,
+            ],
+            'soal' => $soalList,
+            'total_bobot' => round($totalBobot, 2),
+            'statistik' => [
+                'total_siswa' => count($siswaResults),
+                'sudah_mengerjakan' => $sudahCount,
+                'belum_mengerjakan' => $belumCount,
+                'rata_rata_skor' => $rataRata,
+                'skor_tertinggi' => count($skorSemua) > 0 ? round(max($skorSemua), 2) : 0,
+                'skor_terendah' => count($skorSemua) > 0 ? round(min($skorSemua), 2) : 0,
+            ],
+            'siswa' => $siswaResults,
+        ]);
+    }
+
+    public function sesiAsesmenIndex(Request $request): JsonResponse
+    {
+        $guruId = $request->user()->guru->id_guru;
+
+        // Fetch penugasan untuk filter
+        $kelasIds = PenugasanPembelajaran::query()->where('id_guru', $guruId)->pluck('id_kelas');
+        $mapelIds = PenugasanPembelajaran::query()->where('id_guru', $guruId)->pluck('id_mapel');
+
+        return response()->json(
+            SesiAsesmen::query()
+                ->with(['kelas', 'mataPelajaran', 'detailSesiSoal'])
+                ->whereIn('id_kelas', $kelasIds)
+                ->whereIn('id_mapel', $mapelIds)
+                ->latest('waktu_mulai')
+                ->latest('id_sesi')
+                ->paginate(15)
+        );
     }
 
     public function sesiAsesmenStore(Request $request): JsonResponse
@@ -165,12 +399,36 @@ class GuruController extends Controller
             'jenis_asesmen' => ['required', 'in:pretest,posttest,ujian'],
             'waktu_mulai' => ['required', 'date'],
             'durasi_menit' => ['required', 'integer', 'min:1'],
+            'soal' => ['required', 'array', 'min:1'],
+            'soal.*.id_soal' => ['required', 'integer', 'exists:bank_soal,id_soal'],
+            'soal.*.bobot_nilai' => ['required', 'numeric', 'min:0'],
         ]);
 
         $guruId = $request->user()->guru->id_guru;
         $this->ensureGuruMengampuKelasDanMapel($guruId, (int) $data['id_kelas'], (int) $data['id_mapel']);
 
-        return response()->json(SesiAsesmen::create($data), 201);
+        $sesiAsesmen = \Illuminate\Support\Facades\DB::transaction(function () use ($data) {
+            $sesi = SesiAsesmen::create([
+                'id_kelas' => $data['id_kelas'],
+                'id_mapel' => $data['id_mapel'],
+                'tipe_soal' => $data['tipe_soal'],
+                'jenis_asesmen' => $data['jenis_asesmen'],
+                'waktu_mulai' => $data['waktu_mulai'],
+                'durasi_menit' => $data['durasi_menit'],
+            ]);
+
+            foreach ($data['soal'] as $soal) {
+                \App\Models\DetailSesiSoal::create([
+                    'id_sesi' => $sesi->id_sesi,
+                    'id_soal' => $soal['id_soal'],
+                    'bobot_nilai' => $soal['bobot_nilai'],
+                ]);
+            }
+
+            return $sesi->load('bankSoal');
+        });
+
+        return response()->json($sesiAsesmen, 201);
     }
 
     public function beritaAcaraStore(Request $request): JsonResponse
@@ -321,6 +579,66 @@ class GuruController extends Controller
         });
 
         return response()->json($updatedBeritaAcara);
+    }
+
+    public function sesiAsesmenUpdate(Request $request, int $id_sesi): JsonResponse
+    {
+        $sesi = SesiAsesmen::findOrFail($id_sesi);
+
+        $data = $request->validate([
+            'id_kelas' => ['required', 'integer', 'exists:kelas,id_kelas'],
+            'id_mapel' => ['required', 'integer', 'exists:mata_pelajaran,id_mapel'],
+            'tipe_soal' => ['required', 'string', 'max:255'],
+            'jenis_asesmen' => ['required', 'in:pretest,posttest,ujian'],
+            'waktu_mulai' => ['required', 'date'],
+            'durasi_menit' => ['required', 'integer', 'min:1'],
+            'soal' => ['required', 'array', 'min:1'],
+            'soal.*.id_soal' => ['required', 'integer', 'exists:bank_soal,id_soal'],
+            'soal.*.bobot_nilai' => ['required', 'numeric', 'min:0'],
+        ]);
+
+        $guruId = $request->user()->guru->id_guru;
+        $this->ensureGuruMengampuKelasDanMapel($guruId, (int) $data['id_kelas'], (int) $data['id_mapel']);
+
+        $sesiAsesmen = \Illuminate\Support\Facades\DB::transaction(function () use ($sesi, $data) {
+            $sesi->update([
+                'id_kelas' => $data['id_kelas'],
+                'id_mapel' => $data['id_mapel'],
+                'tipe_soal' => $data['tipe_soal'],
+                'jenis_asesmen' => $data['jenis_asesmen'],
+                'waktu_mulai' => $data['waktu_mulai'],
+                'durasi_menit' => $data['durasi_menit'],
+            ]);
+
+            \App\Models\DetailSesiSoal::where('id_sesi', $sesi->id_sesi)->delete();
+
+            foreach ($data['soal'] as $soal) {
+                \App\Models\DetailSesiSoal::create([
+                    'id_sesi' => $sesi->id_sesi,
+                    'id_soal' => $soal['id_soal'],
+                    'bobot_nilai' => $soal['bobot_nilai'],
+                ]);
+            }
+
+            return $sesi->load('bankSoal');
+        });
+
+        return response()->json($sesiAsesmen);
+    }
+
+    public function sesiAsesmenDestroy(int $id_sesi): JsonResponse
+    {
+        $sesi = SesiAsesmen::findOrFail($id_sesi);
+        
+        try {
+            $sesi->delete();
+            return response()->json(null, 204);
+        } catch (\Illuminate\Database\QueryException $e) {
+            if ($e->getCode() == 23000) {
+                return response()->json(['message' => 'Sesi Asesmen tidak bisa dihapus karena sudah memiliki data riwayat pengerjaan siswa.'], 400);
+            }
+            throw $e;
+        }
     }
 
     public function beritaAcaraIndex(Request $request): JsonResponse

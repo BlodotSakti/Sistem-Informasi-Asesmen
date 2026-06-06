@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import DashboardLayout from '../components/layout/DashboardLayout';
 import StatCard from '../components/ui/StatCard';
 import { apiFetch } from '../lib/api';
-import { formatDateLabel } from '../lib/date';
+import { formatDateLabel, formatDateTimeLabel } from '../lib/date';
 
 const BLOOM_OPTIONS = ['C1', 'C2', 'C3', 'C4', 'C5', 'C6'];
 const BADGE_OPTIONS = [
@@ -43,10 +43,31 @@ export default function GuruDashboard({ session, onLogout, mode = 'dashboard' })
         opsi_c: '',
         opsi_d: '',
         kunci_jawaban: '',
+        kunci_jawaban_kompleks: [],
         topik_materi: '',
         level_kognitif: '',
     });
     const [bankSearch, setBankSearch] = useState('');
+    const [bankFilterMapel, setBankFilterMapel] = useState('');
+    const [bankFilterJenis, setBankFilterJenis] = useState('');
+    const [bankFilterLevel, setBankFilterLevel] = useState('');
+    const [editingBankSoalId, setEditingBankSoalId] = useState(null);
+    const [sesiAsesmenHistory, setSesiAsesmenHistory] = useState([]);
+
+    const [isSesiModalOpen, setIsSesiModalOpen] = useState(false);
+    const [editingSesiId, setEditingSesiId] = useState(null);
+    const [sesiDetailData, setSesiDetailData] = useState(null);
+    const [sesiDetailLoading, setSesiDetailLoading] = useState(false);
+    const [expandedSiswaId, setExpandedSiswaId] = useState(null);
+    const [sesiForm, setSesiForm] = useState({
+        id_kelas: '',
+        id_mapel: '',
+        tipe_soal: '',
+        jenis_asesmen: 'ujian',
+        waktu_mulai: '',
+        durasi_menit: 60,
+    });
+    const [selectedSoalMap, setSelectedSoalMap] = useState({});
 
     const [beritaForm, setBeritaForm] = useState({
         id_kelas: '',
@@ -71,10 +92,11 @@ export default function GuruDashboard({ session, onLogout, mode = 'dashboard' })
                 setLoading(true);
                 setError('');
 
-                const [summaryPayload, diagnosticsPayload, workspacePayload] = await Promise.all([
+                const [summaryPayload, diagnosticsPayload, workspacePayload, sesiPayload] = await Promise.all([
                     apiFetch('/api/guru/dashboard-summary', session),
                     apiFetch('/api/guru/analisis-diagnostik', session),
                     apiFetch('/api/guru/workspace-data', session),
+                    apiFetch('/api/guru/sesi-asesmen', session),
                 ]);
 
                 if (!mounted) {
@@ -84,6 +106,7 @@ export default function GuruDashboard({ session, onLogout, mode = 'dashboard' })
                 setSummary(summaryPayload);
                 setDiagnostics(diagnosticsPayload);
                 setWorkspace(workspacePayload);
+                setSesiAsesmenHistory(sesiPayload?.data || []);
 
                 setBankForm((current) => ({
                     ...current,
@@ -155,6 +178,8 @@ export default function GuruDashboard({ session, onLogout, mode = 'dashboard' })
     const reloadWorkspace = async () => {
         const payload = await apiFetch('/api/guru/workspace-data', session);
         setWorkspace(payload);
+        const sesi = await apiFetch('/api/guru/sesi-asesmen', session);
+        setSesiAsesmenHistory(sesi?.data || []);
     };
 
     const showToast = (message) => {
@@ -226,6 +251,10 @@ export default function GuruDashboard({ session, onLogout, mode = 'dashboard' })
         const search = bankSearch.trim().toLowerCase();
 
         return (workspace.bank_soal || []).filter((item) => {
+            if (bankFilterMapel && String(item.id_mapel) !== String(bankFilterMapel)) return false;
+            if (bankFilterJenis && item.jenis_soal !== bankFilterJenis) return false;
+            if (bankFilterLevel && item.level_kognitif !== bankFilterLevel) return false;
+
             if (!search) {
                 return true;
             }
@@ -240,7 +269,7 @@ export default function GuruDashboard({ session, onLogout, mode = 'dashboard' })
                 .filter(Boolean)
                 .some((value) => String(value).toLowerCase().includes(search));
         });
-    }, [bankSearch, workspace.bank_soal]);
+    }, [bankSearch, bankFilterMapel, bankFilterJenis, bankFilterLevel, workspace.bank_soal]);
 
     const beritaRows = useMemo(() => {
         const search = beritaSearch.trim().toLowerCase();
@@ -309,6 +338,138 @@ export default function GuruDashboard({ session, onLogout, mode = 'dashboard' })
         return `Catatan:${grouped.catatan} Badge:${grouped.badge}`;
     };
 
+    const submitSesiAsesmen = async (event) => {
+        event.preventDefault();
+        try {
+            setError('');
+            const soalArr = Object.entries(selectedSoalMap)
+                .filter(([id, bobot]) => bobot > 0)
+                .map(([id, bobot]) => ({ id_soal: Number(id), bobot_nilai: Number(bobot) }));
+
+            if (soalArr.length === 0) {
+                setError('Pilih minimal satu soal dan tentukan bobot nilainya.');
+                return;
+            }
+
+            const isEditing = editingSesiId !== null;
+
+            await apiFetch(isEditing ? `/api/guru/sesi-asesmen/${editingSesiId}` : '/api/guru/sesi-asesmen', session, {
+                method: isEditing ? 'PATCH' : 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    id_kelas: Number(sesiForm.id_kelas),
+                    id_mapel: Number(sesiForm.id_mapel),
+                    tipe_soal: sesiForm.tipe_soal,
+                    jenis_asesmen: sesiForm.jenis_asesmen,
+                    waktu_mulai: sesiForm.waktu_mulai,
+                    durasi_menit: Number(sesiForm.durasi_menit),
+                    soal: soalArr,
+                }),
+            });
+
+            showToast(isEditing ? 'Sesi Asesmen berhasil diperbarui.' : 'Sesi Asesmen berhasil dibuat.');
+            setIsSesiModalOpen(false);
+            setEditingSesiId(null);
+            setSelectedSoalMap({});
+            setSesiForm({
+                id_kelas: '', id_mapel: '', tipe_soal: '', jenis_asesmen: 'ujian', waktu_mulai: '', durasi_menit: 60
+            });
+            await reloadWorkspace();
+        } catch (exception) {
+            setError(exception.message || 'Gagal menyimpan sesi asesmen.');
+        }
+    };
+
+    const openEditSesiAsesmen = (item) => {
+        setEditingSesiId(item.id_sesi);
+        setSesiForm({
+            id_kelas: String(item.id_kelas || ''),
+            id_mapel: String(item.id_mapel || ''),
+            tipe_soal: item.tipe_soal || '',
+            jenis_asesmen: item.jenis_asesmen || 'ujian',
+            waktu_mulai: item.waktu_mulai ? new Date(new Date(item.waktu_mulai).getTime() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16) : '',
+            durasi_menit: item.durasi_menit || 60,
+        });
+
+        const soalMap = {};
+        (item.detail_sesi_soal || []).forEach(ds => {
+            soalMap[ds.id_soal] = ds.bobot_nilai;
+        });
+        setSelectedSoalMap(soalMap);
+        
+        setIsSesiModalOpen(true);
+    };
+
+    const handleDeleteSesiAsesmen = async (id) => {
+        if (!window.confirm('Yakin ingin menghapus jadwal CBT ini?')) return;
+        try {
+            await apiFetch(`/api/guru/sesi-asesmen/${id}`, session, { method: 'DELETE' });
+            showToast('Jadwal CBT berhasil dihapus.');
+            await reloadWorkspace();
+        } catch (err) {
+            showSuccessPopup('Gagal Menghapus', err.message || 'Jadwal tidak dapat dihapus karena siswa sudah mulai mengerjakan.');
+        }
+    };
+
+    const fetchSesiDetail = async (idSesi) => {
+        try {
+            setSesiDetailLoading(true);
+            setSesiDetailData(null);
+            setExpandedSiswaId(null);
+            const data = await apiFetch(`/api/guru/sesi-asesmen/${idSesi}/detail`, session);
+            setSesiDetailData(data);
+        } catch (err) {
+            showSuccessPopup('Gagal', err.message || 'Gagal memuat detail sesi.');
+        } finally {
+            setSesiDetailLoading(false);
+        }
+    };
+
+    const openEditBankSoal = (item) => {
+        setEditingBankSoalId(item.id_soal);
+        setBankForm({
+            id_mapel: String(item.id_mapel || ''),
+            isi_soal: item.isi_soal || '',
+            jenis_soal: item.jenis_soal || 'pilihan_ganda',
+            opsi_a: item.opsi_jawaban?.[0] || '',
+            opsi_b: item.opsi_jawaban?.[1] || '',
+            opsi_c: item.opsi_jawaban?.[2] || '',
+            opsi_d: item.opsi_jawaban?.[3] || '',
+            kunci_jawaban: item.jenis_soal !== 'pilihan_ganda_kompleks' ? item.kunci_jawaban : '',
+            kunci_jawaban_kompleks: item.jenis_soal === 'pilihan_ganda_kompleks' ? (function() { try { return JSON.parse(item.kunci_jawaban); } catch { return []; } })() : [],
+            topik_materi: item.topik_materi || '',
+            level_kognitif: item.level_kognitif || '',
+        });
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
+    const resetBankForm = () => {
+        setEditingBankSoalId(null);
+        setBankForm((current) => ({
+            ...current,
+            isi_soal: '',
+            opsi_a: '',
+            opsi_b: '',
+            opsi_c: '',
+            opsi_d: '',
+            kunci_jawaban: '',
+            kunci_jawaban_kompleks: [],
+            topik_materi: '',
+            level_kognitif: '',
+        }));
+    };
+
+    const handleDeleteBankSoal = async (id) => {
+        if (!window.confirm('Yakin ingin menghapus soal ini?')) return;
+        try {
+            await apiFetch(`/api/guru/bank-soal/${id}`, session, { method: 'DELETE' });
+            showToast('Soal berhasil dihapus.');
+            await reloadWorkspace();
+        } catch (err) {
+            showSuccessPopup('Gagal Menghapus', err.message || 'Soal tidak dapat dihapus karena sudah dipakai dalam sesi ujian.');
+        }
+    };
+
     const submitBankSoal = async (event) => {
         event.preventDefault();
 
@@ -324,34 +485,24 @@ export default function GuruDashboard({ session, onLogout, mode = 'dashboard' })
                 .map((item) => item.trim())
                 .filter(Boolean);
 
-            await apiFetch('/api/guru/bank-soal', session, {
-                method: 'POST',
+            const isEditing = editingBankSoalId !== null;
+            await apiFetch(isEditing ? `/api/guru/bank-soal/${editingBankSoalId}` : '/api/guru/bank-soal', session, {
+                method: isEditing ? 'PATCH' : 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     id_mapel: Number(bankForm.id_mapel),
                     isi_soal: bankForm.isi_soal,
                     jenis_soal: bankForm.jenis_soal,
-                    opsi_jawaban: bankForm.jenis_soal === 'pilihan_ganda' ? opsiJawaban : [],
-                    kunci_jawaban: bankForm.kunci_jawaban,
+                    opsi_jawaban: (bankForm.jenis_soal === 'pilihan_ganda' || bankForm.jenis_soal === 'pilihan_ganda_kompleks') ? opsiJawaban : [],
+                    kunci_jawaban: bankForm.jenis_soal === 'pilihan_ganda_kompleks' ? bankForm.kunci_jawaban_kompleks : bankForm.kunci_jawaban,
                     topik_materi: bankForm.topik_materi,
                     level_kognitif: bankForm.level_kognitif,
                 }),
             });
 
-            showToast('Bank soal berhasil disimpan.');
+            showToast(isEditing ? 'Bank soal berhasil diperbarui.' : 'Bank soal berhasil disimpan.');
 
-            setBankForm((current) => ({
-                ...current,
-                isi_soal: '',
-                opsi_a: '',
-                opsi_b: '',
-                opsi_c: '',
-                opsi_d: '',
-                kunci_jawaban: '',
-                topik_materi: '',
-                level_kognitif: '',
-            }));
-
+            resetBankForm();
             await reloadWorkspace();
         } catch (exception) {
             setError(exception.message || 'Gagal menyimpan bank soal.');
@@ -406,6 +557,7 @@ export default function GuruDashboard({ session, onLogout, mode = 'dashboard' })
 
     const navigation = [
         { label: 'Dashboard', href: '/guru/dashboard', badge: 'Home' },
+        { label: 'Jadwal CBT', href: '/guru/jadwal-cbt', badge: 'Ujian' },
         { label: 'Bank Soal', href: '/guru/bank-soal', badge: 'Soal' },
         { label: 'Berita Acara', href: '/guru/berita-acara', badge: 'Presensi' },
     ];
@@ -495,6 +647,7 @@ export default function GuruDashboard({ session, onLogout, mode = 'dashboard' })
                             className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-slate-900"
                         >
                             <option value="pilihan_ganda">Pilihan Ganda</option>
+                            <option value="pilihan_ganda_kompleks">Pilihan Ganda Kompleks</option>
                             <option value="esai">Esai</option>
                         </select>
                     </label>
@@ -539,7 +692,7 @@ export default function GuruDashboard({ session, onLogout, mode = 'dashboard' })
                         />
                     </label>
 
-                    {bankForm.jenis_soal === 'pilihan_ganda' ? (
+                    {bankForm.jenis_soal === 'pilihan_ganda' || bankForm.jenis_soal === 'pilihan_ganda_kompleks' ? (
                         <>
                             <label className="space-y-2 text-sm font-medium text-slate-700"><span>Opsi A</span><input value={bankForm.opsi_a} onChange={(event) => setBankForm((current) => ({ ...current, opsi_a: event.target.value }))} className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-slate-900" /></label>
                             <label className="space-y-2 text-sm font-medium text-slate-700"><span>Opsi B</span><input value={bankForm.opsi_b} onChange={(event) => setBankForm((current) => ({ ...current, opsi_b: event.target.value }))} className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-slate-900" /></label>
@@ -550,41 +703,98 @@ export default function GuruDashboard({ session, onLogout, mode = 'dashboard' })
 
                     <label className="space-y-2 text-sm font-medium text-slate-700 md:col-span-2">
                         <span>Kunci Jawaban</span>
-                        <input
-                            required
-                            value={bankForm.kunci_jawaban}
-                            onChange={(event) => setBankForm((current) => ({ ...current, kunci_jawaban: event.target.value }))}
-                            className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-slate-900"
-                            placeholder={bankForm.jenis_soal === 'esai' ? 'Panduan jawaban esai' : 'Harus sama dengan salah satu opsi'}
-                        />
+                        {bankForm.jenis_soal === 'pilihan_ganda_kompleks' ? (
+                            <div className="flex flex-wrap gap-4 pt-2">
+                                {[bankForm.opsi_a, bankForm.opsi_b, bankForm.opsi_c, bankForm.opsi_d].filter(Boolean).map((opsi, idx) => (
+                                    <label key={idx} className="flex items-center gap-2 cursor-pointer">
+                                        <input
+                                            type="checkbox"
+                                            value={opsi}
+                                            checked={bankForm.kunci_jawaban_kompleks.includes(opsi)}
+                                            onChange={(e) => {
+                                                const checked = e.target.checked;
+                                                const val = e.target.value;
+                                                setBankForm(curr => {
+                                                    const next = new Set(curr.kunci_jawaban_kompleks);
+                                                    if (checked) next.add(val);
+                                                    else next.delete(val);
+                                                    return { ...curr, kunci_jawaban_kompleks: Array.from(next) };
+                                                });
+                                            }}
+                                            className="h-4 w-4 rounded border-slate-300 text-slate-900 focus:ring-slate-900"
+                                        />
+                                        <span className="text-sm font-normal text-slate-700">{opsi}</span>
+                                    </label>
+                                ))}
+                                {![bankForm.opsi_a, bankForm.opsi_b, bankForm.opsi_c, bankForm.opsi_d].filter(Boolean).length && (
+                                    <span className="text-xs text-slate-400">Isi opsi jawaban terlebih dahulu.</span>
+                                )}
+                            </div>
+                        ) : (
+                            <input
+                                required
+                                value={bankForm.kunci_jawaban}
+                                onChange={(event) => setBankForm((current) => ({ ...current, kunci_jawaban: event.target.value }))}
+                                className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-slate-900"
+                                placeholder={bankForm.jenis_soal === 'esai' ? 'Panduan jawaban esai' : 'Harus sama dengan salah satu opsi'}
+                            />
+                        )}
                     </label>
                 </div>
 
                 <div className="mt-4 flex flex-wrap gap-3">
                     <button type="submit" className="rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800">
-                        Simpan Soal
+                        {editingBankSoalId ? 'Simpan Perubahan' : 'Simpan Soal'}
                     </button>
+                    {editingBankSoalId ? (
+                        <button type="button" onClick={resetBankForm} className="rounded-full border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
+                            Batal Edit
+                        </button>
+                    ) : null}
                 </div>
             </form>
 
             <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white">
-                <div className="border-b border-slate-200 px-5 py-4">
-                    <h4 className="text-lg font-semibold text-slate-900">Data Bank Soal</h4>
-                    <p className="text-sm text-slate-500">Pastikan topik dan level Bloom terisi untuk semua soal.</p>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-200 px-5 py-4 gap-4">
+                    <div>
+                        <h4 className="text-lg font-semibold text-slate-900">Data Bank Soal</h4>
+                        <p className="text-sm text-slate-500">Pastikan topik dan level Bloom terisi untuk semua soal.</p>
+                    </div>
                 </div>
                 <div className="border-b border-slate-200 px-5 py-4">
-                    <div className="grid gap-3 lg:grid-cols-[0.8fr_1.2fr] lg:items-end">
-                        <div className="rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-600">
-                            <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Total Data</p>
-                            <p className="mt-1 font-semibold text-slate-900">{loading ? 'Memuat...' : `${bankRows.length} data`}</p>
-                        </div>
+                    <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4 lg:items-end">
+                        <label className="space-y-2 text-sm font-medium text-slate-700">
+                            <span>Filter Mapel</span>
+                            <select value={bankFilterMapel} onChange={e => setBankFilterMapel(e.target.value)} className="w-full rounded-2xl border border-slate-300 px-4 py-2 outline-none transition focus:border-slate-900">
+                                <option value="">Semua Mapel</option>
+                                {(workspace.mapel_options || []).map(item => (
+                                    <option key={item.id_mapel} value={item.id_mapel}>{item.nama_mapel}</option>
+                                ))}
+                            </select>
+                        </label>
+                        <label className="space-y-2 text-sm font-medium text-slate-700">
+                            <span>Jenis Soal</span>
+                            <select value={bankFilterJenis} onChange={e => setBankFilterJenis(e.target.value)} className="w-full rounded-2xl border border-slate-300 px-4 py-2 outline-none transition focus:border-slate-900">
+                                <option value="">Semua Jenis</option>
+                                <option value="pilihan_ganda">Pilihan Ganda</option>
+                                <option value="pilihan_ganda_kompleks">Pilihan Ganda Kompleks</option>
+                                <option value="esai">Esai</option>
+                            </select>
+                        </label>
+                        <label className="space-y-2 text-sm font-medium text-slate-700">
+                            <span>Level Kognitif</span>
+                            <select value={bankFilterLevel} onChange={e => setBankFilterLevel(e.target.value)} className="w-full rounded-2xl border border-slate-300 px-4 py-2 outline-none transition focus:border-slate-900">
+                                <option value="">Semua Level</option>
+                                {BLOOM_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                            </select>
+                        </label>
                         <label className="space-y-2 text-sm font-medium text-slate-700">
                             <span>Cari soal</span>
                             <input
                                 value={bankSearch}
                                 onChange={(event) => setBankSearch(event.target.value)}
-                                className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-slate-900"
-                                placeholder="Mapel, topik, level Bloom, atau isi soal"
+                                className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-2 outline-none transition focus:border-slate-900"
+                                placeholder="Topik atau isi soal"
                             />
                         </label>
                     </div>
@@ -599,6 +809,7 @@ export default function GuruDashboard({ session, onLogout, mode = 'dashboard' })
                                 <th className="px-5 py-4 font-semibold">Bloom</th>
                                 <th className="px-5 py-4 font-semibold">Jenis</th>
                                 <th className="px-5 py-4 font-semibold">Kunci</th>
+                                <th className="px-5 py-4 font-semibold text-right">Aksi</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100 bg-white">
@@ -609,16 +820,336 @@ export default function GuruDashboard({ session, onLogout, mode = 'dashboard' })
                                     <td className="px-5 py-4 text-slate-600">{item.topik_materi}</td>
                                     <td className="px-5 py-4 text-slate-600">{item.level_kognitif}</td>
                                     <td className="px-5 py-4 text-slate-600">{item.jenis_soal}</td>
-                                    <td className="px-5 py-4 text-slate-600">{item.kunci_jawaban}</td>
+                                    <td className="px-5 py-4 text-slate-600">
+                                        {item.jenis_soal === 'pilihan_ganda_kompleks' && item.kunci_jawaban 
+                                            ? (() => { try { return JSON.parse(item.kunci_jawaban).join(', '); } catch { return item.kunci_jawaban; } })() 
+                                            : item.kunci_jawaban}
+                                    </td>
+                                    <td className="px-5 py-4 text-right">
+                                        <div className="flex items-center justify-end gap-3">
+                                            <button onClick={() => openEditBankSoal(item)} className="text-blue-600 hover:text-blue-800 font-medium">Edit</button>
+                                            <button onClick={() => handleDeleteBankSoal(item.id_soal)} className="text-rose-600 hover:text-rose-800 font-medium">Hapus</button>
+                                        </div>
+                                    </td>
                                 </tr>
                             ))}
                             {!loading && bankRows.length === 0 ? (
-                                <tr><td colSpan="6" className="px-5 py-6 text-sm text-slate-500">Belum ada data bank soal yang cocok.</td></tr>
+                                <tr><td colSpan="7" className="px-5 py-6 text-sm text-slate-500">Belum ada data bank soal yang cocok.</td></tr>
                             ) : null}
                         </tbody>
                     </table>
                 </div>
             </div>
+
+        </section>
+    );
+
+    const renderJadwalCbt = () => (
+        <section className="space-y-6">
+            <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-200 px-5 py-4 gap-4">
+                    <div>
+                        <h4 className="text-lg font-semibold text-slate-900">Riwayat Jadwal CBT</h4>
+                        <p className="text-sm text-slate-500">Daftar sesi asesmen yang telah dibuat.</p>
+                    </div>
+                    <button onClick={() => setIsSesiModalOpen(true)} type="button" className="rounded-full bg-blue-600 px-5 py-2 text-sm font-semibold text-white transition hover:bg-blue-700 whitespace-nowrap">
+                        + Buat Jadwal CBT
+                    </button>
+                </div>
+                <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-slate-200 text-left text-sm">
+                        <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase tracking-[0.2em] text-slate-500">
+                            <tr>
+                                <th className="px-5 py-4 font-semibold">Tipe Soal</th>
+                                <th className="px-5 py-4 font-semibold">Kelas</th>
+                                <th className="px-5 py-4 font-semibold">Mapel</th>
+                                <th className="px-5 py-4 font-semibold">Jenis</th>
+                                <th className="px-5 py-4 font-semibold">Waktu Mulai</th>
+                                <th className="px-5 py-4 font-semibold">Soal</th>
+                                <th className="px-5 py-4 font-semibold text-center">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100 bg-white">
+                            {sesiAsesmenHistory.map((item) => (
+                                <tr key={item.id_sesi} className="align-top hover:bg-slate-50/70">
+                                    <td className="px-5 py-4 font-semibold text-slate-900">{item.tipe_soal}</td>
+                                    <td className="px-5 py-4 text-slate-600">{item.kelas?.nama_kelas}</td>
+                                    <td className="px-5 py-4 text-slate-600">{item.mata_pelajaran?.nama_mapel}</td>
+                                    <td className="px-5 py-4 text-slate-600 capitalize">{item.jenis_asesmen}</td>
+                                    <td className="px-5 py-4 text-slate-600">{formatDateTimeLabel(item.waktu_mulai)}</td>
+                                    <td className="px-5 py-4 text-slate-600">{item.detail_sesi_soal?.length || 0} soal</td>
+                                    <td className="px-5 py-4 text-right">
+                                        <div className="flex items-center justify-end gap-3">
+                                            <button onClick={() => fetchSesiDetail(item.id_sesi)} className="text-indigo-600 hover:text-indigo-800 font-medium">Detail</button>
+                                            <button onClick={() => openEditSesiAsesmen(item)} className="text-blue-600 hover:text-blue-800 font-medium">Edit</button>
+                                            <button onClick={() => handleDeleteSesiAsesmen(item.id_sesi)} className="text-rose-600 hover:text-rose-800 font-medium">Hapus</button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            ))}
+                            {!loading && sesiAsesmenHistory.length === 0 ? (
+                                <tr><td colSpan="6" className="px-5 py-6 text-sm text-slate-500">Belum ada riwayat jadwal CBT.</td></tr>
+                            ) : null}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            {/* Detail Modal */}
+            {(sesiDetailData || sesiDetailLoading) && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4" onClick={() => !sesiDetailLoading && setSesiDetailData(null)}>
+                    <div className="w-full max-w-5xl max-h-[90vh] overflow-y-auto rounded-3xl bg-white shadow-xl" onClick={(e) => e.stopPropagation()}>
+                        {sesiDetailLoading ? (
+                            <div className="flex items-center justify-center py-20">
+                                <div className="h-10 w-10 animate-spin rounded-full border-b-2 border-t-2 border-blue-600"></div>
+                            </div>
+                        ) : sesiDetailData ? (
+                            <>
+                                <div className="border-b border-slate-200 px-6 py-5 flex justify-between items-center">
+                                    <div>
+                                        <h3 className="text-xl font-bold text-slate-900">Detail: {sesiDetailData.sesi.mata_pelajaran}</h3>
+                                        <p className="text-sm text-slate-500 capitalize">{sesiDetailData.sesi.jenis_asesmen} — {sesiDetailData.sesi.kelas}</p>
+                                    </div>
+                                    <button onClick={() => setSesiDetailData(null)} className="text-2xl text-slate-400 hover:text-slate-600">&times;</button>
+                                </div>
+                                <div className="p-6 space-y-6">
+                                    {/* Statistik */}
+                                    <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
+                                        <div className="rounded-2xl bg-blue-50 px-4 py-4 text-center">
+                                            <p className="text-xl font-bold text-blue-700">{sesiDetailData.statistik.total_siswa}</p>
+                                            <p className="text-xs text-blue-500">Total Siswa</p>
+                                        </div>
+                                        <div className="rounded-2xl bg-emerald-50 px-4 py-4 text-center">
+                                            <p className="text-xl font-bold text-emerald-700">{sesiDetailData.statistik.sudah_mengerjakan}</p>
+                                            <p className="text-xs text-emerald-500">Sudah</p>
+                                        </div>
+                                        <div className="rounded-2xl bg-rose-50 px-4 py-4 text-center">
+                                            <p className="text-xl font-bold text-rose-700">{sesiDetailData.statistik.belum_mengerjakan}</p>
+                                            <p className="text-xs text-rose-500">Belum</p>
+                                        </div>
+                                        <div className="rounded-2xl bg-amber-50 px-4 py-4 text-center">
+                                            <p className="text-xl font-bold text-amber-700">{sesiDetailData.statistik.rata_rata_skor}</p>
+                                            <p className="text-xs text-amber-500">Rata-Rata</p>
+                                        </div>
+                                        <div className="rounded-2xl bg-indigo-50 px-4 py-4 text-center">
+                                            <p className="text-xl font-bold text-indigo-700">{sesiDetailData.statistik.skor_tertinggi}</p>
+                                            <p className="text-xs text-indigo-500">Tertinggi</p>
+                                        </div>
+                                        <div className="rounded-2xl bg-slate-100 px-4 py-4 text-center">
+                                            <p className="text-xl font-bold text-slate-700">{sesiDetailData.statistik.skor_terendah}</p>
+                                            <p className="text-xs text-slate-500">Terendah</p>
+                                        </div>
+                                    </div>
+
+                                    {/* Daftar Soal */}
+                                    <details className="group rounded-2xl border border-slate-200">
+                                        <summary className="cursor-pointer px-5 py-4 font-semibold text-slate-800 flex items-center justify-between">
+                                            <span>📋 Daftar Soal ({sesiDetailData.soal.length} soal — Total Bobot: {sesiDetailData.total_bobot})</span>
+                                            <span className="text-slate-400 group-open:rotate-180 transition">▼</span>
+                                        </summary>
+                                        <div className="border-t border-slate-200 px-5 py-4 space-y-3">
+                                            {sesiDetailData.soal.map((s, idx) => (
+                                                <div key={s.id_detail} className="rounded-xl border border-slate-100 bg-slate-50/50 p-4">
+                                                    <div className="flex items-center justify-between mb-1">
+                                                        <span className="text-sm font-bold text-slate-700">Soal {idx + 1} <span className="font-normal text-slate-400">({s.jenis_soal})</span></span>
+                                                        <span className="text-xs font-medium text-slate-500">Bobot: {s.bobot_nilai}</span>
+                                                    </div>
+                                                    <p className="text-sm text-slate-600">{s.isi_soal}</p>
+                                                    <p className="mt-1 text-xs text-emerald-600 font-medium">Kunci: {(() => { try { const arr = JSON.parse(s.kunci_jawaban); if (Array.isArray(arr)) return arr.join(', '); } catch {} return s.kunci_jawaban; })()}</p>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </details>
+
+                                    {/* Daftar Siswa */}
+                                    <div>
+                                        <h4 className="text-lg font-bold text-slate-800 mb-3">👥 Status Siswa</h4>
+                                        <div className="overflow-x-auto rounded-2xl border border-slate-200">
+                                            <table className="min-w-full divide-y divide-slate-200 text-left text-sm">
+                                                <thead className="bg-slate-50 text-xs uppercase tracking-[0.15em] text-slate-500">
+                                                    <tr>
+                                                        <th className="px-4 py-3 font-semibold">Nama</th>
+                                                        <th className="px-4 py-3 font-semibold">NISN</th>
+                                                        <th className="px-4 py-3 font-semibold">Status</th>
+                                                        <th className="px-4 py-3 font-semibold">Skor</th>
+                                                        <th className="px-4 py-3 font-semibold">Benar</th>
+                                                        <th className="px-4 py-3 font-semibold text-right">Aksi</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody className="divide-y divide-slate-100">
+                                                    {sesiDetailData.siswa.map((sw) => (
+                                                        <React.Fragment key={sw.id_siswa}>
+                                                            <tr className="hover:bg-slate-50/70">
+                                                                <td className="px-4 py-3 font-semibold text-slate-900">{sw.nama_lengkap}</td>
+                                                                <td className="px-4 py-3 text-slate-500">{sw.nisn}</td>
+                                                                <td className="px-4 py-3">
+                                                                    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-bold ${sw.status === 'sudah' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-600'}`}>
+                                                                        {sw.status === 'sudah' ? '✓ Sudah' : '— Belum'}
+                                                                    </span>
+                                                                </td>
+                                                                <td className="px-4 py-3 text-slate-600">{sw.status === 'sudah' ? `${sw.total_skor}/${sesiDetailData.total_bobot}` : '-'}</td>
+                                                                <td className="px-4 py-3 text-slate-600">{sw.status === 'sudah' ? `${sw.jumlah_benar}/${sesiDetailData.soal.length}` : '-'}</td>
+                                                                <td className="px-4 py-3 text-right">
+                                                                    {sw.status === 'sudah' && (
+                                                                        <button onClick={() => setExpandedSiswaId(expandedSiswaId === sw.id_siswa ? null : sw.id_siswa)} className="text-indigo-600 hover:text-indigo-800 font-medium text-xs">
+                                                                            {expandedSiswaId === sw.id_siswa ? 'Tutup' : 'Lihat Jawaban'}
+                                                                        </button>
+                                                                    )}
+                                                                </td>
+                                                            </tr>
+                                                            {expandedSiswaId === sw.id_siswa && sw.detail_jawaban && (
+                                                                <tr>
+                                                                    <td colSpan="6" className="bg-slate-50 px-4 py-4">
+                                                                        <div className="space-y-2">
+                                                                            {sesiDetailData.soal.map((soal, sIdx) => {
+                                                                                const dj = sw.detail_jawaban.find(d => d.id_detail === soal.id_detail);
+                                                                                const jawSiswa = dj?.jawaban_siswa || '-';
+                                                                                const kunci = soal.kunci_jawaban;
+                                                                                const isCorrect = dj?.is_correct;
+                                                                                const formatVal = (v) => { try { const a = JSON.parse(v); if (Array.isArray(a)) return a.join(', '); } catch {} return v || '-'; };
+                                                                                return (
+                                                                                    <div key={soal.id_detail} className={`rounded-xl border px-4 py-3 text-xs ${isCorrect ? 'border-emerald-200 bg-emerald-50/50' : 'border-rose-200 bg-rose-50/50'}`}>
+                                                                                        <div className="flex items-center justify-between mb-1">
+                                                                                            <span className="font-bold text-slate-700">Soal {sIdx + 1}</span>
+                                                                                            <span className={`font-bold ${isCorrect ? 'text-emerald-600' : 'text-rose-600'}`}>{isCorrect ? '✓ Benar' : '✗ Salah'} ({dj?.skor_diperoleh ?? 0}/{soal.bobot_nilai})</span>
+                                                                                        </div>
+                                                                                        <div className="grid gap-2 sm:grid-cols-2 mt-1">
+                                                                                            <div><span className="text-slate-500">Jawaban Siswa:</span> <span className="text-slate-800 font-medium">{formatVal(jawSiswa)}</span></div>
+                                                                                            <div><span className="text-slate-500">Kunci:</span> <span className="text-emerald-700 font-medium">{formatVal(kunci)}</span></div>
+                                                                                        </div>
+                                                                                    </div>
+                                                                                );
+                                                                            })}
+                                                                        </div>
+                                                                    </td>
+                                                                </tr>
+                                                            )}
+                                                        </React.Fragment>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="border-t border-slate-200 px-6 py-4 text-right">
+                                    <button onClick={() => setSesiDetailData(null)} className="rounded-xl bg-slate-900 px-5 py-2 text-sm font-semibold text-white transition hover:bg-slate-800">Tutup</button>
+                                </div>
+                            </>
+                        ) : null}
+                    </div>
+                </div>
+            )}
+
+            {isSesiModalOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+                    <form onSubmit={submitSesiAsesmen} className="w-full max-w-4xl overflow-hidden rounded-3xl bg-white shadow-xl">
+                        <div className="border-b border-slate-200 px-6 py-5 flex justify-between items-center">
+                            <h3 className="text-xl font-semibold text-slate-900">Buat Jadwal Asesmen (CBT)</h3>
+                            <button type="button" onClick={() => { setIsSesiModalOpen(false); setEditingSesiId(null); }} className="text-slate-400 hover:text-slate-600">&times;</button>
+                        </div>
+                        <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
+                            <div className="grid gap-4 md:grid-cols-2">
+                                <label className="space-y-2 text-sm font-medium text-slate-700">
+                                    <span>Kelas</span>
+                                    <select required value={sesiForm.id_kelas} onChange={e => setSesiForm(c => ({...c, id_kelas: e.target.value}))} className="w-full rounded-2xl border border-slate-300 px-4 py-3 outline-none transition focus:border-slate-900">
+                                        <option value="">Pilih kelas</option>
+                                        {(workspace.kelas_options || []).map(item => <option key={item.id_kelas} value={item.id_kelas}>{item.nama_kelas}</option>)}
+                                    </select>
+                                </label>
+                                <label className="space-y-2 text-sm font-medium text-slate-700">
+                                    <span>Mata Pelajaran</span>
+                                    <select required value={sesiForm.id_mapel} onChange={e => setSesiForm(c => ({...c, id_mapel: e.target.value}))} className="w-full rounded-2xl border border-slate-300 px-4 py-3 outline-none transition focus:border-slate-900">
+                                        <option value="">Pilih mapel</option>
+                                        {(workspace.mapel_options || []).map(item => <option key={item.id_mapel} value={item.id_mapel}>{item.nama_mapel}</option>)}
+                                    </select>
+                                </label>
+                                <label className="space-y-2 text-sm font-medium text-slate-700">
+                                    <span>Tipe Soal (Label)</span>
+                                    <input required value={sesiForm.tipe_soal} onChange={e => setSesiForm(c => ({...c, tipe_soal: e.target.value}))} className="w-full rounded-2xl border border-slate-300 px-4 py-3 outline-none transition focus:border-slate-900" placeholder="Contoh: Soal UTS Genap" />
+                                </label>
+                                <label className="space-y-2 text-sm font-medium text-slate-700">
+                                    <span>Jenis Asesmen</span>
+                                    <select required value={sesiForm.jenis_asesmen} onChange={e => setSesiForm(c => ({...c, jenis_asesmen: e.target.value}))} className="w-full rounded-2xl border border-slate-300 px-4 py-3 outline-none transition focus:border-slate-900">
+                                        <option value="ujian">Ujian</option>
+                                        <option value="pretest">Pretest</option>
+                                        <option value="posttest">Posttest</option>
+                                    </select>
+                                </label>
+                                <label className="space-y-2 text-sm font-medium text-slate-700">
+                                    <span>Waktu Mulai</span>
+                                    <input required type="datetime-local" value={sesiForm.waktu_mulai} onChange={e => setSesiForm(c => ({...c, waktu_mulai: e.target.value}))} className="w-full rounded-2xl border border-slate-300 px-4 py-3 outline-none transition focus:border-slate-900" />
+                                </label>
+                                <label className="space-y-2 text-sm font-medium text-slate-700">
+                                    <span>Durasi (Menit)</span>
+                                    <input required type="number" min="1" value={sesiForm.durasi_menit} onChange={e => setSesiForm(c => ({...c, durasi_menit: e.target.value}))} className="w-full rounded-2xl border border-slate-300 px-4 py-3 outline-none transition focus:border-slate-900" />
+                                </label>
+                            </div>
+
+                            <div className="mt-6 pt-6 border-t border-slate-200">
+                                <div className="flex items-center justify-between mb-4">
+                                    <h4 className="text-base font-semibold text-slate-900">Pilih Soal dari Bank Soal ({Object.keys(selectedSoalMap).length} Terpilih)</h4>
+                                </div>
+                                <div className="max-h-64 overflow-y-auto border border-slate-200 rounded-xl">
+                                    <table className="min-w-full text-left text-sm divide-y divide-slate-200">
+                                        <thead className="bg-slate-50 sticky top-0">
+                                            <tr>
+                                                <th className="px-4 py-3 font-semibold text-slate-600">Pilih</th>
+                                                <th className="px-4 py-3 font-semibold text-slate-600">Isi Soal</th>
+                                                <th className="px-4 py-3 font-semibold text-slate-600">Mapel</th>
+                                                <th className="px-4 py-3 font-semibold text-slate-600">Jenis</th>
+                                                <th className="px-4 py-3 font-semibold text-slate-600">Bobot</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-slate-100">
+                                            {(workspace.bank_soal || []).map(item => (
+                                                <tr key={item.id_soal} className="hover:bg-slate-50">
+                                                    <td className="px-4 py-3">
+                                                        <input 
+                                                            type="checkbox" 
+                                                            checked={!!selectedSoalMap[item.id_soal]}
+                                                            onChange={e => {
+                                                                const checked = e.target.checked;
+                                                                setSelectedSoalMap(curr => {
+                                                                    const next = {...curr};
+                                                                    if (checked) next[item.id_soal] = 10;
+                                                                    else delete next[item.id_soal];
+                                                                    return next;
+                                                                });
+                                                            }}
+                                                            className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-600"
+                                                        />
+                                                    </td>
+                                                    <td className="px-4 py-3 truncate max-w-xs">{item.isi_soal.substring(0, 50)}...</td>
+                                                    <td className="px-4 py-3">{item.mata_pelajaran?.nama_mapel}</td>
+                                                    <td className="px-4 py-3 capitalize">{item.jenis_soal.replace(/_/g, ' ')}</td>
+                                                    <td className="px-4 py-3">
+                                                        <input 
+                                                            type="number" min="1"
+                                                            value={selectedSoalMap[item.id_soal] || ''}
+                                                            onChange={e => setSelectedSoalMap(curr => ({...curr, [item.id_soal]: Number(e.target.value)}))}
+                                                            disabled={!selectedSoalMap[item.id_soal]}
+                                                            className="w-16 rounded border border-slate-300 px-2 py-1 text-sm disabled:bg-slate-100 outline-none transition focus:border-slate-900"
+                                                        />
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                            {(workspace.bank_soal || []).length === 0 && (
+                                                <tr><td colSpan="5" className="px-4 py-4 text-center text-slate-500">Bank soal kosong.</td></tr>
+                                            )}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                        <div className="border-t border-slate-200 bg-slate-50 px-6 py-4 flex justify-end gap-3">
+                            <button type="button" onClick={() => { setIsSesiModalOpen(false); setEditingSesiId(null); }} className="rounded-full px-5 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-200">Batal</button>
+                            <button type="submit" disabled={Object.keys(selectedSoalMap).length === 0} className="rounded-full bg-blue-600 px-5 py-2 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed">
+                                {editingSesiId ? 'Simpan Perubahan' : 'Simpan Jadwal & Aktifkan'}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            )}
         </section>
     );
 
@@ -905,6 +1436,10 @@ export default function GuruDashboard({ session, onLogout, mode = 'dashboard' })
     );
 
     const renderContent = () => {
+        if (mode === 'jadwal-cbt') {
+            return renderJadwalCbt();
+        }
+
         if (mode === 'bank-soal') {
             return renderBankSoal();
         }

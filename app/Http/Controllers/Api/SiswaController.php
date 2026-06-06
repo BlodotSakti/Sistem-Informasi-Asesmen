@@ -25,7 +25,6 @@ class SiswaController extends Controller
 
         $query = SesiAsesmen::query()
             ->with(['kelas', 'mataPelajaran'])
-            ->where('waktu_mulai', '<=', now())
             ->latest('waktu_mulai');
 
         if ($idKelas) {
@@ -351,5 +350,330 @@ class SiswaController extends Controller
         );
 
         return response()->json($rencana->fresh('mataPelajaran'), 201);
+    }
+
+    public function cbtData(Request $request, int $id_sesi): JsonResponse
+    {
+        $siswa = $request->user()->siswa;
+        
+        $sesi = SesiAsesmen::query()
+            ->with(['mataPelajaran', 'detailSesiSoal.bankSoal'])
+            ->where('id_sesi', $id_sesi)
+            ->firstOrFail();
+
+        // Check if student has access to this class session
+        if ($sesi->id_kelas !== $siswa->kelasAktifAssignment?->id_kelas) {
+            return response()->json(['message' => 'Unauthorized access to this session'], 403);
+        }
+
+        $soal = $sesi->detailSesiSoal->map(function ($detail) {
+            $bankSoal = $detail->bankSoal;
+            return [
+                'id_detail' => $detail->id_detail,
+                'jenis_soal' => $bankSoal->jenis_soal,
+                'isi_soal' => $bankSoal->isi_soal,
+                'opsi_jawaban' => $bankSoal->opsi_jawaban,
+                'bobot_nilai' => $detail->bobot_nilai,
+            ];
+        });
+
+        // Get existing answers
+        $jawaban = JawabanSiswa::query()
+            ->where('id_siswa', $siswa->id_siswa)
+            ->whereIn('id_detail', $soal->pluck('id_detail'))
+            ->get()
+            ->keyBy('id_detail');
+
+        return response()->json([
+            'sesi' => [
+                'id_sesi' => $sesi->id_sesi,
+                'tipe_soal' => $sesi->tipe_soal,
+                'jenis_asesmen' => $sesi->jenis_asesmen,
+                'durasi_menit' => $sesi->durasi_menit,
+                'waktu_mulai' => $sesi->waktu_mulai,
+                'mata_pelajaran' => $sesi->mataPelajaran?->nama_mapel,
+            ],
+            'soal' => $soal,
+            'jawaban_tersimpan' => $jawaban->values()->map(function ($item) {
+                return [
+                    'id_detail' => $item->id_detail,
+                    'teks_jawaban' => $item->teks_jawaban,
+                ];
+            }),
+        ]);
+    }
+
+    public function cbtSubmit(Request $request, int $id_sesi): JsonResponse
+    {
+        $siswa = $request->user()->siswa;
+        $data = $request->validate([
+            'jawaban' => ['required', 'array'],
+            'jawaban.*.id_detail' => ['required', 'integer', 'exists:detail_sesi_soal,id_detail'],
+            'jawaban.*.teks_jawaban' => ['nullable', 'string'],
+        ]);
+
+        $sesi = SesiAsesmen::query()
+            ->with(['detailSesiSoal.bankSoal', 'mataPelajaran'])
+            ->findOrFail($id_sesi);
+
+        $details = $sesi->detailSesiSoal->keyBy('id_detail');
+        $totalSkor = 0;
+        $totalBobot = $sesi->detailSesiSoal->sum('bobot_nilai');
+        $resultPerSoal = [];
+
+        DB::transaction(function () use ($data, $siswa, $details, &$totalSkor, &$resultPerSoal) {
+            foreach ($data['jawaban'] as $jawab) {
+                $detail = $details->get($jawab['id_detail']);
+                if (!$detail || !$detail->bankSoal) continue;
+
+                $bankSoal = $detail->bankSoal;
+                $teksJawaban = $jawab['teks_jawaban'] ?? null;
+
+                $isCorrect = false;
+                $skorDiperoleh = 0;
+
+                if ($teksJawaban !== null && $teksJawaban !== '') {
+                    if ($bankSoal->jenis_soal === 'pilihan_ganda') {
+                        $isCorrect = $teksJawaban === $bankSoal->kunci_jawaban;
+                        $skorDiperoleh = $isCorrect ? $detail->bobot_nilai : 0;
+                    } elseif ($bankSoal->jenis_soal === 'pilihan_ganda_kompleks') {
+                        $kunciArr = json_decode($bankSoal->kunci_jawaban, true) ?? [];
+                        $jawabArr = json_decode($teksJawaban, true);
+
+                        if (!is_array($jawabArr)) {
+                            $jawabArr = [$teksJawaban];
+                        }
+
+                        if (count($kunciArr) > 0) {
+                            $truePositives = 0;
+                            $falsePositives = 0;
+                            foreach ($jawabArr as $j) {
+                                if (in_array($j, $kunciArr)) {
+                                    $truePositives++;
+                                } else {
+                                    $falsePositives++;
+                                }
+                            }
+                            $calculatedScore = ($truePositives - $falsePositives) / count($kunciArr);
+                            $calculatedScore = max(0, $calculatedScore);
+                            $skorDiperoleh = $calculatedScore * $detail->bobot_nilai;
+                            $isCorrect = $skorDiperoleh == $detail->bobot_nilai;
+                        }
+                    }
+                    // Essay: stays 0, needs manual grading
+                }
+
+                $totalSkor += $skorDiperoleh;
+
+                JawabanSiswa::updateOrCreate(
+                    [
+                        'id_siswa' => $siswa->id_siswa,
+                        'id_detail' => $jawab['id_detail'],
+                    ],
+                    [
+                        'teks_jawaban' => $teksJawaban ?? '',
+                        'is_correct' => $isCorrect,
+                        'skor_diperoleh' => $skorDiperoleh,
+                    ]
+                );
+
+                $resultPerSoal[] = [
+                    'id_detail' => $detail->id_detail,
+                    'isi_soal' => $bankSoal->isi_soal,
+                    'jenis_soal' => $bankSoal->jenis_soal,
+                    'jawaban_siswa' => $teksJawaban,
+                    'kunci_jawaban' => $bankSoal->kunci_jawaban,
+                    'is_correct' => $isCorrect,
+                    'bobot_nilai' => $detail->bobot_nilai,
+                    'skor_diperoleh' => $skorDiperoleh,
+                ];
+            }
+        });
+
+        $jumlahBenar = collect($resultPerSoal)->where('is_correct', true)->count();
+
+        return response()->json([
+            'message' => 'Ujian berhasil disubmit',
+            'total_skor' => round($totalSkor, 2),
+            'total_bobot' => round($totalBobot, 2),
+            'jumlah_soal' => count($resultPerSoal),
+            'jumlah_benar' => $jumlahBenar,
+            'jumlah_salah' => count($resultPerSoal) - $jumlahBenar,
+            'mata_pelajaran' => $sesi->mataPelajaran?->nama_mapel,
+            'jenis_asesmen' => $sesi->jenis_asesmen,
+            'detail_hasil' => $resultPerSoal,
+        ], 200);
+    }
+
+    public function cbtSaveAnswer(Request $request, int $id_sesi): JsonResponse
+    {
+        $siswa = $request->user()->siswa;
+        $data = $request->validate([
+            'id_detail' => ['required', 'integer', 'exists:detail_sesi_soal,id_detail'],
+            'teks_jawaban' => ['nullable', 'string'],
+        ]);
+
+        $sesi = SesiAsesmen::findOrFail($id_sesi);
+
+        if ($sesi->id_kelas !== $siswa->kelasAktifAssignment?->id_kelas) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        $detail = \App\Models\DetailSesiSoal::with('bankSoal')->where('id_detail', $data['id_detail'])->first();
+        $isCorrect = false;
+        $skorDiperoleh = 0;
+
+        if ($detail && $detail->bankSoal) {
+            $bankSoal = $detail->bankSoal;
+            $teksJawaban = $data['teks_jawaban'] ?? null;
+
+            if ($teksJawaban !== null && $teksJawaban !== '') {
+                if ($bankSoal->jenis_soal === 'pilihan_ganda') {
+                    $isCorrect = $teksJawaban === $bankSoal->kunci_jawaban;
+                    $skorDiperoleh = $isCorrect ? $detail->bobot_nilai : 0;
+                } elseif ($bankSoal->jenis_soal === 'pilihan_ganda_kompleks') {
+                    $kunciArr = json_decode($bankSoal->kunci_jawaban, true) ?? [];
+                    $jawabArr = json_decode($teksJawaban, true);
+
+                    if (!is_array($jawabArr)) {
+                        $jawabArr = [$teksJawaban];
+                    }
+
+                    if (count($kunciArr) > 0) {
+                        $truePositives = 0;
+                        $falsePositives = 0;
+                        foreach ($jawabArr as $j) {
+                            if (in_array($j, $kunciArr)) $truePositives++;
+                            else $falsePositives++;
+                        }
+                        $scorePerOpsi = $detail->bobot_nilai / count($kunciArr);
+                        $skorDiperoleh = max(0, ($truePositives * $scorePerOpsi) - ($falsePositives * $scorePerOpsi));
+                        $isCorrect = $skorDiperoleh == $detail->bobot_nilai;
+                    }
+                }
+            }
+        }
+
+        JawabanSiswa::updateOrCreate(
+            [
+                'id_siswa' => $siswa->id_siswa,
+                'id_detail' => $data['id_detail'],
+            ],
+            [
+                'teks_jawaban' => $data['teks_jawaban'] ?? '',
+                'is_correct' => $isCorrect,
+                'skor_diperoleh' => $skorDiperoleh,
+            ]
+        );
+
+        return response()->json(['message' => 'Jawaban tersimpan'], 200);
+    }
+
+    public function cbtHistory(Request $request): JsonResponse
+    {
+        $siswa = $request->user()->siswa;
+
+        // Get all detail IDs the student has answered
+        $answeredDetailIds = JawabanSiswa::where('id_siswa', $siswa->id_siswa)->pluck('id_detail');
+
+        // Get the session IDs from those details
+        $sesiIds = \App\Models\DetailSesiSoal::whereIn('id_detail', $answeredDetailIds)
+            ->pluck('id_sesi')
+            ->unique();
+
+        $sessions = SesiAsesmen::query()
+            ->with(['kelas', 'mataPelajaran', 'detailSesiSoal'])
+            ->whereIn('id_sesi', $sesiIds)
+            ->latest('waktu_mulai')
+            ->get()
+            ->map(function (SesiAsesmen $sesi) use ($siswa) {
+                $detailIds = $sesi->detailSesiSoal->pluck('id_detail');
+                $jawaban = JawabanSiswa::where('id_siswa', $siswa->id_siswa)
+                    ->whereIn('id_detail', $detailIds)
+                    ->get();
+
+                $totalSkor = $jawaban->sum('skor_diperoleh');
+                $totalBobot = $sesi->detailSesiSoal->sum('bobot_nilai');
+                $jumlahBenar = $jawaban->where('is_correct', true)->count();
+
+                return [
+                    'id_sesi' => $sesi->id_sesi,
+                    'mata_pelajaran' => $sesi->mataPelajaran?->nama_mapel,
+                    'kelas' => $sesi->kelas?->nama_kelas,
+                    'tipe_soal' => $sesi->tipe_soal,
+                    'jenis_asesmen' => $sesi->jenis_asesmen,
+                    'waktu_mulai' => $sesi->waktu_mulai,
+                    'durasi_menit' => $sesi->durasi_menit,
+                    'jumlah_soal' => $sesi->detailSesiSoal->count(),
+                    'jumlah_dijawab' => $jawaban->count(),
+                    'jumlah_benar' => $jumlahBenar,
+                    'total_skor' => round($totalSkor, 2),
+                    'total_bobot' => round($totalBobot, 2),
+                    'submitted_at' => $jawaban->max('updated_at'),
+                ];
+            });
+
+        return response()->json(['data' => $sessions->values()]);
+    }
+
+    public function cbtReview(Request $request, int $id_sesi): JsonResponse
+    {
+        $siswa = $request->user()->siswa;
+
+        $sesi = SesiAsesmen::query()
+            ->with(['mataPelajaran', 'kelas', 'detailSesiSoal.bankSoal'])
+            ->findOrFail($id_sesi);
+
+        $detailIds = $sesi->detailSesiSoal->pluck('id_detail');
+        $jawaban = JawabanSiswa::where('id_siswa', $siswa->id_siswa)
+            ->whereIn('id_detail', $detailIds)
+            ->get()
+            ->keyBy('id_detail');
+
+        // Only allow review if the student has at least one answer
+        if ($jawaban->isEmpty()) {
+            return response()->json(['message' => 'Anda belum mengerjakan ujian ini.'], 403);
+        }
+
+        $totalSkor = 0;
+        $totalBobot = 0;
+
+        $soalReview = $sesi->detailSesiSoal->map(function ($detail) use ($jawaban, &$totalSkor, &$totalBobot) {
+            $bankSoal = $detail->bankSoal;
+            $answer = $jawaban->get($detail->id_detail);
+            $totalBobot += $detail->bobot_nilai;
+
+            $skorDiperoleh = $answer ? (float) $answer->skor_diperoleh : 0;
+            $totalSkor += $skorDiperoleh;
+
+            return [
+                'id_detail' => $detail->id_detail,
+                'isi_soal' => $bankSoal->isi_soal,
+                'jenis_soal' => $bankSoal->jenis_soal,
+                'opsi_jawaban' => $bankSoal->opsi_jawaban,
+                'kunci_jawaban' => $bankSoal->kunci_jawaban,
+                'bobot_nilai' => $detail->bobot_nilai,
+                'jawaban_siswa' => $answer?->teks_jawaban,
+                'is_correct' => $answer?->is_correct ?? false,
+                'skor_diperoleh' => $skorDiperoleh,
+            ];
+        });
+
+        return response()->json([
+            'sesi' => [
+                'id_sesi' => $sesi->id_sesi,
+                'mata_pelajaran' => $sesi->mataPelajaran?->nama_mapel,
+                'kelas' => $sesi->kelas?->nama_kelas,
+                'jenis_asesmen' => $sesi->jenis_asesmen,
+                'tipe_soal' => $sesi->tipe_soal,
+                'waktu_mulai' => $sesi->waktu_mulai,
+                'durasi_menit' => $sesi->durasi_menit,
+            ],
+            'total_skor' => round($totalSkor, 2),
+            'total_bobot' => round($totalBobot, 2),
+            'jumlah_benar' => $soalReview->where('is_correct', true)->count(),
+            'jumlah_soal' => $soalReview->count(),
+            'soal' => $soalReview->values(),
+        ]);
     }
 }

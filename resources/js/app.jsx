@@ -11,6 +11,8 @@ import SiswaLearningPlanPage from './pages/SiswaLearningPlanPage';
 import SiswaLearningHistoryPage from './pages/SiswaLearningHistoryPage';
 import SiswaTrendPage from './pages/SiswaTrendPage';
 import SiswaAppreciationPage from './pages/SiswaAppreciationPage';
+import SiswaCbtPage from './pages/SiswaCbtPage';
+import SiswaCbtHistoryPage from './pages/SiswaCbtHistoryPage';
 
 const STORAGE_KEY = 'sia-session';
 
@@ -54,6 +56,7 @@ function App() {
             '/admin/penugasan-pembelajaran',
             '/admin/import-akun',
             '/guru/dashboard',
+            '/guru/jadwal-cbt',
             '/guru/bank-soal',
             '/guru/berita-acara',
             '/siswa/dashboard',
@@ -63,6 +66,7 @@ function App() {
             '/siswa/riwayat-pembelajaran',
             '/siswa/tren-nilai',
             '/siswa/apresiasi',
+            '/siswa/riwayat-cbt',
         ];
 
         if (protectedRoutes.includes(pathname) && !session?.token) {
@@ -80,6 +84,12 @@ function App() {
 
         if (session?.role && pathname.startsWith('/siswa/') && session.role !== 'siswa') {
             window.location.replace(`/${session.role}/dashboard`);
+        }
+
+        // Specific check for CBT path because it has an ID
+        if (pathname.startsWith('/siswa/cbt/') && !session?.token) {
+            window.location.replace('/login');
+            return;
         }
     }, [pathname, session]);
 
@@ -146,6 +156,7 @@ function App() {
 
         const guruRouteMap = {
             '/guru/dashboard': 'dashboard',
+            '/guru/jadwal-cbt': 'jadwal-cbt',
             '/guru/bank-soal': 'bank-soal',
             '/guru/berita-acara': 'berita-acara',
         };
@@ -180,6 +191,15 @@ function App() {
 
         if (pathname === '/siswa/apresiasi') {
             return <SiswaAppreciationPage session={session} onLogout={onLogout} />;
+        }
+
+        if (pathname === '/siswa/riwayat-cbt') {
+            return <SiswaCbtHistoryPage session={session} onLogout={onLogout} />;
+        }
+
+        if (pathname.startsWith('/siswa/cbt/')) {
+            const idSesi = pathname.split('/')[3];
+            return <SiswaCbtPage session={session} onLogout={onLogout} idSesi={idSesi} />;
         }
 
         return <LoginPage session={session} onLogin={onLogin} />;

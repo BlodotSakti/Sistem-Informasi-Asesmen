@@ -1,31 +1,24 @@
-# Changelog
+# CHANGELOG
 
-## 2026-06-03
-
-- Added optional per-student catatan pribadi and apresiasi badges in guru BAP, linked to the saved berita acara.
-- Strengthened student learning history with per-meeting note/badge details, better subject summaries, and human-readable dates.
-- Fixed guru and student history tables to display formatted dates instead of raw ISO timestamps.
-- Reflowed student learning-history and appreciation sections into a vertical layout.
-- Added BAP edit actions, PATCH support, and success popup/toast feedback for guru create/update flows.
-
-## 2026-05-25
-
-- Added master data management for Tahun Ajaran with full CRUD API and admin UI.
-- Connected Kelas and Mata Pelajaran CRUD to a more user-friendly admin dashboard layout.
-- Implemented real Excel bulk import for Guru and Siswa accounts with automatic username extraction from NIP/NISN.
-- Added automatic default password generation for imported accounts.
-- Added tests for tahun ajaran CRUD and Excel import flow.
-- Added sticky sidebar navigation and route-based admin pages.
-- Added toast notifications for Excel import success and failure states.
-- Added semester selection for Tahun Ajaran and limited mapel tingkat to X, XI, and XII.
-- Added class-enrollment, teaching-assignment, and student learning-plan relations for profile-aware dashboards.
-- Added admin CRUD pages and API endpoints for Siswa-Kelas placement and Guru-Mapel teaching assignments.
-- Added search/filter controls and Excel/CSV bulk import for Siswa-Kelas and Guru-Mapel relation management.
-- Surfaced relation counts on the admin and guru dashboards so the latest assignment data is visible at a glance.
-- Added downloadable CSV/XLSX templates for Siswa-Kelas and Guru-Mapel bulk import flows.
-- Split student navigation into separate route-based pages for dashboard, profile, sessions, learning plans, trends, and appreciation.
-- Added dedicated guru pages for Bank Soal and Berita Acara with route-based navigation and user-friendly forms.
-- Enhanced Bank Soal validation with mandatory topik materi + Bloom level (C1-C6), pilihan ganda option checks, and assignment-aware mapel validation.
-- Enhanced Berita Acara with per-student attendance input, meeting evaluation/kendala notes, and strict validation requiring complete attendance for all active class students.
-- Added guru workspace API endpoints to serve assignment-based options and recent Bank Soal/Berita Acara data for integrated UI flows.
-- Added feature tests for new guru Bank Soal and Berita Acara behavior, plus web shell tests for new guru routes.
+## [Unreleased]
+### Added
+- **Backend API**: Added `cbtData` and `cbtSubmit` endpoints in `SiswaController` to fetch CBT session questions and auto-submit student answers. Support for partial points in complex multiple choice questions (pilihan_ganda_kompleks) has been added.
+- **Backend API**: Added `bankSoalStore` and `sesiAsesmenStore` in `GuruController` to support transactional session creation.
+- **Database**: Added `pilihan_ganda_kompleks` enum to `bank_soal` table.
+- **Frontend Page (Siswa)**: Created `SiswaCbtPage.jsx` component representing the CBT execution interface.
+  - Features: Multiple choice, complex multiple choice (checkboxes), and essay handling. Question palette with status indicators (Unanswered, Answered, Active), Countdown Timer, Auto-submit on timeout.
+  - Security: Basic browser lockdown (disables right-click, alerts on tab change).
+- **Frontend Routing**: Added `/siswa/cbt/:id` route in `app.jsx` and `web.php`.
+- **UI Update (Siswa)**: Added "Kerjakan" button in `SiswaSessionsPage.jsx` to navigate to active exams.
+- **UI Update (Guru)**: Modifikasi `Bank Soal` mode for `pilihan_ganda_kompleks` options. Added Modal "Buat Jadwal CBT" to combine multiple questions into one session.
+- **Testing**: Configured Vitest and React Testing Library setup in `vite.config.js` and `package.json`. Added `SiswaCbtPage.test.jsx` and `GuruSesiAsesmen.test.jsx`.
+- **Persistensi Jawaban CBT**: Jawaban siswa tersimpan otomatis ke `localStorage` dan auto-save ke backend (`POST /api/siswa/cbt/{id_sesi}/save-answer`) setiap 2 detik. Jawaban tidak hilang saat halaman di-refresh.
+- **Tampilan Hasil Nilai Setelah Submit**: Setelah submit, halaman CBT menampilkan skor total, persentase, jumlah benar/salah, dan ringkasan per soal dengan jawaban benar vs jawaban siswa.
+- **Halaman Riwayat CBT (Siswa)**: Halaman baru `/siswa/riwayat-cbt` menampilkan daftar semua CBT yang pernah dikerjakan, skor, dan fitur Review per soal dengan jawaban siswa, kunci jawaban benar, dan indikator benar/salah.
+- **Monitoring CBT (Guru)**: Tombol "Detail" di Jadwal CBT (`GET /api/guru/sesi-asesmen/{id_sesi}/detail`) membuka modal monitoring lengkap: statistik (rata-rata, tertinggi, terendah), daftar soal & kunci, status pengerjaan siswa (sudah/belum), skor, dan detail jawaban per siswa.
+- **Backend API (Siswa)**: Endpoint `cbtSaveAnswer`, `cbtHistory`, `cbtReview` di `SiswaController`.
+- **Backend API (Guru)**: Endpoint `sesiAsesmenDetail` di `GuruController`.
+- **Testing**: 20 tests across 4 test files (`SiswaCbtPage.test.jsx`, `SiswaCbtHistoryPage.test.jsx`, `GuruSesiDetail.test.jsx`, `GuruSesiAsesmen.test.jsx`).
+### Fixed
+- **Bug Fix**: Memperbaiki issue `(data.jawaban_tersimpan || []).forEach is not a function` saat halaman di-refresh. Method `cbtData` sekarang menggunakan `->values()` agar response JSON yang dihasilkan merupakan array sekuensial (bukan object).
+- **Bug Fix**: Memperbaiki sistem penilaian auto-save di method `cbtSaveAnswer` agar jawaban siswa saat progres ujian dinilai secara real-time, bukan default `0`. Guru kini dapat melihat skor sebenarnya secara real-time di monitoring CBT meskipun siswa belum submit ujian secara final.

@@ -3,6 +3,7 @@ import DashboardLayout from '../components/layout/DashboardLayout';
 import StatCard from '../components/ui/StatCard';
 import { siswaNavigation } from './siswa/siswaNavigation';
 import { useSiswaData } from './siswa/useSiswaData';
+import { formatDateTimeLabel } from '../lib/date';
 
 export default function SiswaSessionsPage({ session, onLogout }) {
     const { summary, activeSessions, loading, error } = useSiswaData(session, { includeActiveSessions: true });
@@ -54,7 +55,8 @@ export default function SiswaSessionsPage({ session, onLogout }) {
                                     <th className="px-4 py-3 font-semibold">Kelas</th>
                                     <th className="px-4 py-3 font-semibold">Jenis</th>
                                     <th className="px-4 py-3 font-semibold">Durasi</th>
-                                    <th className="px-4 py-3 font-semibold">Mulai</th>
+                                    <th className="px-4 py-3 font-semibold">Waktu Mulai</th>
+                                    <th className="px-4 py-3 font-semibold text-center">Aksi</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100 bg-white">
@@ -64,12 +66,17 @@ export default function SiswaSessionsPage({ session, onLogout }) {
                                         <td className="px-4 py-3 text-slate-600">{item.kelas?.nama_kelas || '-'}</td>
                                         <td className="px-4 py-3 text-slate-600">{item.tipe_soal || '-'} • {item.jenis_asesmen || '-'}</td>
                                         <td className="px-4 py-3 text-slate-600">{item.durasi_menit || 0} menit</td>
-                                        <td className="px-4 py-3 text-slate-600">{item.waktu_mulai || '-'}</td>
+                                        <td className="px-4 py-3 text-slate-600">{formatDateTimeLabel(item.waktu_mulai)}</td>
+                                        <td className="px-4 py-3 text-right">
+                                            <a href={`/siswa/cbt/${item.id_sesi}`} className="inline-flex items-center justify-center rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700">
+                                                Kerjakan
+                                            </a>
+                                        </td>
                                     </tr>
                                 ))}
                                 {!loading && filteredSessions.length === 0 ? (
                                     <tr>
-                                        <td colSpan="5" className="px-4 py-4 text-sm text-slate-500">Belum ada sesi aktif untuk kelas ini.</td>
+                                        <td colSpan="6" className="px-4 py-4 text-center text-sm text-slate-500">Belum ada sesi aktif untuk kelas ini.</td>
                                     </tr>
                                 ) : null}
                             </tbody>

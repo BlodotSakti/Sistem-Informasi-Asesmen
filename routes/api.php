@@ -65,7 +65,13 @@ Route::middleware('auth:sanctum')->group(function (): void {
 			Route::get('/workspace-data', [GuruController::class, 'workspaceData'])->name('workspace-data');
 			Route::get('/bank-soal', [GuruController::class, 'bankSoalIndex'])->name('bank-soal.index');
 			Route::post('/bank-soal', [GuruController::class, 'bankSoalStore'])->name('bank-soal.store');
+			Route::patch('/bank-soal/{id_soal}', [GuruController::class, 'bankSoalUpdate'])->name('bank-soal.update');
+			Route::delete('/bank-soal/{id_soal}', [GuruController::class, 'bankSoalDestroy'])->name('bank-soal.destroy');
+			Route::get('/sesi-asesmen', [GuruController::class, 'sesiAsesmenIndex'])->name('sesi-asesmen.index');
 			Route::post('/sesi-asesmen', [GuruController::class, 'sesiAsesmenStore'])->name('sesi-asesmen.store');
+			Route::patch('/sesi-asesmen/{id_sesi}', [GuruController::class, 'sesiAsesmenUpdate'])->name('sesi-asesmen.update');
+			Route::delete('/sesi-asesmen/{id_sesi}', [GuruController::class, 'sesiAsesmenDestroy'])->name('sesi-asesmen.destroy');
+			Route::get('/sesi-asesmen/{id_sesi}/detail', [GuruController::class, 'sesiAsesmenDetail'])->name('sesi-asesmen.detail');
 			Route::get('/berita-acara', [GuruController::class, 'beritaAcaraIndex'])->name('berita-acara.index');
 			Route::post('/berita-acara', [GuruController::class, 'beritaAcaraStore'])->name('berita-acara.store');
 			Route::patch('/berita-acara/{id_berita_acara}', [GuruController::class, 'beritaAcaraUpdate'])->name('berita-acara.update');
@@ -84,6 +90,11 @@ Route::middleware('auth:sanctum')->group(function (): void {
 			Route::get('/apresiasi', [SiswaController::class, 'apresiasi'])->name('apresiasi.index');
 			Route::get('/rencana-belajar', [SiswaController::class, 'rencanaBelajarIndex'])->name('rencana-belajar.index');
 			Route::post('/rencana-belajar', [SiswaController::class, 'rencanaBelajarStore'])->name('rencana-belajar.store');
+			Route::get('/cbt/riwayat', [SiswaController::class, 'cbtHistory'])->name('cbt.history');
+			Route::get('/cbt/{id_sesi}', [SiswaController::class, 'cbtData'])->name('cbt.data');
+			Route::post('/cbt/{id_sesi}/submit', [SiswaController::class, 'cbtSubmit'])->name('cbt.submit');
+			Route::post('/cbt/{id_sesi}/save-answer', [SiswaController::class, 'cbtSaveAnswer'])->name('cbt.save-answer');
+			Route::get('/cbt/{id_sesi}/review', [SiswaController::class, 'cbtReview'])->name('cbt.review');
 		});
     });
 });

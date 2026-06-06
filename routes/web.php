@@ -27,6 +27,7 @@ Route::view('/admin/kelas-siswa', 'app');
 Route::view('/admin/penugasan-pembelajaran', 'app');
 Route::view('/admin/import-akun', 'app');
 Route::view('/guru/dashboard', 'app');
+Route::view('/guru/jadwal-cbt', 'app');
 Route::view('/guru/bank-soal', 'app');
 Route::view('/guru/berita-acara', 'app');
 Route::view('/siswa/dashboard', 'app');
@@ -36,6 +37,8 @@ Route::view('/siswa/rencana-belajar', 'app');
 Route::view('/siswa/riwayat-pembelajaran', 'app');
 Route::view('/siswa/tren-nilai', 'app');
 Route::view('/siswa/apresiasi', 'app');
+Route::view('/siswa/riwayat-cbt', 'app');
+Route::view('/siswa/cbt/{id}', 'app');
 
 Route::resource('pengguna', PenggunaController::class);
 Route::resource('admin', AdminController::class);
