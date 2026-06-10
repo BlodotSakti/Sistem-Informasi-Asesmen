@@ -162,6 +162,13 @@ describe('SiswaCbtPage Component', () => {
         render(<SiswaCbtPage session={mockSession} idSesi={1} onLogout={() => {}} />);
 
         await waitFor(() => {
+            expect(screen.getByText('Kumpulkan Jawaban')).toBeInTheDocument();
+        });
+
+        const kumpulButton = screen.getByText('Kumpulkan Jawaban');
+        fireEvent.click(kumpulButton);
+
+        await waitFor(() => {
             expect(screen.getByText('Selesai Ujian')).toBeInTheDocument();
         });
 
@@ -184,6 +191,12 @@ describe('SiswaCbtPage Component', () => {
         localStorage.setItem('cbt-jawaban-1', JSON.stringify({ '101': '2' }));
 
         render(<SiswaCbtPage session={mockSession} idSesi={1} onLogout={() => {}} />);
+
+        await waitFor(() => {
+            expect(screen.getByText('Kumpulkan Jawaban')).toBeInTheDocument();
+        });
+
+        fireEvent.click(screen.getByText('Kumpulkan Jawaban'));
 
         await waitFor(() => {
             expect(screen.getByText('Selesai Ujian')).toBeInTheDocument();

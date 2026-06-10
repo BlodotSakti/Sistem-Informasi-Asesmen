@@ -38,10 +38,7 @@ export default function GuruDashboard({ session, onLogout, mode = 'dashboard' })
         id_mapel: '',
         isi_soal: '',
         jenis_soal: 'pilihan_ganda',
-        opsi_a: '',
-        opsi_b: '',
-        opsi_c: '',
-        opsi_d: '',
+        opsi_jawaban: ['', '', '', ''],
         kunci_jawaban: '',
         kunci_jawaban_kompleks: [],
         topik_materi: '',
@@ -449,10 +446,7 @@ export default function GuruDashboard({ session, onLogout, mode = 'dashboard' })
             id_mapel: String(item.id_mapel || ''),
             isi_soal: item.isi_soal || '',
             jenis_soal: item.jenis_soal || 'pilihan_ganda',
-            opsi_a: item.opsi_jawaban?.[0] || '',
-            opsi_b: item.opsi_jawaban?.[1] || '',
-            opsi_c: item.opsi_jawaban?.[2] || '',
-            opsi_d: item.opsi_jawaban?.[3] || '',
+            opsi_jawaban: item.opsi_jawaban || ['', '', '', ''],
             kunci_jawaban: item.jenis_soal !== 'pilihan_ganda_kompleks' ? item.kunci_jawaban : '',
             kunci_jawaban_kompleks: item.jenis_soal === 'pilihan_ganda_kompleks' ? (function() { try { return JSON.parse(item.kunci_jawaban); } catch { return []; } })() : [],
             topik_materi: item.topik_materi || '',
@@ -466,10 +460,7 @@ export default function GuruDashboard({ session, onLogout, mode = 'dashboard' })
         setBankForm((current) => ({
             ...current,
             isi_soal: '',
-            opsi_a: '',
-            opsi_b: '',
-            opsi_c: '',
-            opsi_d: '',
+            opsi_jawaban: ['', '', '', ''],
             kunci_jawaban: '',
             kunci_jawaban_kompleks: [],
             topik_materi: '',
@@ -499,7 +490,7 @@ export default function GuruDashboard({ session, onLogout, mode = 'dashboard' })
                 return;
             }
 
-            const opsiJawaban = [bankForm.opsi_a, bankForm.opsi_b, bankForm.opsi_c, bankForm.opsi_d]
+            const opsiJawaban = bankForm.opsi_jawaban
                 .map((item) => item.trim())
                 .filter(Boolean);
 
@@ -712,19 +703,51 @@ export default function GuruDashboard({ session, onLogout, mode = 'dashboard' })
                     </label>
 
                     {bankForm.jenis_soal === 'pilihan_ganda' || bankForm.jenis_soal === 'pilihan_ganda_kompleks' ? (
-                        <>
-                            <label className="space-y-2 text-sm font-medium text-slate-700"><span>Opsi A</span><input value={bankForm.opsi_a} onChange={(event) => setBankForm((current) => ({ ...current, opsi_a: event.target.value }))} className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-slate-900" /></label>
-                            <label className="space-y-2 text-sm font-medium text-slate-700"><span>Opsi B</span><input value={bankForm.opsi_b} onChange={(event) => setBankForm((current) => ({ ...current, opsi_b: event.target.value }))} className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-slate-900" /></label>
-                            <label className="space-y-2 text-sm font-medium text-slate-700"><span>Opsi C</span><input value={bankForm.opsi_c} onChange={(event) => setBankForm((current) => ({ ...current, opsi_c: event.target.value }))} className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-slate-900" /></label>
-                            <label className="space-y-2 text-sm font-medium text-slate-700"><span>Opsi D</span><input value={bankForm.opsi_d} onChange={(event) => setBankForm((current) => ({ ...current, opsi_d: event.target.value }))} className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-slate-900" /></label>
-                        </>
+                        <div className="md:col-span-2 space-y-3">
+                            {bankForm.opsi_jawaban.map((opsi, idx) => (
+                                <label key={idx} className="flex flex-col space-y-2 text-sm font-medium text-slate-700">
+                                    <div className="flex items-center justify-between">
+                                        <span>Opsi {String.fromCharCode(65 + idx)}</span>
+                                        {bankForm.opsi_jawaban.length > 2 && (
+                                            <button 
+                                                type="button" 
+                                                onClick={() => {
+                                                    const newOpsi = [...bankForm.opsi_jawaban];
+                                                    newOpsi.splice(idx, 1);
+                                                    setBankForm(curr => ({ ...curr, opsi_jawaban: newOpsi }));
+                                                }}
+                                                className="text-rose-500 hover:text-rose-700 text-xs"
+                                            >
+                                                Hapus
+                                            </button>
+                                        )}
+                                    </div>
+                                    <input 
+                                        value={opsi} 
+                                        onChange={(event) => {
+                                            const newOpsi = [...bankForm.opsi_jawaban];
+                                            newOpsi[idx] = event.target.value;
+                                            setBankForm(curr => ({ ...curr, opsi_jawaban: newOpsi }));
+                                        }} 
+                                        className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-slate-900" 
+                                    />
+                                </label>
+                            ))}
+                            <button 
+                                type="button" 
+                                onClick={() => setBankForm(curr => ({ ...curr, opsi_jawaban: [...curr.opsi_jawaban, ''] }))}
+                                className="mt-2 text-sm text-blue-600 font-semibold hover:text-blue-800"
+                            >
+                                + Tambah Opsi Jawaban
+                            </button>
+                        </div>
                     ) : null}
 
                     <label className="space-y-2 text-sm font-medium text-slate-700 md:col-span-2">
                         <span>Kunci Jawaban</span>
                         {bankForm.jenis_soal === 'pilihan_ganda_kompleks' ? (
                             <div className="flex flex-wrap gap-4 pt-2">
-                                {[bankForm.opsi_a, bankForm.opsi_b, bankForm.opsi_c, bankForm.opsi_d].filter(Boolean).map((opsi, idx) => (
+                                {bankForm.opsi_jawaban.filter(Boolean).map((opsi, idx) => (
                                     <label key={idx} className="flex items-center gap-2 cursor-pointer">
                                         <input
                                             type="checkbox"
@@ -745,7 +768,7 @@ export default function GuruDashboard({ session, onLogout, mode = 'dashboard' })
                                         <span className="text-sm font-normal text-slate-700">{opsi}</span>
                                     </label>
                                 ))}
-                                {![bankForm.opsi_a, bankForm.opsi_b, bankForm.opsi_c, bankForm.opsi_d].filter(Boolean).length && (
+                                {bankForm.opsi_jawaban.filter(Boolean).length === 0 && (
                                     <span className="text-xs text-slate-400">Isi opsi jawaban terlebih dahulu.</span>
                                 )}
                             </div>

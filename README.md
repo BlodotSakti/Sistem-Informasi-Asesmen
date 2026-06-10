@@ -1,58 +1,28 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Pengembangan Sistem Informasi Asesmen Progres Belajar Siswa Berbasis Website (Studi Kasus: SMAN Sumatera Selatan)
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+![Laravel](https://img.shields.io/badge/Laravel-FF2D20?style=for-the-badge&logo=laravel&logoColor=white)
+![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)
+![TailwindCSS](https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)
+![MySQL](https://img.shields.io/badge/MySQL-00000F?style=for-the-badge&logo=mysql&logoColor=white)
+![Gemini AI](https://img.shields.io/badge/Gemini%20AI-8E75FF?style=for-the-badge&logo=google-gemini&logoColor=white)
 
-## About Laravel
+Repository ini berisi kode sumber (*source code*) untuk **Sistem Informasi Asesmen Progres Belajar Siswa** yang dikembangkan sebagai proyek **Tugas Akhir** program studi Teknik Informatika, Institut Teknologi Sumatera. Sistem ini dirancang untuk mendigitalisasi proses penilaian sekaligus memberikan analisis diagnostik otomatis berbasis kecerdasan buatan.
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+## 📌 Latar Belakang & Permasalahan
+Proses evaluasi belajar konvensional sering kali hanya menghasilkan tumpukan angka tanpa memberikan umpan balik (*feedback*) yang mendalam mengenai peta kemampuan kognitif siswa. Sistem ini hadir untuk menyelesaikan masalah tersebut dengan memetakan hasil ujian berdasarkan **Taksonomi Bloom (C1-C6)** dan menghasilkan analisis personal secara otomatis menggunakan **Gemini AI**.
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## 🚀 Fitur Utama Sistem
+Sistem dibangun menggunakan arsitektur **Multi-Role (Role-Based Access Control)** yang memisahkan hak akses untuk tiga pengguna utama:
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+* **Admin**: Manajemen Master Data Akademik (Tahun Ajaran, Kelas, Mata Pelajaran) dan fitur *bulk import* akun Guru/Siswa via Excel.
+* **Guru**: Pembuatan Bank Soal berlabel Level Kognitif (C1-C6) & Topik Materi, penjadwalan ujian CBT, pengisian Berita Acara Kelas harian, serta pemberian Catatan Privat dan Lencana (*Badge*) Apresiasi kepada siswa.
+* **Siswa**: Ruang ujian CBT interaktif yang dilengkapi dengan *timer* otomatis, serta halaman *Dashboard* personal untuk memantau grafik tren nilai, histori tugas, dan dokumen analisis diagnostik.
+* **AI-Powered Diagnostic Analysis**: Integrasi otomatis dengan API Gemini untuk merangkum pencapaian kognitif siswa pasca-ujian menjadi satu paragraf deskriptif terkait kekuatan dan kelemahan belajar mereka.
 
-## Learning Laravel
+## 🛠️ Spesifikasi Teknologi (Tech Stack)
+* **Backend:** Laravel 11 (sebagai RESTful API & REST Server)
+* **Frontend:** React.js dengan Tailwind CSS (Single Page Application)
+* **Database:** MySQL (Lingkungan pengembangan menggunakan Laragon)
+* **AI Integration:** Google Gemini API Client for Laravel
+* **State Management & Tools:** Git & GitHub untuk Version Control
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
-
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
-
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
-
-## Agentic Development
-
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
-
-```bash
-composer require laravel/boost --dev
-
-php artisan boost:install
-```
-
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
-
-## Contributing
-
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
-
-## Code of Conduct
-
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
-
-## Security Vulnerabilities
-
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
-
-## License
-
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).

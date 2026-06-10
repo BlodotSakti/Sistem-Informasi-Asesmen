@@ -72,7 +72,7 @@ describe('GuruDashboard - Sesi Asesmen CBT', () => {
 
         // Verify Edit and Hapus buttons are visible
         expect(screen.getByText('Edit')).toBeInTheDocument();
-        expect(screen.getByText('Hapus')).toBeInTheDocument();
+        expect(screen.getAllByText('Hapus').length).toBeGreaterThan(0);
     });
 
     it('shows detail button for jadwal CBT items', async () => {

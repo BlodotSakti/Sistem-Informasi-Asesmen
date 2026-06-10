@@ -16,6 +16,7 @@ export default function SiswaCbtPage({ session, onLogout, idSesi }) {
     const [currentIndex, setCurrentIndex] = useState(0);
     const [timeLeft, setTimeLeft] = useState(0);
     const [resultData, setResultData] = useState(null);
+    const [showSummary, setShowSummary] = useState(false);
 
     const saveTimerRef = useRef({});
     const activeSoal = soalData[currentIndex];
@@ -268,11 +269,11 @@ export default function SiswaCbtPage({ session, onLogout, idSesi }) {
                     <h2 className="mb-4 text-xl font-bold text-slate-800">Ringkasan Jawaban</h2>
                     <div className="space-y-4">
                         {(resultData.detail_hasil || []).map((item, idx) => (
-                            <div key={item.id_detail} className={`rounded-2xl border p-5 shadow-sm ${item.is_correct ? 'border-emerald-200 bg-emerald-50/40' : 'border-rose-200 bg-rose-50/40'}`}>
+                            <div key={item.id_detail} className={`rounded-2xl border p-5 shadow-sm ${item.skor_diperoleh == item.bobot_nilai ? 'border-emerald-200 bg-emerald-50/40' : item.skor_diperoleh > 0 ? 'border-amber-200 bg-amber-50/40' : 'border-rose-200 bg-rose-50/40'}`}>
                                 <div className="flex items-start justify-between">
                                     <h3 className="font-semibold text-slate-800">Soal {idx + 1}</h3>
-                                    <span className={`rounded-full px-3 py-1 text-xs font-bold ${item.is_correct ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
-                                        {item.is_correct ? '✓ Benar' : '✗ Salah'} — {item.skor_diperoleh}/{item.bobot_nilai}
+                                    <span className={`rounded-full px-3 py-1 text-xs font-bold ${item.skor_diperoleh == item.bobot_nilai ? 'bg-emerald-100 text-emerald-700' : item.skor_diperoleh > 0 ? 'bg-amber-100 text-amber-700' : 'bg-rose-100 text-rose-700'}`}>
+                                        {item.skor_diperoleh == item.bobot_nilai ? '✓ Benar' : item.skor_diperoleh > 0 ? '○ Sebagian Benar' : '✗ Salah'} — {item.skor_diperoleh}/{item.bobot_nilai}
                                     </span>
                                 </div>
                                 <p className="mt-2 text-sm text-slate-600">{item.isi_soal}</p>
@@ -373,15 +374,11 @@ export default function SiswaCbtPage({ session, onLogout, idSesi }) {
                         </span>
                     </div>
                     <button
-                        onClick={() => {
-                            if (window.confirm('Anda yakin ingin mengakhiri ujian dan menyimpan jawaban?')) {
-                                handleSubmit();
-                            }
-                        }}
+                        onClick={() => setShowSummary(true)}
                         disabled={submitting}
                         className="rounded-xl bg-blue-600 px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 disabled:opacity-50"
                     >
-                        Selesai Ujian
+                        Kumpulkan Jawaban
                     </button>
                 </div>
             </header>
@@ -389,7 +386,48 @@ export default function SiswaCbtPage({ session, onLogout, idSesi }) {
             <main className="mx-auto flex w-full max-w-7xl flex-1 items-start gap-8 p-6">
                 {/* Question Area */}
                 <div className="flex-1 rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
-                    {activeSoal ? (
+                    {showSummary ? (
+                        <div className="animate-in fade-in zoom-in-95 duration-300">
+                            <h2 className="mb-6 text-2xl font-bold text-slate-800 text-center">Konfirmasi Pengumpulan Jawaban</h2>
+                            <p className="mb-8 text-slate-600 text-center">Pastikan semua soal telah terjawab. Anda tidak dapat mengubah jawaban setelah menekan tombol Selesai Ujian.</p>
+                            
+                            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 mb-10">
+                                {soalData.map((soal, idx) => {
+                                    const hasAnswered = !!jawaban[soal.id_detail];
+                                    return (
+                                        <div key={soal.id_detail} className={`flex items-center justify-between rounded-xl border p-4 ${hasAnswered ? 'border-emerald-200 bg-emerald-50' : 'border-rose-200 bg-rose-50'}`}>
+                                            <span className="font-bold text-slate-700">Soal {idx + 1}</span>
+                                            {hasAnswered ? (
+                                                <span className="text-xs font-semibold text-emerald-700 bg-emerald-100 px-2 py-1 rounded-md">Terjawab</span>
+                                            ) : (
+                                                <span className="text-xs font-semibold text-rose-700 bg-rose-100 px-2 py-1 rounded-md">Belum</span>
+                                            )}
+                                        </div>
+                                    )
+                                })}
+                            </div>
+
+                            <div className="flex items-center justify-center space-x-4 border-t border-slate-100 pt-8">
+                                <button
+                                    onClick={() => setShowSummary(false)}
+                                    className="rounded-xl border border-slate-200 bg-white px-6 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                                >
+                                    Kembali ke Soal
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        if (window.confirm('Anda yakin ingin mengakhiri ujian? Jawaban tidak dapat diubah lagi setelah dikumpulkan.')) {
+                                            handleSubmit();
+                                        }
+                                    }}
+                                    disabled={submitting}
+                                    className="rounded-xl bg-blue-600 px-8 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 disabled:opacity-50 flex items-center"
+                                >
+                                    {submitting ? 'Menyimpan...' : 'Selesai Ujian'}
+                                </button>
+                            </div>
+                        </div>
+                    ) : activeSoal ? (
                         <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
                             <div className="mb-6 flex items-center justify-between">
                                 <h2 className="text-xl font-bold text-slate-800">
@@ -471,13 +509,21 @@ export default function SiswaCbtPage({ session, onLogout, idSesi }) {
                                 >
                                     &larr; Sebelumnya
                                 </button>
-                                <button
-                                    onClick={() => setCurrentIndex((p) => Math.min(soalData.length - 1, p + 1))}
-                                    disabled={currentIndex === soalData.length - 1}
-                                    className="rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:opacity-40"
-                                >
-                                    Selanjutnya &rarr;
-                                </button>
+                                {currentIndex === soalData.length - 1 ? (
+                                    <button
+                                        onClick={() => setShowSummary(true)}
+                                        className="rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700"
+                                    >
+                                        Kumpulkan Jawaban
+                                    </button>
+                                ) : (
+                                    <button
+                                        onClick={() => setCurrentIndex((p) => Math.min(soalData.length - 1, p + 1))}
+                                        className="rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:opacity-40"
+                                    >
+                                        Selanjutnya &rarr;
+                                    </button>
+                                )}
                             </div>
                         </div>
                     ) : (
