@@ -16,9 +16,14 @@
 - **Tampilan Hasil Nilai Setelah Submit**: Setelah submit, halaman CBT menampilkan skor total, persentase, jumlah benar/salah, dan ringkasan per soal dengan jawaban benar vs jawaban siswa.
 - **Halaman Riwayat CBT (Siswa)**: Halaman baru `/siswa/riwayat-cbt` menampilkan daftar semua CBT yang pernah dikerjakan, skor, dan fitur Review per soal dengan jawaban siswa, kunci jawaban benar, dan indikator benar/salah.
 - **Monitoring CBT (Guru)**: Tombol "Detail" di Jadwal CBT (`GET /api/guru/sesi-asesmen/{id_sesi}/detail`) membuka modal monitoring lengkap: statistik (rata-rata, tertinggi, terendah), daftar soal & kunci, status pengerjaan siswa (sudah/belum), skor, dan detail jawaban per siswa.
+- **Halaman Ringkasan Mengajar (Guru)**: Halaman baru `/guru/siswa` yang menampilkan daftar kelas, mata pelajaran yang diampu, serta daftar lengkap siswa (Nama Lengkap & NISN) dalam setiap kelas yang diajar. Tampilan *user-friendly* dan responsif menggunakan pola Master-Detail (Tabs/Sidebar Kelas di kiri, Daftar Siswa di kanan).
+- **Update Tabel Berita Acara (Guru)**: Mengubah tampilan kolom "Catatan / Badge" agar memunculkan **Nama Siswa** yang sebenarnya, alih-alih sekadar "Siswa [ID]". Memanfaatkan dictionary mapping dari `students_by_class`.
 - **Backend API (Siswa)**: Endpoint `cbtSaveAnswer`, `cbtHistory`, `cbtReview` di `SiswaController`.
 - **Backend API (Guru)**: Endpoint `sesiAsesmenDetail` di `GuruController`.
 - **Testing**: 20 tests across 4 test files (`SiswaCbtPage.test.jsx`, `SiswaCbtHistoryPage.test.jsx`, `GuruSesiDetail.test.jsx`, `GuruSesiAsesmen.test.jsx`).
+- **Kontrol Pengerjaan Ulang CBT**: Guru dapat mengaktifkan/menonaktifkan opsi "Boleh Dikerjakan Ulang" saat membuat atau mengedit jadwal CBT via toggle switch. Kolom baru `boleh_ulang` ditambahkan ke tabel `sesi_asesmen` (migration).
+- **Pembatasan Pengerjaan Siswa**: Jika `boleh_ulang` tidak aktif, siswa yang sudah mengerjakan akan melihat status "Selesai" dan tombol "Sudah Dikerjakan" (disabled) di Sesi Aktif. Jika siswa mencoba mengakses URL langsung, halaman menampilkan pesan khusus "Ujian Sudah Dikerjakan" dengan link ke Riwayat CBT. Jika `boleh_ulang` aktif, siswa dapat mengerjakan ulang melalui tombol "Kerjakan Ulang".
+- **UI Guru (Jadwal CBT)**: Kolom "Ulang" ditambahkan di tabel Riwayat Jadwal CBT dengan badge "Boleh" (biru) atau "Sekali" (abu-abu).
 ### Fixed
 - **Bug Fix**: Memperbaiki issue `(data.jawaban_tersimpan || []).forEach is not a function` saat halaman di-refresh. Method `cbtData` sekarang menggunakan `->values()` agar response JSON yang dihasilkan merupakan array sekuensial (bukan object).
 - **Bug Fix**: Memperbaiki sistem penilaian auto-save di method `cbtSaveAnswer` agar jawaban siswa saat progres ujian dinilai secara real-time, bukan default `0`. Guru kini dapat melihat skor sebenarnya secara real-time di monitoring CBT meskipun siswa belum submit ujian secara final.

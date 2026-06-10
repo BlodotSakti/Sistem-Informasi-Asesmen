@@ -65,7 +65,9 @@ export default function GuruDashboard({ session, onLogout, mode = 'dashboard' })
         tipe_soal: '',
         jenis_asesmen: 'ujian',
         waktu_mulai: '',
+        waktu_selesai: '',
         durasi_menit: 60,
+        boleh_ulang: false,
     });
     const [selectedSoalMap, setSelectedSoalMap] = useState({});
 
@@ -142,6 +144,18 @@ export default function GuruDashboard({ session, onLogout, mode = 'dashboard' })
             mounted = false;
         };
     }, [session]);
+
+    const studentNameMap = useMemo(() => {
+        const map = {};
+        if (workspace?.students_by_class) {
+            Object.values(workspace.students_by_class).forEach(students => {
+                students.forEach(student => {
+                    map[student.id_siswa] = student.nama_lengkap;
+                });
+            });
+        }
+        return map;
+    }, [workspace?.students_by_class]);
 
     useEffect(() => {
         const students = workspace.students_by_class?.[beritaForm.id_kelas] || [];
@@ -362,7 +376,9 @@ export default function GuruDashboard({ session, onLogout, mode = 'dashboard' })
                     tipe_soal: sesiForm.tipe_soal,
                     jenis_asesmen: sesiForm.jenis_asesmen,
                     waktu_mulai: sesiForm.waktu_mulai,
+                    waktu_selesai: sesiForm.waktu_selesai,
                     durasi_menit: Number(sesiForm.durasi_menit),
+                    boleh_ulang: sesiForm.boleh_ulang,
                     soal: soalArr,
                 }),
             });
@@ -372,7 +388,7 @@ export default function GuruDashboard({ session, onLogout, mode = 'dashboard' })
             setEditingSesiId(null);
             setSelectedSoalMap({});
             setSesiForm({
-                id_kelas: '', id_mapel: '', tipe_soal: '', jenis_asesmen: 'ujian', waktu_mulai: '', durasi_menit: 60
+                id_kelas: '', id_mapel: '', tipe_soal: '', jenis_asesmen: 'ujian', waktu_mulai: '', waktu_selesai: '', durasi_menit: 60, boleh_ulang: false
             });
             await reloadWorkspace();
         } catch (exception) {
@@ -388,7 +404,9 @@ export default function GuruDashboard({ session, onLogout, mode = 'dashboard' })
             tipe_soal: item.tipe_soal || '',
             jenis_asesmen: item.jenis_asesmen || 'ujian',
             waktu_mulai: item.waktu_mulai ? new Date(new Date(item.waktu_mulai).getTime() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16) : '',
+            waktu_selesai: item.waktu_selesai ? new Date(new Date(item.waktu_selesai).getTime() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16) : '',
             durasi_menit: item.durasi_menit || 60,
+            boleh_ulang: !!item.boleh_ulang,
         });
 
         const soalMap = {};
@@ -557,6 +575,7 @@ export default function GuruDashboard({ session, onLogout, mode = 'dashboard' })
 
     const navigation = [
         { label: 'Dashboard', href: '/guru/dashboard', badge: 'Home' },
+        { label: 'Daftar Siswa', href: '/guru/siswa', badge: 'Data' },
         { label: 'Jadwal CBT', href: '/guru/jadwal-cbt', badge: 'Ujian' },
         { label: 'Bank Soal', href: '/guru/bank-soal', badge: 'Soal' },
         { label: 'Berita Acara', href: '/guru/berita-acara', badge: 'Presensi' },
@@ -863,9 +882,10 @@ export default function GuruDashboard({ session, onLogout, mode = 'dashboard' })
                                 <th className="px-5 py-4 font-semibold">Tipe Soal</th>
                                 <th className="px-5 py-4 font-semibold">Kelas</th>
                                 <th className="px-5 py-4 font-semibold">Mapel</th>
-                                <th className="px-5 py-4 font-semibold">Jenis</th>
-                                <th className="px-5 py-4 font-semibold">Waktu Mulai</th>
-                                <th className="px-5 py-4 font-semibold">Soal</th>
+                                <th className="px-5 py-4 font-semibold">Tipe</th>
+                                <th className="px-5 py-4 font-semibold">Waktu Pelaksanaan</th>
+                                <th className="px-5 py-4 font-semibold">Durasi</th>
+                                <th className="px-5 py-4 font-semibold text-center">Ulang</th>
                                 <th className="px-5 py-4 font-semibold text-center">Aksi</th>
                             </tr>
                         </thead>
@@ -875,9 +895,19 @@ export default function GuruDashboard({ session, onLogout, mode = 'dashboard' })
                                     <td className="px-5 py-4 font-semibold text-slate-900">{item.tipe_soal}</td>
                                     <td className="px-5 py-4 text-slate-600">{item.kelas?.nama_kelas}</td>
                                     <td className="px-5 py-4 text-slate-600">{item.mata_pelajaran?.nama_mapel}</td>
-                                    <td className="px-5 py-4 text-slate-600 capitalize">{item.jenis_asesmen}</td>
-                                    <td className="px-5 py-4 text-slate-600">{formatDateTimeLabel(item.waktu_mulai)}</td>
-                                    <td className="px-5 py-4 text-slate-600">{item.detail_sesi_soal?.length || 0} soal</td>
+                                    <td className="px-5 py-4 text-slate-600">{item.tipe_soal || '-'} • {item.jenis_asesmen || '-'}</td>
+                                    <td className="px-5 py-4 text-slate-600">
+                                        <div className="font-medium text-slate-900">{formatDateTimeLabel(item.waktu_mulai)}</div>
+                                        {item.waktu_selesai ? <div className="mt-1 text-xs text-rose-600 font-medium">S/d: {formatDateTimeLabel(item.waktu_selesai)}</div> : null}
+                                    </td>
+                                    <td className="px-5 py-4 text-slate-600">{item.durasi_menit} mnt</td>
+                                    <td className="px-5 py-4 text-center">
+                                        {item.boleh_ulang ? (
+                                            <span className="inline-flex items-center rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-semibold text-blue-700">Boleh</span>
+                                        ) : (
+                                            <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-semibold text-slate-500">Sekali</span>
+                                        )}
+                                    </td>
                                     <td className="px-5 py-4 text-right">
                                         <div className="flex items-center justify-end gap-3">
                                             <button onClick={() => fetchSesiDetail(item.id_sesi)} className="text-indigo-600 hover:text-indigo-800 font-medium">Detail</button>
@@ -888,7 +918,7 @@ export default function GuruDashboard({ session, onLogout, mode = 'dashboard' })
                                 </tr>
                             ))}
                             {!loading && sesiAsesmenHistory.length === 0 ? (
-                                <tr><td colSpan="6" className="px-5 py-6 text-sm text-slate-500">Belum ada riwayat jadwal CBT.</td></tr>
+                                <tr><td colSpan="8" className="px-5 py-6 text-sm text-slate-500">Belum ada riwayat jadwal CBT.</td></tr>
                             ) : null}
                         </tbody>
                     </table>
@@ -1075,14 +1105,34 @@ export default function GuruDashboard({ session, onLogout, mode = 'dashboard' })
                                         <option value="posttest">Posttest</option>
                                     </select>
                                 </label>
-                                <label className="space-y-2 text-sm font-medium text-slate-700">
-                                    <span>Waktu Mulai</span>
+                                <div className="space-y-2">
+                                    <label className="text-sm font-semibold text-slate-700">Waktu Mulai</label>
                                     <input required type="datetime-local" value={sesiForm.waktu_mulai} onChange={e => setSesiForm(c => ({...c, waktu_mulai: e.target.value}))} className="w-full rounded-2xl border border-slate-300 px-4 py-3 outline-none transition focus:border-slate-900" />
-                                </label>
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-sm font-semibold text-slate-700">Waktu Berakhir</label>
+                                    <input required type="datetime-local" value={sesiForm.waktu_selesai} onChange={e => setSesiForm(c => ({...c, waktu_selesai: e.target.value}))} className="w-full rounded-2xl border border-slate-300 px-4 py-3 outline-none transition focus:border-slate-900" />
+                                </div>
                                 <label className="space-y-2 text-sm font-medium text-slate-700">
                                     <span>Durasi (Menit)</span>
                                     <input required type="number" min="1" value={sesiForm.durasi_menit} onChange={e => setSesiForm(c => ({...c, durasi_menit: e.target.value}))} className="w-full rounded-2xl border border-slate-300 px-4 py-3 outline-none transition focus:border-slate-900" />
                                 </label>
+                            </div>
+
+                            <div className="mt-4 flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4">
+                                <div>
+                                    <p className="text-sm font-semibold text-slate-900">Boleh Dikerjakan Ulang</p>
+                                    <p className="text-xs text-slate-500">Jika aktif, siswa dapat mengerjakan ujian ini lebih dari satu kali.</p>
+                                </div>
+                                <button
+                                    type="button"
+                                    role="switch"
+                                    aria-checked={sesiForm.boleh_ulang}
+                                    onClick={() => setSesiForm(c => ({...c, boleh_ulang: !c.boleh_ulang}))}
+                                    className={`relative inline-flex h-7 w-12 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${sesiForm.boleh_ulang ? 'bg-blue-600' : 'bg-slate-300'}`}
+                                >
+                                    <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${sesiForm.boleh_ulang ? 'translate-x-5' : 'translate-x-0.5'}`} />
+                                </button>
                             </div>
 
                             <div className="mt-6 pt-6 border-t border-slate-200">
@@ -1404,7 +1454,7 @@ export default function GuruDashboard({ session, onLogout, mode = 'dashboard' })
                                             <div className="space-y-2">
                                                 {(item.kehadiran_siswa || []).filter((row) => String(row.catatan_pribadi || '').trim() || String(row.jenis_badge || '').trim()).map((row) => (
                                                     <div key={`${item.id_berita_acara}-${row.id_siswa}`} className="rounded-2xl bg-slate-50 px-3 py-2 text-xs text-slate-600">
-                                                        <p className="font-semibold text-slate-900">Siswa {row.id_siswa}</p>
+                                                        <p className="font-semibold text-slate-900">{studentNameMap[row.id_siswa] || `Siswa ${row.id_siswa}`}</p>
                                                         {row.catatan_pribadi ? <p className="mt-1">Catatan: {row.catatan_pribadi}</p> : null}
                                                         {row.jenis_badge ? <p className="mt-1">Badge: {row.jenis_badge}</p> : null}
                                                     </div>

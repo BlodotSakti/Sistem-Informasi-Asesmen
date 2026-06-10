@@ -13,6 +13,7 @@ import SiswaTrendPage from './pages/SiswaTrendPage';
 import SiswaAppreciationPage from './pages/SiswaAppreciationPage';
 import SiswaCbtPage from './pages/SiswaCbtPage';
 import SiswaCbtHistoryPage from './pages/SiswaCbtHistoryPage';
+import GuruSiswaPage from './pages/GuruSiswaPage';
 
 const STORAGE_KEY = 'sia-session';
 
@@ -59,6 +60,7 @@ function App() {
             '/guru/jadwal-cbt',
             '/guru/bank-soal',
             '/guru/berita-acara',
+            '/guru/siswa',
             '/siswa/dashboard',
             '/siswa/profil',
             '/siswa/sesi-aktif',
@@ -165,9 +167,9 @@ function App() {
             return <GuruDashboard session={session} onLogout={onLogout} mode={guruRouteMap[pathname]} />;
         }
 
-        if (pathname === '/siswa/dashboard') {
-            return <SiswaDashboard session={session} onLogout={onLogout} />;
-        }
+        if (pathname === '/guru/siswa') return <GuruSiswaPage session={session} onLogout={onLogout} />;
+
+        if (pathname === '/siswa/dashboard') return <SiswaDashboard session={session} onLogout={onLogout} />;
 
         if (pathname === '/siswa/profil') {
             return <SiswaProfilePage session={session} onLogout={onLogout} />;

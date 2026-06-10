@@ -55,28 +55,75 @@ export default function SiswaSessionsPage({ session, onLogout }) {
                                     <th className="px-4 py-3 font-semibold">Kelas</th>
                                     <th className="px-4 py-3 font-semibold">Jenis</th>
                                     <th className="px-4 py-3 font-semibold">Durasi</th>
-                                    <th className="px-4 py-3 font-semibold">Waktu Mulai</th>
+                                    <th className="px-4 py-3 font-semibold">Waktu Pelaksanaan</th>
+                                    <th className="px-4 py-3 font-semibold">Status</th>
                                     <th className="px-4 py-3 font-semibold text-center">Aksi</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100 bg-white">
-                                {filteredSessions.map((item) => (
+                                {filteredSessions.map((item) => {
+                                    const sudahDikerjakan = !!item.sudah_dikerjakan;
+                                    const bolehUlang = !!item.boleh_ulang;
+                                    const isExpired = item.waktu_selesai && new Date() > new Date(item.waktu_selesai);
+                                    const isBelumMulai = item.waktu_mulai && new Date() < new Date(item.waktu_mulai);
+                                    return (
                                     <tr key={item.id_sesi} className="align-top hover:bg-slate-50/70">
                                         <td className="px-4 py-3 font-semibold text-slate-900">{item.mata_pelajaran?.nama_mapel || item.mataPelajaran?.nama_mapel || '-'}</td>
                                         <td className="px-4 py-3 text-slate-600">{item.kelas?.nama_kelas || '-'}</td>
                                         <td className="px-4 py-3 text-slate-600">{item.tipe_soal || '-'} • {item.jenis_asesmen || '-'}</td>
                                         <td className="px-4 py-3 text-slate-600">{item.durasi_menit || 0} menit</td>
-                                        <td className="px-4 py-3 text-slate-600">{formatDateTimeLabel(item.waktu_mulai)}</td>
-                                        <td className="px-4 py-3 text-right">
-                                            <a href={`/siswa/cbt/${item.id_sesi}`} className="inline-flex items-center justify-center rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700">
-                                                Kerjakan
-                                            </a>
+                                        <td className="px-4 py-3 text-slate-600">
+                                            <div className="font-medium text-slate-900">{formatDateTimeLabel(item.waktu_mulai)}</div>
+                                            {item.waktu_selesai ? <div className="mt-1 text-xs text-rose-600 font-medium">S/d: {formatDateTimeLabel(item.waktu_selesai)}</div> : null}
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            {sudahDikerjakan ? (
+                                                <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
+                                                    <svg className="h-3 w-3" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
+                                                    Selesai
+                                                </span>
+                                            ) : isExpired ? (
+                                                <span className="inline-flex items-center rounded-full bg-rose-50 px-3 py-1 text-xs font-semibold text-rose-700">
+                                                    Waktu Habis
+                                                </span>
+                                            ) : isBelumMulai ? (
+                                                <span className="inline-flex items-center rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
+                                                    Sesi Belum Dimulai
+                                                </span>
+                                            ) : (
+                                                <span className="inline-flex items-center rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700">
+                                                    Belum Dikerjakan
+                                                </span>
+                                            )}
+                                        </td>
+                                        <td className="px-4 py-3 text-center">
+                                            {sudahDikerjakan && !bolehUlang ? (
+                                                <span className="inline-flex items-center justify-center rounded-xl bg-slate-200 px-4 py-2 text-sm font-semibold text-slate-500 cursor-not-allowed">
+                                                    Sudah Dikerjakan
+                                                </span>
+                                            ) : isExpired && !sudahDikerjakan ? (
+                                                <span className="inline-flex items-center justify-center rounded-xl bg-slate-200 px-4 py-2 text-sm font-semibold text-slate-500 cursor-not-allowed">
+                                                    CBT Sudah Ditutup
+                                                </span>
+                                            ) : isBelumMulai ? (
+                                                <span className="inline-flex items-center justify-center rounded-xl bg-slate-200 px-4 py-2 text-sm font-semibold text-slate-500 cursor-not-allowed">
+                                                    Sesi Belum Dimulai
+                                                </span>
+                                            ) : (
+                                                <a
+                                                    href={`/siswa/cbt/${item.id_sesi}`}
+                                                    className="inline-flex items-center justify-center rounded-xl bg-blue-600 px-6 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:bg-blue-700 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-2"
+                                                >
+                                                    {sudahDikerjakan ? 'Kerjakan Ulang' : 'Kerjakan'}
+                                                </a>
+                                            )}
                                         </td>
                                     </tr>
-                                ))}
+                                    );
+                                })}
                                 {!loading && filteredSessions.length === 0 ? (
                                     <tr>
-                                        <td colSpan="6" className="px-4 py-4 text-center text-sm text-slate-500">Belum ada sesi aktif untuk kelas ini.</td>
+                                        <td colSpan="7" className="px-4 py-4 text-center text-sm text-slate-500">Belum ada sesi aktif untuk kelas ini.</td>
                                     </tr>
                                 ) : null}
                             </tbody>

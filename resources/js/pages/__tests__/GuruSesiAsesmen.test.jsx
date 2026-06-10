@@ -90,6 +90,7 @@ describe('GuruDashboard - Sesi Asesmen CBT', () => {
                         mata_pelajaran: { nama_mapel: 'Matematika' },
                         jenis_asesmen: 'ujian',
                         waktu_mulai: '2026-06-10T08:00:00Z',
+                        waktu_selesai: '2026-06-10T10:00:00Z',
                         detail_sesi_soal: [{ id_detail: 1 }],
                     }
                 ],

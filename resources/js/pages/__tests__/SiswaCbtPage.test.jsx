@@ -8,6 +8,7 @@ const mockFetchData = {
     sesi: {
         id_sesi: 1,
         waktu_mulai: new Date().toISOString(),
+        waktu_selesai: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
         durasi_menit: 60,
         mata_pelajaran: 'Matematika',
         jenis_asesmen: 'Ujian Akhir Semester',

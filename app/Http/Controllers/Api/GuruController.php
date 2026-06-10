@@ -398,7 +398,9 @@ class GuruController extends Controller
             'tipe_soal' => ['required', 'string', 'max:255'],
             'jenis_asesmen' => ['required', 'in:pretest,posttest,ujian'],
             'waktu_mulai' => ['required', 'date'],
+            'waktu_selesai' => ['required', 'date', 'after:waktu_mulai'],
             'durasi_menit' => ['required', 'integer', 'min:1'],
+            'boleh_ulang' => ['sometimes', 'boolean'],
             'soal' => ['required', 'array', 'min:1'],
             'soal.*.id_soal' => ['required', 'integer', 'exists:bank_soal,id_soal'],
             'soal.*.bobot_nilai' => ['required', 'numeric', 'min:0'],
@@ -414,7 +416,9 @@ class GuruController extends Controller
                 'tipe_soal' => $data['tipe_soal'],
                 'jenis_asesmen' => $data['jenis_asesmen'],
                 'waktu_mulai' => $data['waktu_mulai'],
+                'waktu_selesai' => $data['waktu_selesai'],
                 'durasi_menit' => $data['durasi_menit'],
+                'boleh_ulang' => $data['boleh_ulang'] ?? false,
             ]);
 
             foreach ($data['soal'] as $soal) {
@@ -591,7 +595,9 @@ class GuruController extends Controller
             'tipe_soal' => ['required', 'string', 'max:255'],
             'jenis_asesmen' => ['required', 'in:pretest,posttest,ujian'],
             'waktu_mulai' => ['required', 'date'],
+            'waktu_selesai' => ['required', 'date', 'after:waktu_mulai'],
             'durasi_menit' => ['required', 'integer', 'min:1'],
+            'boleh_ulang' => ['sometimes', 'boolean'],
             'soal' => ['required', 'array', 'min:1'],
             'soal.*.id_soal' => ['required', 'integer', 'exists:bank_soal,id_soal'],
             'soal.*.bobot_nilai' => ['required', 'numeric', 'min:0'],
@@ -607,7 +613,9 @@ class GuruController extends Controller
                 'tipe_soal' => $data['tipe_soal'],
                 'jenis_asesmen' => $data['jenis_asesmen'],
                 'waktu_mulai' => $data['waktu_mulai'],
+                'waktu_selesai' => $data['waktu_selesai'],
                 'durasi_menit' => $data['durasi_menit'],
+                'boleh_ulang' => $data['boleh_ulang'] ?? $sesi->boleh_ulang,
             ]);
 
             \App\Models\DetailSesiSoal::where('id_sesi', $sesi->id_sesi)->delete();

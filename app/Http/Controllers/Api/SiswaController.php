@@ -21,10 +21,12 @@ class SiswaController extends Controller
 {
     public function activeSessions(Request $request): JsonResponse
     {
-        $idKelas = $request->user()->siswa?->kelasAktifAssignment?->id_kelas;
+        $siswa = $request->user()->siswa;
+        $idKelas = $siswa?->kelasAktifAssignment?->id_kelas;
+        $idSiswa = $siswa?->id_siswa;
 
         $query = SesiAsesmen::query()
-            ->with(['kelas', 'mataPelajaran'])
+            ->with(['kelas', 'mataPelajaran', 'detailSesiSoal'])
             ->latest('waktu_mulai');
 
         if ($idKelas) {
@@ -33,7 +35,28 @@ class SiswaController extends Controller
             $query->whereRaw('1 = 0');
         }
 
-        return response()->json($query->paginate(15));
+        $paginated = $query->paginate(15);
+
+        // Add sudah_dikerjakan flag per session
+        if ($idSiswa) {
+            $allDetailIds = $paginated->getCollection()->flatMap(function ($sesi) {
+                return $sesi->detailSesiSoal->pluck('id_detail');
+            })->unique()->values();
+
+            $answeredDetailIds = JawabanSiswa::where('id_siswa', $idSiswa)
+                ->whereIn('id_detail', $allDetailIds)
+                ->pluck('id_detail')
+                ->toArray();
+
+            $paginated->getCollection()->transform(function ($sesi) use ($answeredDetailIds) {
+                $sesiDetailIds = $sesi->detailSesiSoal->pluck('id_detail')->toArray();
+                $answeredCount = count(array_intersect($sesiDetailIds, $answeredDetailIds));
+                $sesi->sudah_dikerjakan = $answeredCount > 0 && $answeredCount >= count($sesiDetailIds);
+                return $sesi;
+            });
+        }
+
+        return response()->json($paginated);
     }
 
     public function submitJawaban(Request $request): JsonResponse
@@ -366,6 +389,36 @@ class SiswaController extends Controller
             return response()->json(['message' => 'Unauthorized access to this session'], 403);
         }
 
+        // Check if session has ended
+        if ($sesi->waktu_selesai && now()->gt($sesi->waktu_selesai)) {
+            return response()->json([
+                'message' => 'Waktu pengerjaan ujian telah berakhir.',
+                'waktu_habis' => true,
+            ], 403);
+        }
+
+        // Check if session has started
+        if ($sesi->waktu_mulai && now()->lt($sesi->waktu_mulai)) {
+            return response()->json([
+                'message' => 'Ujian belum dimulai.',
+                'belum_mulai' => true,
+            ], 403);
+        }
+
+        // Check if student already completed and retakes not allowed
+        if (!$sesi->boleh_ulang) {
+            $totalSoal = $sesi->detailSesiSoal->count();
+            $answeredCount = JawabanSiswa::where('id_siswa', $siswa->id_siswa)
+                ->whereIn('id_detail', $sesi->detailSesiSoal->pluck('id_detail'))
+                ->count();
+            if ($answeredCount > 0 && $answeredCount >= $totalSoal) {
+                return response()->json([
+                    'message' => 'Anda sudah mengerjakan ujian ini dan tidak diperbolehkan mengulang.',
+                    'sudah_dikerjakan' => true,
+                ], 403);
+            }
+        }
+
         $soal = $sesi->detailSesiSoal->map(function ($detail) {
             $bankSoal = $detail->bankSoal;
             return [
@@ -391,6 +444,7 @@ class SiswaController extends Controller
                 'jenis_asesmen' => $sesi->jenis_asesmen,
                 'durasi_menit' => $sesi->durasi_menit,
                 'waktu_mulai' => $sesi->waktu_mulai,
+                'waktu_selesai' => $sesi->waktu_selesai,
                 'mata_pelajaran' => $sesi->mataPelajaran?->nama_mapel,
             ],
             'soal' => $soal,
@@ -415,6 +469,14 @@ class SiswaController extends Controller
         $sesi = SesiAsesmen::query()
             ->with(['detailSesiSoal.bankSoal', 'mataPelajaran'])
             ->findOrFail($id_sesi);
+
+        if ($sesi->waktu_selesai && now()->gt(\Carbon\Carbon::parse($sesi->waktu_selesai)->addMinutes(5))) {
+            return response()->json(['message' => 'Waktu ujian telah berakhir'], 403);
+        }
+
+        if ($sesi->waktu_mulai && now()->lt($sesi->waktu_mulai)) {
+            return response()->json(['message' => 'Ujian belum dimulai'], 403);
+        }
 
         $details = $sesi->detailSesiSoal->keyBy('id_detail');
         $totalSkor = 0;
@@ -515,6 +577,14 @@ class SiswaController extends Controller
 
         $sesi = SesiAsesmen::findOrFail($id_sesi);
 
+        if ($sesi->waktu_selesai && now()->gt(\Carbon\Carbon::parse($sesi->waktu_selesai)->addMinutes(5))) {
+            return response()->json(['message' => 'Waktu ujian telah berakhir'], 403);
+        }
+
+        if ($sesi->waktu_mulai && now()->lt($sesi->waktu_mulai)) {
+            return response()->json(['message' => 'Ujian belum dimulai'], 403);
+        }
+
         if ($sesi->id_kelas !== $siswa->kelasAktifAssignment?->id_kelas) {
             return response()->json(['message' => 'Unauthorized'], 403);
         }
@@ -573,17 +643,15 @@ class SiswaController extends Controller
     {
         $siswa = $request->user()->siswa;
 
-        // Get all detail IDs the student has answered
-        $answeredDetailIds = JawabanSiswa::where('id_siswa', $siswa->id_siswa)->pluck('id_detail');
+        $idKelas = $siswa->kelasAktifAssignment?->id_kelas;
 
-        // Get the session IDs from those details
-        $sesiIds = \App\Models\DetailSesiSoal::whereIn('id_detail', $answeredDetailIds)
-            ->pluck('id_sesi')
-            ->unique();
+        if (!$idKelas) {
+            return response()->json([]);
+        }
 
         $sessions = SesiAsesmen::query()
             ->with(['kelas', 'mataPelajaran', 'detailSesiSoal'])
-            ->whereIn('id_sesi', $sesiIds)
+            ->where('id_kelas', $idKelas)
             ->latest('waktu_mulai')
             ->get()
             ->map(function (SesiAsesmen $sesi) use ($siswa) {

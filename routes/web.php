@@ -26,10 +26,9 @@ Route::view('/admin/mata-pelajaran', 'app');
 Route::view('/admin/kelas-siswa', 'app');
 Route::view('/admin/penugasan-pembelajaran', 'app');
 Route::view('/admin/import-akun', 'app');
-Route::view('/guru/dashboard', 'app');
-Route::view('/guru/jadwal-cbt', 'app');
-Route::view('/guru/bank-soal', 'app');
-Route::view('/guru/berita-acara', 'app');
+Route::get('/guru/{path?}', function () {
+    return view('app');
+})->where('path', 'dashboard|jadwal-cbt|bank-soal|berita-acara|siswa');
 Route::view('/siswa/dashboard', 'app');
 Route::view('/siswa/profil', 'app');
 Route::view('/siswa/sesi-aktif', 'app');

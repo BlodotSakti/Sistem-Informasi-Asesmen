@@ -44,7 +44,11 @@ export default function SiswaCbtPage({ session, onLogout, idSesi }) {
                 });
 
                 if (!response.ok) {
-                    throw new Error('Gagal memuat data ujian');
+                    const errorBody = await response.json().catch(() => ({}));
+                    if (errorBody.sudah_dikerjakan) {
+                        throw new Error('SUDAH_DIKERJAKAN');
+                    }
+                    throw new Error(errorBody.message || 'Gagal memuat data ujian');
                 }
 
                 const data = await response.json();
@@ -71,7 +75,15 @@ export default function SiswaCbtPage({ session, onLogout, idSesi }) {
                     // Initialize timer
                     const startTime = new Date(data.sesi.waktu_mulai).getTime();
                     const durationMs = data.sesi.durasi_menit * 60 * 1000;
-                    const endTime = startTime + durationMs;
+                    let endTime = startTime + durationMs;
+
+                    if (data.sesi.waktu_selesai) {
+                        const absoluteEndTime = new Date(data.sesi.waktu_selesai).getTime();
+                        if (absoluteEndTime < endTime) {
+                            endTime = absoluteEndTime;
+                        }
+                    }
+
                     const now = new Date().getTime();
                     const remaining = Math.max(0, Math.floor((endTime - now) / 1000));
 
@@ -298,6 +310,25 @@ export default function SiswaCbtPage({ session, onLogout, idSesi }) {
                 <div className="text-center">
                     <div className="mx-auto h-12 w-12 animate-spin rounded-full border-b-2 border-t-2 border-blue-600"></div>
                     <p className="mt-4 text-slate-500 font-medium">Memuat Soal Ujian...</p>
+                </div>
+            </div>
+        );
+    }
+
+    // --- ALREADY COMPLETED (no retakes) ---
+    if (error === 'SUDAH_DIKERJAKAN') {
+        return (
+            <div className="flex min-h-screen items-center justify-center bg-slate-50">
+                <div className="rounded-3xl border border-emerald-200 bg-white px-8 py-8 shadow-sm max-w-md text-center space-y-4">
+                    <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100">
+                        <svg className="h-8 w-8 text-emerald-600" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
+                    </div>
+                    <h2 className="text-xl font-bold text-slate-900">Ujian Sudah Dikerjakan</h2>
+                    <p className="text-sm text-slate-600">Anda sudah menyelesaikan ujian ini. Pengerjaan ulang tidak diperbolehkan oleh guru.</p>
+                    <div className="flex flex-col gap-2 pt-2">
+                        <a href="/siswa/riwayat-cbt" className="inline-block rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700">Lihat Riwayat CBT</a>
+                        <a href="/siswa/sesi-aktif" className="inline-block text-sm font-semibold text-slate-500 hover:text-slate-700">Kembali ke Sesi Aktif</a>
+                    </div>
                 </div>
             </div>
         );

@@ -1,0 +1,203 @@
+import React, { useState, useEffect } from 'react';
+import DashboardLayout from '../components/layout/DashboardLayout';
+
+function apiBase(path) {
+    return `${window.location.origin}${path}`;
+}
+
+export default function GuruSiswaPage({ session, onLogout }) {
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+    const [workspace, setWorkspace] = useState(null);
+    const [activeKelasId, setActiveKelasId] = useState(null);
+
+    useEffect(() => {
+        let mounted = true;
+
+        const loadData = async () => {
+            try {
+                const response = await fetch(apiBase('/api/guru/workspace-data'), {
+                    headers: {
+                        Accept: 'application/json',
+                        Authorization: `Bearer ${session.token}`,
+                    },
+                });
+
+                if (!response.ok) {
+                    throw new Error('Gagal memuat data workspace guru');
+                }
+
+                const data = await response.json();
+                
+                if (mounted) {
+                    setWorkspace(data);
+                    if (data.kelas_options?.length > 0) {
+                        setActiveKelasId(data.kelas_options[0].id_kelas);
+                    }
+                    setLoading(false);
+                }
+            } catch (err) {
+                if (mounted) {
+                    setError(err.message);
+                    setLoading(false);
+                }
+            }
+        };
+
+        if (session?.token) {
+            loadData();
+        }
+
+        return () => { mounted = false; };
+    }, [session]);
+
+    if (loading) {
+        return (
+            <div className="flex min-h-screen items-center justify-center bg-slate-50">
+                <div className="flex flex-col items-center">
+                    <div className="h-10 w-10 animate-spin rounded-full border-4 border-blue-200 border-t-blue-600"></div>
+                    <p className="mt-4 text-sm font-medium text-slate-500">Memuat data kelas...</p>
+                </div>
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className="flex min-h-screen items-center justify-center bg-slate-50">
+                <div className="rounded-2xl border border-rose-200 bg-rose-50 px-6 py-4 text-rose-700 shadow-sm max-w-md text-center">
+                    <h2 className="text-lg font-bold mb-2">Terjadi Kesalahan</h2>
+                    <p className="text-sm">{error}</p>
+                    <a href="/guru/dashboard" className="mt-4 inline-block text-sm font-semibold text-rose-600 hover:text-rose-800">Kembali ke Dashboard</a>
+                </div>
+            </div>
+        );
+    }
+
+    const { kelas_options = [], students_by_class = {}, teaching_assignments = [] } = workspace || {};
+    const activeKelas = kelas_options.find(k => k.id_kelas === activeKelasId);
+    const activeStudents = students_by_class[activeKelasId] || [];
+    
+    // Find all subjects the teacher teaches for this specific class
+    const activeMapel = teaching_assignments
+        .filter(a => a.id_kelas === activeKelasId)
+        .map(a => a.mata_pelajaran?.nama_mapel)
+        .filter(Boolean);
+
+    const navigation = [
+        { label: 'Dashboard', href: '/guru/dashboard', badge: 'Home' },
+        { label: 'Daftar Siswa', href: '/guru/siswa', badge: 'Data' },
+        { label: 'Jadwal CBT', href: '/guru/jadwal-cbt', badge: 'Ujian' },
+        { label: 'Bank Soal', href: '/guru/bank-soal', badge: 'Soal' },
+        { label: 'Berita Acara', href: '/guru/berita-acara', badge: 'Presensi' },
+    ];
+
+    return (
+        <DashboardLayout title="Daftar Siswa & Kelas" user={session?.user} navigation={navigation} onLogout={onLogout}>
+            <div className="font-sans text-slate-900 selection:bg-blue-100 flex flex-col">
+                <main className="flex-1 max-w-7xl mx-auto w-full">
+                    <div className="mb-8 flex flex-col gap-2">
+                        <h2 className="text-3xl font-extrabold tracking-tight text-slate-900">Daftar Kelas & Siswa</h2>
+                        <p className="text-slate-600 max-w-2xl">Lihat seluruh kelas dan daftar siswa yang berada di bawah bimbingan Anda. Pilih kelas pada tab di bawah untuk melihat detail lebih lanjut.</p>
+                    </div>
+
+                {kelas_options.length === 0 ? (
+                    <div className="rounded-3xl border border-slate-200 bg-white p-12 text-center shadow-sm">
+                        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-slate-100">
+                            <svg className="h-8 w-8 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" /></svg>
+                        </div>
+                        <h3 className="mt-4 text-lg font-bold text-slate-900">Tidak Ada Kelas Aktif</h3>
+                        <p className="mt-2 text-slate-500 max-w-md mx-auto">Anda belum memiliki jadwal mengajar di kelas manapun. Hubungi administrator jika Anda merasa ini adalah sebuah kesalahan.</p>
+                        <a href="/guru/dashboard" className="mt-6 inline-block rounded-full bg-blue-600 px-6 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700">Kembali ke Dashboard</a>
+                    </div>
+                ) : (
+                    <div className="flex flex-col lg:flex-row gap-8 items-start">
+                        {/* Sidebar / Tabs */}
+                        <div className="w-full lg:w-64 shrink-0">
+                            <h3 className="mb-3 text-xs font-bold uppercase tracking-wider text-slate-500">Pilih Kelas</h3>
+                            <nav className="flex flex-col space-y-1">
+                                {kelas_options.map(kelas => {
+                                    const isActive = activeKelasId === kelas.id_kelas;
+                                    return (
+                                        <button
+                                            key={kelas.id_kelas}
+                                            onClick={() => setActiveKelasId(kelas.id_kelas)}
+                                            className={`flex items-center justify-between rounded-xl px-4 py-3 text-left transition-all ${
+                                                isActive 
+                                                    ? 'bg-blue-600 text-white shadow-md' 
+                                                    : 'bg-white text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                                            }`}
+                                        >
+                                            <span className="font-semibold">{kelas.nama_kelas}</span>
+                                            <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${isActive ? 'bg-blue-500/50 text-white' : 'bg-slate-100 text-slate-500'}`}>
+                                                {students_by_class[kelas.id_kelas]?.length || 0} Siswa
+                                            </span>
+                                        </button>
+                                    );
+                                })}
+                            </nav>
+                        </div>
+
+                        {/* Content Area */}
+                        <div className="flex-1 w-full space-y-6">
+                            {/* Class Overview Card */}
+                            <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm flex flex-col md:flex-row gap-6 justify-between items-start md:items-center">
+                                <div>
+                                    <h3 className="text-2xl font-bold text-slate-900">{activeKelas?.nama_kelas}</h3>
+                                    <p className="text-sm text-slate-500 mt-1">Tahun Ajaran {activeKelas?.tahun_ajaran}</p>
+                                </div>
+                                <div className="flex gap-2 flex-wrap">
+                                    {activeMapel.length > 0 ? activeMapel.map((m, idx) => (
+                                        <span key={idx} className="inline-flex items-center rounded-lg bg-indigo-50 px-3 py-1.5 text-sm font-medium text-indigo-700 ring-1 ring-inset ring-indigo-700/10">
+                                            {m}
+                                        </span>
+                                    )) : (
+                                        <span className="text-sm text-slate-500 italic">Tidak ada mapel terdaftar</span>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Students Table */}
+                            <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+                                <div className="border-b border-slate-200 bg-slate-50 px-6 py-4 flex justify-between items-center">
+                                    <h3 className="font-bold text-slate-900">Daftar Siswa</h3>
+                                    <span className="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-semibold text-blue-800">
+                                        Total: {activeStudents.length}
+                                    </span>
+                                </div>
+                                <div className="overflow-x-auto">
+                                    <table className="min-w-full text-left text-sm divide-y divide-slate-200">
+                                        <thead className="bg-slate-50/50">
+                                            <tr>
+                                                <th className="px-6 py-4 font-semibold text-slate-500 w-16">No</th>
+                                                <th className="px-6 py-4 font-semibold text-slate-500">Nama Siswa</th>
+                                                <th className="px-6 py-4 font-semibold text-slate-500 w-48">NISN</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-slate-100">
+                                            {activeStudents.map((student, index) => (
+                                                <tr key={student.id_siswa} className="hover:bg-slate-50 transition-colors">
+                                                    <td className="px-6 py-4 text-slate-500 font-medium">{index + 1}</td>
+                                                    <td className="px-6 py-4 text-slate-900 font-semibold">{student.nama_lengkap}</td>
+                                                    <td className="px-6 py-4 text-slate-600 font-mono text-sm">{student.nisn || '-'}</td>
+                                                </tr>
+                                            ))}
+                                            {activeStudents.length === 0 && (
+                                                <tr>
+                                                    <td colSpan="3" className="px-6 py-8 text-center text-slate-500">
+                                                        Belum ada siswa terdaftar di kelas ini.
+                                                    </td>
+                                                </tr>
+                                            )}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+                </main>
+            </div>
+        </DashboardLayout>
+    );
+}

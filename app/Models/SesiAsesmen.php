@@ -54,12 +54,16 @@ class SesiAsesmen extends Model
         'tipe_soal',
         'jenis_asesmen',
         'waktu_mulai',
+        'waktu_selesai',
         'durasi_menit',
+        'boleh_ulang',
     ];
 
     protected $casts = [
         'waktu_mulai' => 'datetime',
+        'waktu_selesai' => 'datetime',
         'durasi_menit' => 'integer',
+        'boleh_ulang' => 'boolean',
     ];
 
     public function kelas(): BelongsTo
