@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import DashboardLayout from '../components/layout/DashboardLayout';
 import StatCard from '../components/ui/StatCard';
+import AnalisisDiagnostikCard from '../components/ui/AnalisisDiagnostikCard';
 import { siswaNavigation } from './siswa/siswaNavigation';
 import { apiFetch } from '../lib/api';
 
@@ -46,8 +47,8 @@ export default function SiswaCbtHistoryPage({ session, onLogout }) {
         const scores = history.map(h => h.total_bobot > 0 ? (h.total_skor / h.total_bobot) * 100 : 0);
         return {
             total: history.length,
-            rataRata: Math.round(scores.reduce((a, b) => a + b, 0) / scores.length),
-            tertinggi: Math.round(Math.max(...scores)),
+            rataRata: Number((scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(2)),
+            tertinggi: Number(Math.max(...scores).toFixed(2)),
         };
     }, [history]);
 
@@ -112,7 +113,7 @@ export default function SiswaCbtHistoryPage({ session, onLogout }) {
                             </thead>
                             <tbody className="divide-y divide-slate-100 bg-white">
                                 {filteredHistory.map((item) => {
-                                    const persen = item.total_bobot > 0 ? Math.round((item.total_skor / item.total_bobot) * 100) : 0;
+                                    const persen = item.total_bobot > 0 ? Number(((item.total_skor / item.total_bobot) * 100).toFixed(2)) : 0;
                                     return (
                                         <tr key={item.id_sesi} className="align-top hover:bg-slate-50/70">
                                             <td className="px-4 py-3 font-semibold text-slate-900">{item.mata_pelajaran || '-'}</td>
@@ -122,13 +123,16 @@ export default function SiswaCbtHistoryPage({ session, onLogout }) {
                                             <td className="px-4 py-3 text-slate-600">{item.jumlah_benar}</td>
                                             <td className="px-4 py-3">
                                                 <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-bold ${persen >= 70 ? 'bg-emerald-100 text-emerald-700' : persen >= 50 ? 'bg-amber-100 text-amber-700' : 'bg-rose-100 text-rose-700'}`}>
-                                                    {item.total_skor}/{item.total_bobot} ({persen}%)
+                                                    {Number(item.total_skor).toFixed(2)}/{item.total_bobot} ({persen}%)
                                                 </span>
                                             </td>
                                             <td className="px-4 py-3 text-right">
-                                                <button onClick={() => openReview(item.id_sesi)} className="rounded-xl bg-blue-600 px-4 py-2 text-xs font-semibold text-white transition hover:bg-blue-700">
-                                                    Review
-                                                </button>
+                                                <div className="flex items-center justify-end gap-2">
+                                                    {item.has_analisis && <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-[10px] font-bold text-indigo-700">🤖 AI</span>}
+                                                    <button onClick={() => openReview(item.id_sesi)} className="rounded-xl bg-blue-600 px-4 py-2 text-xs font-semibold text-white transition hover:bg-blue-700">
+                                                        Review
+                                                    </button>
+                                                </div>
                                             </td>
                                         </tr>
                                     );
@@ -164,7 +168,7 @@ export default function SiswaCbtHistoryPage({ session, onLogout }) {
                                         {/* Score summary */}
                                         <div className="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
                                             <div className="rounded-2xl bg-blue-50 px-4 py-4 text-center">
-                                                <p className="text-2xl font-bold text-blue-700">{reviewData.total_skor}/{reviewData.total_bobot}</p>
+                                                <p className="text-2xl font-bold text-blue-700">{Number(reviewData.total_skor).toFixed(2)}/{reviewData.total_bobot}</p>
                                                 <p className="text-xs text-blue-500">Total Skor</p>
                                             </div>
                                             <div className="rounded-2xl bg-emerald-50 px-4 py-4 text-center">
@@ -177,7 +181,7 @@ export default function SiswaCbtHistoryPage({ session, onLogout }) {
                                             </div>
                                             <div className="rounded-2xl bg-amber-50 px-4 py-4 text-center">
                                                 <p className="text-2xl font-bold text-amber-700">
-                                                    {reviewData.total_bobot > 0 ? Math.round((reviewData.total_skor / reviewData.total_bobot) * 100) : 0}%
+                                                    {reviewData.total_bobot > 0 ? Number(((reviewData.total_skor / reviewData.total_bobot) * 100).toFixed(2)) : 0}%
                                                 </p>
                                                 <p className="text-xs text-amber-500">Persentase</p>
                                             </div>
@@ -208,15 +212,32 @@ export default function SiswaCbtHistoryPage({ session, onLogout }) {
                                                                 const isChosenOption = jawabanArr.includes(opsi);
 
                                                                 let style = 'border-slate-200 bg-white text-slate-600';
-                                                                if (isCorrectOption && isChosenOption) style = 'border-emerald-300 bg-emerald-50 text-emerald-800 font-semibold';
-                                                                else if (isCorrectOption) style = 'border-emerald-300 bg-emerald-50/50 text-emerald-700';
-                                                                else if (isChosenOption) style = 'border-rose-300 bg-rose-50 text-rose-700';
+                                                                let label = '';
+                                                                let icon = '○';
+
+                                                                if (isChosenOption && isCorrectOption) {
+                                                                    style = 'border-emerald-300 bg-emerald-50 text-emerald-800 shadow-sm';
+                                                                    icon = '✓';
+                                                                    label = 'Pilihan Anda (Benar)';
+                                                                } else if (isChosenOption && !isCorrectOption) {
+                                                                    style = 'border-rose-300 bg-rose-50 text-rose-800 shadow-sm';
+                                                                    icon = '✗';
+                                                                    label = 'Pilihan Anda (Salah)';
+                                                                } else if (!isChosenOption && isCorrectOption) {
+                                                                    style = 'border-emerald-300 bg-emerald-50/40 text-emerald-700 border-dashed';
+                                                                    icon = '✓';
+                                                                    label = 'Kunci Jawaban';
+                                                                } else {
+                                                                    icon = '○';
+                                                                }
 
                                                                 return (
-                                                                    <div key={oIdx} className={`rounded-xl border px-4 py-2 text-sm flex items-center gap-2 ${style}`}>
-                                                                        {isCorrectOption && <span className="text-emerald-600">✓</span>}
-                                                                        {isChosenOption && !isCorrectOption && <span className="text-rose-600">✗</span>}
-                                                                        {opsi}
+                                                                    <div key={oIdx} className={`rounded-xl border px-4 py-3 text-sm flex items-center justify-between transition-all ${style}`}>
+                                                                        <div className="flex items-center gap-3">
+                                                                            <span className={`text-lg font-bold ${icon === '○' ? 'text-slate-300' : ''}`}>{icon}</span>
+                                                                            <span className="font-medium">{opsi}</span>
+                                                                        </div>
+                                                                        {label && <span className="text-xs font-bold uppercase tracking-wider opacity-80">{label}</span>}
                                                                     </div>
                                                                 );
                                                             })}
@@ -239,6 +260,9 @@ export default function SiswaCbtHistoryPage({ session, onLogout }) {
                                                 </div>
                                             ))}
                                         </div>
+
+                                        {/* Analisis Diagnostik AI */}
+                                        <AnalisisDiagnostikCard analisis={reviewData.analisis_diagnostik} />
                                     </div>
                                     <div className="border-t border-slate-200 px-6 py-4 text-right">
                                         <button onClick={() => setReviewData(null)} className="rounded-xl bg-slate-900 px-5 py-2 text-sm font-semibold text-white transition hover:bg-slate-800">Tutup</button>

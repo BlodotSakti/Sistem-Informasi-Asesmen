@@ -62,7 +62,22 @@ const mockSubmitResponse = {
             bobot_nilai: 20,
             skor_diperoleh: 0,
         }
-    ]
+    ],
+    analisis_diagnostik: {
+        id_analisis: 1,
+        skor_total: 10,
+        narasi_kekuatan: 'Siswa menunjukkan pemahaman yang baik pada soal pilihan ganda.',
+        narasi_kelemahan: 'Siswa perlu meningkatkan kemampuan di soal essay.',
+        tanggal_generate: '2025-06-01T10:00:00Z',
+        rekap_kognitif: {
+            C1: { jumlah_soal: 1, jumlah_benar: 1, skor_diperoleh: 10, bobot_total: 10, persentase: 100 },
+            C2: { jumlah_soal: 1, jumlah_benar: 0, skor_diperoleh: 0, bobot_total: 20, persentase: 0 },
+            C3: { jumlah_soal: 0, jumlah_benar: 0, skor_diperoleh: 0, bobot_total: 0, persentase: 0 },
+            C4: { jumlah_soal: 0, jumlah_benar: 0, skor_diperoleh: 0, bobot_total: 0, persentase: 0 },
+            C5: { jumlah_soal: 0, jumlah_benar: 0, skor_diperoleh: 0, bobot_total: 0, persentase: 0 },
+            C6: { jumlah_soal: 0, jumlah_benar: 0, skor_diperoleh: 0, bobot_total: 0, persentase: 0 },
+        },
+    },
 };
 
 describe('SiswaCbtPage Component', () => {
@@ -182,8 +197,8 @@ describe('SiswaCbtPage Component', () => {
         });
 
         // Check score display
-        expect(screen.getByText('33%')).toBeInTheDocument();
-        expect(screen.getByText('10')).toBeInTheDocument(); // total_skor
+        expect(screen.getByText('33.33%')).toBeInTheDocument();
+        expect(screen.getByText('10.00')).toBeInTheDocument(); // total_skor
         expect(screen.getByText('Kembali ke Dashboard')).toBeInTheDocument();
     });
 
@@ -209,5 +224,32 @@ describe('SiswaCbtPage Component', () => {
         });
 
         expect(localStorage.getItem('cbt-jawaban-1')).toBeNull();
+    });
+
+    it('displays AI diagnostic analysis on result screen', async () => {
+        render(<SiswaCbtPage session={mockSession} idSesi={1} onLogout={() => {}} />);
+
+        await waitFor(() => {
+            expect(screen.getByText('Kumpulkan Jawaban')).toBeInTheDocument();
+        });
+
+        fireEvent.click(screen.getByText('Kumpulkan Jawaban'));
+
+        await waitFor(() => {
+            expect(screen.getByText('Selesai Ujian')).toBeInTheDocument();
+        });
+
+        fireEvent.click(screen.getByText('Selesai Ujian'));
+
+        await waitFor(() => {
+            expect(screen.getByText('Ujian Selesai!')).toBeInTheDocument();
+        });
+
+        // Check AI diagnostic card is rendered
+        expect(screen.getByText('Laporan Analisis Diagnostik AI')).toBeInTheDocument();
+        expect(screen.getByText('Siswa menunjukkan pemahaman yang baik pada soal pilihan ganda.')).toBeInTheDocument();
+        expect(screen.getByText('Siswa perlu meningkatkan kemampuan di soal essay.')).toBeInTheDocument();
+        expect(screen.getByText('Kekuatan')).toBeInTheDocument();
+        expect(screen.getByText('Area Peningkatan')).toBeInTheDocument();
     });
 });

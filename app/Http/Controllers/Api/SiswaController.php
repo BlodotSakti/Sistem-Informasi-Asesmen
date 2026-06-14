@@ -12,6 +12,7 @@ use App\Models\JawabanSiswa;
 use App\Models\PenugasanPembelajaran;
 use App\Models\RencanaBelajar;
 use App\Models\SesiAsesmen;
+use App\Services\GeminiService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -483,8 +484,11 @@ class SiswaController extends Controller
         $totalBobot = $sesi->detailSesiSoal->sum('bobot_nilai');
         $resultPerSoal = [];
 
-        DB::transaction(function () use ($data, $siswa, $details, &$totalSkor, &$resultPerSoal) {
-            foreach ($data['jawaban'] as $jawab) {
+        // Deduplikasi: hanya ambil jawaban terakhir per id_detail
+        $jawabanByDetail = collect($data['jawaban'])->keyBy('id_detail')->values()->all();
+
+        DB::transaction(function () use ($jawabanByDetail, $siswa, $details, &$totalSkor, &$resultPerSoal) {
+            foreach ($jawabanByDetail as $jawab) {
                 $detail = $details->get($jawab['id_detail']);
                 if (!$detail || !$detail->bankSoal) continue;
 
@@ -516,10 +520,9 @@ class SiswaController extends Controller
                                     $falsePositives++;
                                 }
                             }
-                            $calculatedScore = ($truePositives - $falsePositives) / count($kunciArr);
-                            $calculatedScore = max(0, $calculatedScore);
-                            $skorDiperoleh = $calculatedScore * $detail->bobot_nilai;
-                            $isCorrect = $skorDiperoleh == $detail->bobot_nilai;
+                            $calculatedScore = $truePositives / count($kunciArr);
+                            $skorDiperoleh = round($calculatedScore * $detail->bobot_nilai, 4);
+                            $isCorrect = ($truePositives == count($kunciArr) && $falsePositives == 0);
                         }
                     }
                     // Essay: stays 0, needs manual grading
@@ -543,6 +546,7 @@ class SiswaController extends Controller
                     'id_detail' => $detail->id_detail,
                     'isi_soal' => $bankSoal->isi_soal,
                     'jenis_soal' => $bankSoal->jenis_soal,
+                    'opsi_jawaban' => $bankSoal->opsi_jawaban,
                     'jawaban_siswa' => $teksJawaban,
                     'kunci_jawaban' => $bankSoal->kunci_jawaban,
                     'is_correct' => $isCorrect,
@@ -554,16 +558,38 @@ class SiswaController extends Controller
 
         $jumlahBenar = collect($resultPerSoal)->where('is_correct', true)->count();
 
+        // --- Trigger Gemini AI Analisis Diagnostik ---
+        $analisisDiagnostik = null;
+        try {
+            $geminiService = new GeminiService();
+            $analisis = $geminiService->generateAnalisis($siswa->id_siswa, $id_sesi);
+            $analisisDiagnostik = [
+                'id_analisis' => $analisis->id_analisis,
+                'skor_total' => $analisis->skor_total,
+                'narasi_kekuatan' => $analisis->narasi_kekuatan,
+                'narasi_kelemahan' => $analisis->narasi_kelemahan,
+                'tanggal_generate' => $analisis->tanggal_generate,
+                'rekap_kognitif' => $geminiService->buildRekapCognitive($siswa->id_siswa, $id_sesi)['rekap_level_kognitif'] ?? null,
+            ];
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('Gemini AI analysis failed after CBT submit.', [
+                'id_siswa' => $siswa->id_siswa,
+                'id_sesi' => $id_sesi,
+                'error' => $e->getMessage(),
+            ]);
+        }
+
         return response()->json([
             'message' => 'Ujian berhasil disubmit',
-            'total_skor' => round($totalSkor, 2),
-            'total_bobot' => round($totalBobot, 2),
+            'total_skor' => round($totalSkor, 4),
+            'total_bobot' => round($totalBobot, 4),
             'jumlah_soal' => count($resultPerSoal),
             'jumlah_benar' => $jumlahBenar,
             'jumlah_salah' => count($resultPerSoal) - $jumlahBenar,
             'mata_pelajaran' => $sesi->mataPelajaran?->nama_mapel,
             'jenis_asesmen' => $sesi->jenis_asesmen,
             'detail_hasil' => $resultPerSoal,
+            'analisis_diagnostik' => $analisisDiagnostik,
         ], 200);
     }
 
@@ -616,9 +642,9 @@ class SiswaController extends Controller
                             if (in_array($j, $kunciArr)) $truePositives++;
                             else $falsePositives++;
                         }
-                        $scorePerOpsi = $detail->bobot_nilai / count($kunciArr);
-                        $skorDiperoleh = max(0, ($truePositives * $scorePerOpsi) - ($falsePositives * $scorePerOpsi));
-                        $isCorrect = $skorDiperoleh == $detail->bobot_nilai;
+                        $calculatedScore = $truePositives / count($kunciArr);
+                        $skorDiperoleh = round($calculatedScore * $detail->bobot_nilai, 4);
+                        $isCorrect = ($truePositives == count($kunciArr) && $falsePositives == 0);
                     }
                 }
             }
@@ -678,6 +704,9 @@ class SiswaController extends Controller
                     'total_skor' => round($totalSkor, 2),
                     'total_bobot' => round($totalBobot, 2),
                     'submitted_at' => $jawaban->max('updated_at'),
+                    'has_analisis' => AnalisisDiagnostik::where('id_siswa', $siswa->id_siswa)
+                        ->where('id_sesi', $sesi->id_sesi)
+                        ->exists(),
                 ];
             });
 
@@ -727,6 +756,24 @@ class SiswaController extends Controller
             ];
         });
 
+        // Include Analisis Diagnostik if exists
+        $analisis = AnalisisDiagnostik::where('id_siswa', $siswa->id_siswa)
+            ->where('id_sesi', $id_sesi)
+            ->first();
+
+        $analisisDiagnostik = null;
+        if ($analisis) {
+            $geminiService = new GeminiService();
+            $analisisDiagnostik = [
+                'id_analisis' => $analisis->id_analisis,
+                'skor_total' => $analisis->skor_total,
+                'narasi_kekuatan' => $analisis->narasi_kekuatan,
+                'narasi_kelemahan' => $analisis->narasi_kelemahan,
+                'tanggal_generate' => $analisis->tanggal_generate,
+                'rekap_kognitif' => $geminiService->buildRekapCognitive($siswa->id_siswa, $id_sesi)['rekap_level_kognitif'] ?? null,
+            ];
+        }
+
         return response()->json([
             'sesi' => [
                 'id_sesi' => $sesi->id_sesi,
@@ -742,6 +789,7 @@ class SiswaController extends Controller
             'jumlah_benar' => $soalReview->where('is_correct', true)->count(),
             'jumlah_soal' => $soalReview->count(),
             'soal' => $soalReview->values(),
+            'analisis_diagnostik' => $analisisDiagnostik,
         ]);
     }
 }

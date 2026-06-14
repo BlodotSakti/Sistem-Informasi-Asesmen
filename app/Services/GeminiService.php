@@ -14,7 +14,7 @@ class GeminiService
     {
         $rekap = $this->buildRekapCognitive($idSiswa, $idSesi);
         $skorTotal = $rekap['skor_total'];
-        $prompt = $this->buildPrompt($rekap);
+        $prompt = $this->buildPrompt($rekap['rekap_level_kognitif'], $rekap['rekap_topik_materi'] ?? []);
 
         $narasiKekuatan = '';
         $narasiKelemahan = '';
@@ -37,7 +37,7 @@ class GeminiService
                     'generationConfig' => [
                         'temperature' => 0.4,
                         'topP' => 0.9,
-                        'maxOutputTokens' => 512,
+                        'maxOutputTokens' => 2048,
                     ],
                 ]);
 
@@ -45,8 +45,28 @@ class GeminiService
                 throw new \RuntimeException('Gemini API gagal merespons dengan status '.$response->status());
             }
 
-            $rawText = data_get($response->json(), 'candidates.0.content.parts.0.text', '');
+            $rawText = '';
+            $parts = data_get($response->json(), 'candidates.0.content.parts', []);
+            // Model thinking (gemini-2.5-flash) menempatkan "thought" di parts awal.
+            // Text output ada di part terakhir yang memiliki key 'text'.
+            foreach ($parts as $part) {
+                if (isset($part['text']) && !isset($part['thought'])) {
+                    $rawText = $part['text'];
+                }
+            }
+            // Fallback ke parts.0.text jika tidak ditemukan
+            if (empty($rawText)) {
+                $rawText = data_get($response->json(), 'candidates.0.content.parts.0.text', '');
+            }
+
+            Log::info('Gemini raw response', ['id_siswa' => $idSiswa, 'id_sesi' => $idSesi, 'raw' => mb_substr($rawText, 0, 500)]);
+
             [$narasiKekuatan, $narasiKelemahan] = $this->parseGeminiResponse($rawText);
+
+            if (empty($narasiKekuatan) && empty($narasiKelemahan)) {
+                throw new \RuntimeException('Gemini mengembalikan narasi kosong setelah parsing.');
+            }
+
             $geminiBerhasil = true;
         } catch (Throwable $throwable) {
             Log::warning('Gemini analysis failed, saving score only.', [
@@ -102,6 +122,8 @@ class GeminiService
             'C6' => ['jumlah_soal' => 0, 'jumlah_benar' => 0, 'skor_diperoleh' => 0.0, 'bobot_total' => 0.0],
         ];
 
+        $rekapTopik = [];
+
         $skorTotal = 0.0;
 
         foreach ($jawaban as $item) {
@@ -118,6 +140,16 @@ class GeminiService
             $rekap[$levelKognitif]['skor_diperoleh'] += $skorDiperoleh;
             $rekap[$levelKognitif]['bobot_total'] += $bobotNilai;
             $rekap[$levelKognitif]['jumlah_benar'] += $isCorrect ? 1 : 0;
+            
+            $topikMateri = data_get($item, 'detailSesiSoal.bankSoal.topik_materi', 'Umum');
+            if (!isset($rekapTopik[$topikMateri])) {
+                $rekapTopik[$topikMateri] = ['jumlah_soal' => 0, 'jumlah_benar' => 0, 'skor_diperoleh' => 0.0, 'bobot_total' => 0.0];
+            }
+            $rekapTopik[$topikMateri]['jumlah_soal']++;
+            $rekapTopik[$topikMateri]['skor_diperoleh'] += $skorDiperoleh;
+            $rekapTopik[$topikMateri]['bobot_total'] += $bobotNilai;
+            $rekapTopik[$topikMateri]['jumlah_benar'] += $isCorrect ? 1 : 0;
+
             $skorTotal += $skorDiperoleh;
         }
 
@@ -127,38 +159,61 @@ class GeminiService
                 : 0.0;
         }
 
+        foreach ($rekapTopik as $topik => $data) {
+            $rekapTopik[$topik]['persentase'] = $data['bobot_total'] > 0
+                ? round(($data['skor_diperoleh'] / $data['bobot_total']) * 100, 2)
+                : 0.0;
+        }
+
         return [
             'id_siswa' => $idSiswa,
             'id_sesi' => $idSesi,
             'skor_total' => round($skorTotal, 2),
-            'rekap' => $rekap,
+            'rekap_level_kognitif' => $rekap,
+            'rekap_topik_materi' => $rekapTopik,
         ];
     }
 
-    protected function buildPrompt(array $rekapData): string
+    protected function buildPrompt(array $rekapKognitif, array $rekapTopik = []): string
     {
-        $rekapJson = json_encode($rekapData, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+        $kognitifJson = json_encode($rekapKognitif, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+        $topikJson = json_encode($rekapTopik, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
 
         return <<<PROMPT
-Anda adalah asisten analisis diagnostik pembelajaran untuk guru SMA.
+Anda adalah asisten analisis diagnostik pembelajaran untuk siswa SMA. Tugas Anda adalah memberikan umpan balik personal.
 
-Berdasarkan data berikut, buat output singkat dan terstruktur dalam bahasa Indonesia:
-- narasi_kekuatan: deskripsi singkat kelebihan pemahaman kognitif siswa pada topik tersebut.
-- narasi_kelemahan: deskripsi area materi yang perlu diperbaiki.
+DATA CAPAIAN PER LEVEL KOGNITIF (Taksonomi Bloom C1-C6):
+{$kognitifJson}
 
-Gunakan data berikut:
-{$rekapJson}
+DATA CAPAIAN PER TOPIK MATERI:
+{$topikJson}
 
-Instruksi output:
-1. Jawab hanya dalam format JSON valid.
-2. Gunakan properti "narasi_kekuatan" dan "narasi_kelemahan".
-3. Jangan menambahkan properti lain.
+KETERANGAN LEVEL KOGNITIF:
+- C1 = Mengingat
+- C2 = Memahami
+- C3 = Menerapkan/Mengaplikasikan
+- C4 = Menganalisis
+- C5 = Mengevaluasi
+- C6 = Mencipta
+
+BUAT OUTPUT DENGAN ATURAN BERIKUT:
+1. Buat properti "narasi_kekuatan": Narasi 2-4 kalimat tentang kelebihan siswa. Sebutkan secara spesifik Level Kognitif DAN Topik Materi mana yang dikuasai. Gunakan nada positif dan membangun.
+2. Buat properti "narasi_kelemahan": Narasi 2-4 kalimat tentang area yang perlu ditingkatkan. Sebutkan secara spesifik Level Kognitif DAN Topik Materi yang perlu diperbaiki. Berikan saran konkret dan motivasi.
+3. Jika semua persentase 100%, pada narasi_kelemahan tetap beri motivasi untuk mempertahankan kemampuan.
+4. Jika semua persentase 0%, pada narasi_kekuatan tetap beri semangat dan motivasi belajar.
+5. JANGAN menggunakan markdown code blocks. Jawab HANYA dalam JSON murni.
+6. Gunakan HANYA properti "narasi_kekuatan" dan "narasi_kelemahan".
 PROMPT;
     }
 
     protected function parseGeminiResponse(string $rawText): array
     {
-        $decoded = json_decode($rawText, true);
+        // Bersihkan markdown code blocks jika ada (```json ... ```)
+        $cleanText = preg_replace('/^```json\s*/ui', '', trim($rawText));
+        $cleanText = preg_replace('/```$/u', '', trim($cleanText));
+        $cleanText = trim($cleanText);
+
+        $decoded = json_decode($cleanText, true);
 
         if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
             return [
@@ -170,12 +225,13 @@ PROMPT;
         $narasiKekuatan = '';
         $narasiKelemahan = '';
 
-        if (preg_match('/"narasi_kekuatan"\s*:\s*"([^"]*)"/u', $rawText, $matchKekuatan)) {
-            $narasiKekuatan = trim($matchKekuatan[1]);
+        // Fallback parsing dengan regex jika JSON masih tidak valid
+        if (preg_match('/"narasi_kekuatan"\s*:\s*"([^"]*)"/is', $rawText, $matchKekuatan)) {
+            $narasiKekuatan = trim(str_replace('\"', '"', $matchKekuatan[1]));
         }
 
-        if (preg_match('/"narasi_kelemahan"\s*:\s*"([^"]*)"/u', $rawText, $matchKelemahan)) {
-            $narasiKelemahan = trim($matchKelemahan[1]);
+        if (preg_match('/"narasi_kelemahan"\s*:\s*"([^"]*)"/is', $rawText, $matchKelemahan)) {
+            $narasiKelemahan = trim(str_replace('\"', '"', $matchKelemahan[1]));
         }
 
         return [$narasiKekuatan, $narasiKelemahan];
@@ -184,7 +240,7 @@ PROMPT;
     protected function geminiUrl(): string
     {
         $apiKey = (string) env('GEMINI_API_KEY', '');
-        $model = (string) env('GEMINI_MODEL', 'gemini-1.5-flash');
+        $model = (string) env('GEMINI_MODEL', 'gemini-3.5-flash');
 
         return sprintf(
             'https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent?key=%s',

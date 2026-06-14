@@ -3,6 +3,29 @@ import DashboardLayout from '../components/layout/DashboardLayout';
 import StatCard from '../components/ui/StatCard';
 import { siswaNavigation } from './siswa/siswaNavigation';
 import { useSiswaData } from './siswa/useSiswaData';
+import {
+    AreaChart,
+    Area,
+    XAxis,
+    YAxis,
+    CartesianGrid,
+    Tooltip,
+    ResponsiveContainer,
+} from 'recharts';
+
+const CustomTooltip = ({ active, payload, label }) => {
+    if (active && payload && payload.length) {
+        return (
+            <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-lg">
+                <p className="mb-1 text-sm font-semibold text-slate-600">{label}</p>
+                <p className="text-2xl font-bold text-blue-600">
+                    {payload[0].value} <span className="text-sm font-normal text-slate-500">Poin</span>
+                </p>
+            </div>
+        );
+    }
+    return null;
+};
 
 export default function SiswaTrendPage({ session, onLogout }) {
     const { summary, loading, error } = useSiswaData(session);
@@ -25,6 +48,13 @@ export default function SiswaTrendPage({ session, onLogout }) {
         });
     }, [trendPoints, trendSearch]);
 
+    const chartData = useMemo(() => {
+        return filteredTrendPoints.map((point, index) => ({
+            name: point.label || `M${index + 1}`,
+            Nilai: Number(point.value || 0),
+        }));
+    }, [filteredTrendPoints]);
+
     return (
         <DashboardLayout title="Tren Nilai" user={session?.user} navigation={siswaNavigation} onLogout={onLogout} profileHref="/siswa/profil">
             <div className="space-y-6">
@@ -44,13 +74,46 @@ export default function SiswaTrendPage({ session, onLogout }) {
                 {error ? <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div> : null}
 
                 <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-                    <div className="flex h-80 items-end gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-5">
-                        {filteredTrendPoints.map((point, index) => (
-                            <div key={index} className="flex flex-1 flex-col items-center gap-3">
-                                <div className="w-full max-w-[44px] rounded-t-2xl bg-gradient-to-t from-slate-900 to-slate-500" style={{ height: `${Math.max(10, Number(point.value || 0)) * 2.5}%` }} />
-                                <span className="text-xs text-slate-500">{point.label || `M${index + 1}`}</span>
+                    <div className="h-80 w-full rounded-2xl border border-slate-200 bg-slate-50 p-5">
+                        {chartData.length > 0 ? (
+                            <ResponsiveContainer width="100%" height="100%">
+                                <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                                    <defs>
+                                        <linearGradient id="colorNilai" x1="0" y1="0" x2="0" y2="1">
+                                            <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
+                                            <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
+                                        </linearGradient>
+                                    </defs>
+                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                                    <XAxis 
+                                        dataKey="name" 
+                                        axisLine={false} 
+                                        tickLine={false} 
+                                        tick={{ fill: '#64748b', fontSize: 12 }} 
+                                        dy={10}
+                                    />
+                                    <YAxis 
+                                        axisLine={false} 
+                                        tickLine={false} 
+                                        tick={{ fill: '#64748b', fontSize: 12 }}
+                                    />
+                                    <Tooltip content={<CustomTooltip />} cursor={{ stroke: '#94a3b8', strokeWidth: 1, strokeDasharray: '4 4' }} />
+                                    <Area 
+                                        type="monotone" 
+                                        dataKey="Nilai" 
+                                        stroke="#2563eb" 
+                                        strokeWidth={3}
+                                        fillOpacity={1} 
+                                        fill="url(#colorNilai)" 
+                                        activeDot={{ r: 6, fill: '#2563eb', stroke: '#fff', strokeWidth: 2 }}
+                                    />
+                                </AreaChart>
+                            </ResponsiveContainer>
+                        ) : (
+                            <div className="flex h-full items-center justify-center text-sm text-slate-500">
+                                Belum ada data tren nilai yang sesuai.
                             </div>
-                        ))}
+                        )}
                     </div>
 
                     <label className="mt-4 block space-y-2 text-sm font-medium text-slate-700">

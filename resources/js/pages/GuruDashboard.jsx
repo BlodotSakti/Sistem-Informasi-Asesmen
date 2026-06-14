@@ -358,7 +358,7 @@ export default function GuruDashboard({ session, onLogout, mode = 'dashboard' })
                 .map(([id, bobot]) => ({ id_soal: Number(id), bobot_nilai: Number(bobot) }));
 
             if (soalArr.length === 0) {
-                setError('Pilih minimal satu soal dan tentukan bobot nilainya.');
+                showSuccessPopup('Validasi Gagal', 'Pilih minimal satu soal dan tentukan bobot nilainya.');
                 return;
             }
 
@@ -380,7 +380,7 @@ export default function GuruDashboard({ session, onLogout, mode = 'dashboard' })
                 }),
             });
 
-            showToast(isEditing ? 'Sesi Asesmen berhasil diperbarui.' : 'Sesi Asesmen berhasil dibuat.');
+            showSuccessPopup('Berhasil', isEditing ? 'Sesi Asesmen berhasil diperbarui.' : 'Sesi Asesmen berhasil dibuat.');
             setIsSesiModalOpen(false);
             setEditingSesiId(null);
             setSelectedSoalMap({});
@@ -389,7 +389,7 @@ export default function GuruDashboard({ session, onLogout, mode = 'dashboard' })
             });
             await reloadWorkspace();
         } catch (exception) {
-            setError(exception.message || 'Gagal menyimpan sesi asesmen.');
+            showSuccessPopup('Gagal Menyimpan Jadwal', exception.message || 'Gagal menyimpan sesi asesmen.');
         }
     };
 
@@ -419,7 +419,7 @@ export default function GuruDashboard({ session, onLogout, mode = 'dashboard' })
         if (!window.confirm('Yakin ingin menghapus jadwal CBT ini?')) return;
         try {
             await apiFetch(`/api/guru/sesi-asesmen/${id}`, session, { method: 'DELETE' });
-            showToast('Jadwal CBT berhasil dihapus.');
+            showSuccessPopup('Berhasil', 'Jadwal CBT berhasil dihapus.');
             await reloadWorkspace();
         } catch (err) {
             showSuccessPopup('Gagal Menghapus', err.message || 'Jadwal tidak dapat dihapus karena siswa sudah mulai mengerjakan.');
@@ -472,7 +472,7 @@ export default function GuruDashboard({ session, onLogout, mode = 'dashboard' })
         if (!window.confirm('Yakin ingin menghapus soal ini?')) return;
         try {
             await apiFetch(`/api/guru/bank-soal/${id}`, session, { method: 'DELETE' });
-            showToast('Soal berhasil dihapus.');
+            showSuccessPopup('Berhasil', 'Soal berhasil dihapus.');
             await reloadWorkspace();
         } catch (err) {
             showSuccessPopup('Gagal Menghapus', err.message || 'Soal tidak dapat dihapus karena sudah dipakai dalam sesi ujian.');
@@ -486,7 +486,7 @@ export default function GuruDashboard({ session, onLogout, mode = 'dashboard' })
             setError('');
 
             if (!bankForm.topik_materi.trim() || !bankForm.level_kognitif) {
-                setError('Topik materi dan level kognitif Bloom wajib diisi sebelum menyimpan soal.');
+                showSuccessPopup('Validasi Gagal', 'Topik materi dan level kognitif Bloom wajib diisi sebelum menyimpan soal.');
                 return;
             }
 
@@ -509,12 +509,12 @@ export default function GuruDashboard({ session, onLogout, mode = 'dashboard' })
                 }),
             });
 
-            showToast(isEditing ? 'Bank soal berhasil diperbarui.' : 'Bank soal berhasil disimpan.');
+            showSuccessPopup('Berhasil', isEditing ? 'Bank soal berhasil diperbarui.' : 'Bank soal berhasil disimpan.');
 
             resetBankForm();
             await reloadWorkspace();
         } catch (exception) {
-            setError(exception.message || 'Gagal menyimpan bank soal.');
+            showSuccessPopup('Gagal Menyimpan Soal', exception.message || 'Gagal menyimpan bank soal.');
         }
     };
 
@@ -1074,6 +1074,26 @@ export default function GuruDashboard({ session, onLogout, mode = 'dashboard' })
                                                                                 );
                                                                             })}
                                                                         </div>
+
+                                                                        {/* Analisis Diagnostik AI per siswa */}
+                                                                        {sw.analisis_diagnostik && (
+                                                                            <div className="mt-4 rounded-xl border border-indigo-200 bg-indigo-50/50 p-4">
+                                                                                <div className="flex items-center gap-2 mb-2">
+                                                                                    <span className="text-sm">🤖</span>
+                                                                                    <span className="text-xs font-bold text-indigo-700">Analisis Diagnostik AI</span>
+                                                                                </div>
+                                                                                <div className="grid gap-3 sm:grid-cols-2">
+                                                                                    <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3">
+                                                                                        <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-600 mb-1">💪 Kekuatan</p>
+                                                                                        <p className="text-xs text-emerald-800 leading-relaxed">{sw.analisis_diagnostik.narasi_kekuatan || 'Belum tersedia'}</p>
+                                                                                    </div>
+                                                                                    <div className="rounded-lg border border-amber-200 bg-amber-50 p-3">
+                                                                                        <p className="text-[10px] font-bold uppercase tracking-wider text-amber-600 mb-1">📈 Area Peningkatan</p>
+                                                                                        <p className="text-xs text-amber-800 leading-relaxed">{sw.analisis_diagnostik.narasi_kelemahan || 'Belum tersedia'}</p>
+                                                                                    </div>
+                                                                                </div>
+                                                                            </div>
+                                                                        )}
                                                                     </td>
                                                                 </tr>
                                                             )}

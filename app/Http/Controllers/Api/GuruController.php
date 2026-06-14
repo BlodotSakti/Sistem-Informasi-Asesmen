@@ -340,6 +340,19 @@ class GuruController extends Controller
                 'jumlah_benar' => $jumlahBenar,
                 'jumlah_dijawab' => $jawabanSiswa->count(),
                 'detail_jawaban' => $detailJawaban,
+                'analisis_diagnostik' => (function () use ($siswa, $id_sesi, $sudahMengerjakan) {
+                    if (!$sudahMengerjakan) return null;
+                    $analisis = AnalisisDiagnostik::where('id_siswa', $siswa->id_siswa)
+                        ->where('id_sesi', $id_sesi)
+                        ->first();
+                    if (!$analisis) return null;
+                    return [
+                        'narasi_kekuatan' => $analisis->narasi_kekuatan,
+                        'narasi_kelemahan' => $analisis->narasi_kelemahan,
+                        'skor_total' => $analisis->skor_total,
+                        'tanggal_generate' => $analisis->tanggal_generate,
+                    ];
+                })(),
             ];
         }
 

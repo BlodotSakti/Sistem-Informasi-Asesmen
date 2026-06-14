@@ -20,6 +20,7 @@ const mockHistoryData = {
             total_skor: 60,
             total_bobot: 100,
             submitted_at: '2025-06-01T09:00:00Z',
+            has_analisis: true,
         },
         {
             id_sesi: 2,
@@ -35,6 +36,7 @@ const mockHistoryData = {
             total_skor: 30,
             total_bobot: 100,
             submitted_at: '2025-06-02T08:45:00Z',
+            has_analisis: false,
         }
     ]
 };
@@ -65,7 +67,17 @@ const mockReviewData = {
             is_correct: true,
             skor_diperoleh: 20,
         },
-    ]
+    ],
+    analisis_diagnostik: {
+        id_analisis: 1,
+        skor_total: 60,
+        narasi_kekuatan: 'Pemahaman dasar aritmatika siswa sangat baik.',
+        narasi_kelemahan: 'Perlu latihan soal cerita yang lebih kompleks.',
+        tanggal_generate: '2025-06-01T09:05:00Z',
+        rekap_kognitif: {
+            C1: { jumlah_soal: 1, jumlah_benar: 1, skor_diperoleh: 20, bobot_total: 20, persentase: 100 },
+        },
+    },
 };
 
 // Mock apiFetch
@@ -115,8 +127,8 @@ describe('SiswaCbtHistoryPage', () => {
         render(<SiswaCbtHistoryPage session={mockSession} onLogout={() => {}} />);
 
         await waitFor(() => {
-            expect(screen.getByText('60/100 (60%)')).toBeInTheDocument();
-            expect(screen.getByText('30/100 (30%)')).toBeInTheDocument();
+            expect(screen.getByText('60.00/100 (60%)')).toBeInTheDocument();
+            expect(screen.getByText('30.00/100 (30%)')).toBeInTheDocument();
         });
     });
 
@@ -151,5 +163,29 @@ describe('SiswaCbtHistoryPage', () => {
 
         expect(screen.queryByText('Matematika')).not.toBeInTheDocument();
         expect(screen.getByText('Fisika')).toBeInTheDocument();
+    });
+
+    it('shows AI badge on history items with analisis and renders AI card in review', async () => {
+        render(<SiswaCbtHistoryPage session={mockSession} onLogout={() => {}} />);
+
+        await waitFor(() => {
+            expect(screen.getByText('Matematika')).toBeInTheDocument();
+        });
+
+        // Check AI badge exists for Matematika (has_analisis: true)
+        expect(screen.getByText('🤖 AI')).toBeInTheDocument();
+
+        // Open review
+        const reviewButtons = screen.getAllByText('Review');
+        fireEvent.click(reviewButtons[0]);
+
+        await waitFor(() => {
+            expect(screen.getByText(/Review: Matematika/i)).toBeInTheDocument();
+        });
+
+        // Check AI diagnostik card is rendered in review
+        expect(screen.getByText('Laporan Analisis Diagnostik AI')).toBeInTheDocument();
+        expect(screen.getByText('Pemahaman dasar aritmatika siswa sangat baik.')).toBeInTheDocument();
+        expect(screen.getByText('Perlu latihan soal cerita yang lebih kompleks.')).toBeInTheDocument();
     });
 });

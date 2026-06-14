@@ -1,7 +1,19 @@
 # CHANGELOG
 
 ## [Unreleased]
+### Fixed
+- **Bug Fix: Skor melebihi 100** — Perbaikan bug dimana skor siswa bisa melebihi total bobot (misal 115/100) karena data jawaban duplikat di tabel `jawaban_siswa`. Akar masalah: tidak ada unique constraint pada `(id_siswa, id_detail)`, sehingga submit ganda bisa menghasilkan record duplikat.
+  - Menambahkan migration `unique index` pada kolom `(id_siswa, id_detail)` di tabel `jawaban_siswa`.
+  - Menambahkan deduplikasi input jawaban sebelum proses di `SiswaController@cbtSubmit`.
+  - Data duplikat yang sudah ada di database telah dibersihkan.
 ### Added
+- **Integrasi Gemini AI — Analisis Diagnostik Otomatis**: Setelah siswa submit CBT, sistem otomatis mengirim rekap jawaban (per Level Kognitif C1-C6 dan Topik Materi) ke Gemini AI untuk menghasilkan narasi deskriptif kekuatan dan kelemahan siswa. Narasi tersimpan di tabel `analisis_diagnostik` dan ditampilkan di:
+  - Halaman Hasil CBT (setelah submit)
+  - Riwayat CBT (review) dengan badge "🤖 AI"
+  - Sisi Guru (Detail Sesi CBT → Lihat Jawaban siswa)
+  - Komponen reusable `AnalisisDiagnostikCard.jsx` menampilkan narasi + progress bar per level kognitif Bloom.
+  - Termasuk unit test baru pada `SiswaCbtPage.test.jsx` dan `SiswaCbtHistoryPage.test.jsx`.
+- **UI Update (Siswa)**: Visualisasi Grafik Tren Nilai Interaktif di menu Tren Nilai (`SiswaTrendPage.jsx`). Menggunakan library `recharts` untuk menampilkan grafik Area Chart yang mendukung *hover* dan *tooltip* dinamis. Termasuk pengujian unit yang komprehensif (`SiswaTrendPage.test.jsx`).
 - **Backend API**: Added `cbtData` and `cbtSubmit` endpoints in `SiswaController` to fetch CBT session questions and auto-submit student answers. Support for partial points in complex multiple choice questions (pilihan_ganda_kompleks) has been added.
 - **Backend API**: Added `bankSoalStore` and `sesiAsesmenStore` in `GuruController` to support transactional session creation.
 - **Database**: Added `pilihan_ganda_kompleks` enum to `bank_soal` table.

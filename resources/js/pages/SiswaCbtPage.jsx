@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import AnalisisDiagnostikCard from '../components/ui/AnalisisDiagnostikCard';
 
 function apiBase(path) {
     return `${window.location.origin}${path}`;
@@ -233,13 +234,13 @@ export default function SiswaCbtPage({ session, onLogout, idSesi }) {
 
     // --- RESULT SCREEN ---
     if (resultData) {
-        const persen = resultData.total_bobot > 0 ? Math.round((resultData.total_skor / resultData.total_bobot) * 100) : 0;
+        const persen = resultData.total_bobot > 0 ? Number(((resultData.total_skor / resultData.total_bobot) * 100).toFixed(2)) : 0;
         return (
             <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 font-sans text-slate-900">
                 <div className="mx-auto max-w-4xl px-6 py-12">
                     {/* Score Hero */}
                     <div className="mb-10 rounded-3xl border border-slate-200 bg-white p-10 text-center shadow-lg">
-                        <div className="mx-auto mb-4 flex h-28 w-28 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 shadow-xl">
+                        <div className="mx-auto mb-4 flex h-40 w-40 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 shadow-xl">
                             <span className="text-4xl font-black text-white">{persen}%</span>
                         </div>
                         <h1 className="text-3xl font-bold text-slate-800">Ujian Selesai!</h1>
@@ -247,7 +248,7 @@ export default function SiswaCbtPage({ session, onLogout, idSesi }) {
 
                         <div className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-4">
                             <div className="rounded-2xl bg-blue-50 px-4 py-5">
-                                <p className="text-2xl font-bold text-blue-700">{resultData.total_skor}</p>
+                                <p className="text-2xl font-bold text-blue-700">{Number(resultData.total_skor).toFixed(2)}</p>
                                 <p className="mt-1 text-xs font-medium text-blue-500">Skor / {resultData.total_bobot}</p>
                             </div>
                             <div className="rounded-2xl bg-emerald-50 px-4 py-5">
@@ -277,19 +278,68 @@ export default function SiswaCbtPage({ session, onLogout, idSesi }) {
                                     </span>
                                 </div>
                                 <p className="mt-2 text-sm text-slate-600">{item.isi_soal}</p>
-                                <div className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
-                                    <div className="rounded-xl bg-white/80 px-4 py-2">
-                                        <span className="font-medium text-slate-500">Jawaban Anda:</span>
-                                        <p className="mt-1 text-slate-800">{formatJawaban(item.jawaban_siswa, item.jenis_soal) || <em className="text-slate-400">Tidak dijawab</em>}</p>
+                                {item.opsi_jawaban && item.opsi_jawaban.length > 0 && (
+                                    <div className="mt-3 grid gap-2">
+                                        {item.opsi_jawaban.map((opsi, oIdx) => {
+                                            let kunciArr = [item.kunci_jawaban];
+                                            try { const p = JSON.parse(item.kunci_jawaban); if (Array.isArray(p)) kunciArr = p; } catch {}
+                                            let jawabanArr = [item.jawaban_siswa];
+                                            try { const p = JSON.parse(item.jawaban_siswa); if (Array.isArray(p)) jawabanArr = p; } catch {}
+
+                                            const isCorrectOption = kunciArr.includes(opsi);
+                                            const isChosenOption = jawabanArr.includes(opsi);
+
+                                            let style = 'border-slate-200 bg-white text-slate-600';
+                                            let label = '';
+                                            let icon = '○';
+
+                                            if (isChosenOption && isCorrectOption) {
+                                                style = 'border-emerald-300 bg-emerald-50 text-emerald-800 shadow-sm';
+                                                icon = '✓';
+                                                label = 'Pilihan Anda (Benar)';
+                                            } else if (isChosenOption && !isCorrectOption) {
+                                                style = 'border-rose-300 bg-rose-50 text-rose-800 shadow-sm';
+                                                icon = '✗';
+                                                label = 'Pilihan Anda (Salah)';
+                                            } else if (!isChosenOption && isCorrectOption) {
+                                                style = 'border-emerald-300 bg-emerald-50/40 text-emerald-700 border-dashed';
+                                                icon = '✓';
+                                                label = 'Kunci Jawaban';
+                                            } else {
+                                                icon = '○';
+                                            }
+
+                                            return (
+                                                <div key={oIdx} className={`rounded-xl border px-4 py-3 text-sm flex items-center justify-between transition-all ${style}`}>
+                                                    <div className="flex items-center gap-3">
+                                                        <span className={`text-lg font-bold ${icon === '○' ? 'text-slate-300' : ''}`}>{icon}</span>
+                                                        <span className="font-medium">{opsi}</span>
+                                                    </div>
+                                                    {label && <span className="text-xs font-bold uppercase tracking-wider opacity-80">{label}</span>}
+                                                </div>
+                                            );
+                                        })}
                                     </div>
-                                    <div className="rounded-xl bg-white/80 px-4 py-2">
-                                        <span className="font-medium text-slate-500">Kunci Jawaban:</span>
-                                        <p className="mt-1 text-slate-800">{formatJawaban(item.kunci_jawaban, item.jenis_soal)}</p>
+                                )}
+
+                                {(!item.opsi_jawaban || item.opsi_jawaban.length === 0) && (
+                                    <div className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
+                                        <div className="rounded-xl bg-white/80 px-4 py-2 border border-slate-200">
+                                            <span className="font-medium text-slate-500">Jawaban Anda:</span>
+                                            <p className="mt-1 text-slate-800">{formatJawaban(item.jawaban_siswa, item.jenis_soal) || <em className="text-slate-400">Tidak dijawab</em>}</p>
+                                        </div>
+                                        <div className="rounded-xl bg-white/80 px-4 py-2 border border-slate-200">
+                                            <span className="font-medium text-slate-500">Kunci Jawaban:</span>
+                                            <p className="mt-1 text-slate-800">{formatJawaban(item.kunci_jawaban, item.jenis_soal)}</p>
+                                        </div>
                                     </div>
-                                </div>
+                                )}
                             </div>
                         ))}
                     </div>
+
+                    {/* Analisis Diagnostik AI */}
+                    <AnalisisDiagnostikCard analisis={resultData.analisis_diagnostik} />
 
                     <div className="mt-10 text-center">
                         <a href="/siswa/riwayat-cbt" className="mr-4 rounded-xl border border-slate-200 bg-white px-6 py-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50">
