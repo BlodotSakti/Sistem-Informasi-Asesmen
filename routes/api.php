@@ -2,8 +2,10 @@
 
 use App\Http\Controllers\Api\AdminController;
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\GuruController;
 use App\Http\Controllers\Api\SiswaController;
+use App\Http\Controllers\Api\AcademicMappingController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('/auth/login', [AuthController::class, 'login']);
@@ -12,10 +14,12 @@ Route::middleware('auth:sanctum')->group(function (): void {
 	Route::middleware('active')->group(function (): void {
 		Route::get('/auth/me', [AuthController::class, 'me']);
 		Route::post('/auth/logout', [AuthController::class, 'logout']);
+		Route::post('/auth/profile', [ProfileController::class, 'update']);
 
 		Route::prefix('admin')->as('api.admin.')->middleware('role:admin')->group(function (): void {
 			Route::get('/dashboard-summary', [AdminController::class, 'dashboardSummary'])->name('dashboard-summary');
 			Route::get('/master-data', [AdminController::class, 'masterData'])->name('master-data');
+			Route::get('/academic-mapping', [AcademicMappingController::class, 'index'])->name('academic-mapping');
 
 			Route::get('/pengguna', [AdminController::class, 'penggunaIndex'])->name('pengguna.index');
 			Route::post('/pengguna', [AdminController::class, 'penggunaStore'])->name('pengguna.store');

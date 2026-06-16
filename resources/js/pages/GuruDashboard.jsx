@@ -3,6 +3,7 @@ import DashboardLayout from '../components/layout/DashboardLayout';
 import StatCard from '../components/ui/StatCard';
 import { apiFetch } from '../lib/api';
 import { formatDateLabel, formatDateTimeLabel } from '../lib/date';
+import { guruNavigation } from './guru/guruNavigation';
 
 const BLOOM_OPTIONS = ['C1', 'C2', 'C3', 'C4', 'C5', 'C6'];
 const BADGE_OPTIONS = [
@@ -583,64 +584,85 @@ export default function GuruDashboard({ session, onLogout, mode = 'dashboard' })
         }
     };
 
-    const navigation = [
-        { label: 'Dashboard', href: '/guru/dashboard', badge: 'Home' },
-        { label: 'Daftar Siswa', href: '/guru/siswa', badge: 'Data' },
-        { label: 'Jadwal CBT', href: '/guru/jadwal-cbt', badge: 'Ujian' },
-        { label: 'Bank Soal', href: '/guru/bank-soal', badge: 'Soal' },
-        { label: 'Berita Acara', href: '/guru/berita-acara', badge: 'Presensi' },
-    ];
+    const navigation = guruNavigation;
 
     const renderDashboard = () => (
-        <>
+        <div className="space-y-6">
             <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
                 <div className="flex items-start justify-between gap-4">
                     <div>
-                        <p className="text-sm font-medium uppercase tracking-[0.3em] text-slate-500">Ringkasan Kegiatan</p>
-                        <h3 className="mt-2 text-2xl font-semibold text-slate-900">Data saat ini dari aktivitas Anda</h3>
+                        <p className="text-sm font-medium uppercase tracking-[0.3em] text-slate-500">Ringkasan Aktivitas Harian</p>
+                        <h3 className="mt-2 text-2xl font-semibold text-slate-900">Halo, {session?.user?.nama_lengkap || 'Guru'}! 👋</h3>
+                        <p className="max-w-2xl text-sm text-slate-500">Berikut adalah rekapitulasi singkat dari aktivitas Anda hari ini.</p>
                     </div>
-                    <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-800">Aktif</span>
                 </div>
 
-                <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-                    <StatCard label="Total Kelas" value={loading ? '...' : summary?.cards?.total_kelas ?? 0} description="Kelas yang diampu" tone="slate" />
-                    <StatCard label="Penugasan Aktif" value={loading ? '...' : summary?.cards?.total_penugasan ?? 0} description="Relasi mapel dan kelas" tone="rose" />
-                    <StatCard label="Total Bank Soal" value={loading ? '...' : summary?.cards?.total_bank_soal ?? 0} description="Soal terinput" tone="blue" />
-                    <StatCard label="Ujian Aktif" value={loading ? '...' : summary?.cards?.ujian_aktif ?? 0} description="Jadwal CBT" tone="amber" />
-                    <StatCard label="Total Berita Acara" value={loading ? '...' : summary?.cards?.total_berita_acara ?? 0} description="Dokumentasi pertemuan" tone="rose" />
+                <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                    <StatCard label="Kelas Diampu" value={loading ? '...' : summary?.cards?.total_kelas ?? 0} description="Total kelas aktif" tone="slate" />
+                    <StatCard label="Bank Soal" value={loading ? '...' : summary?.cards?.total_bank_soal ?? 0} description="Soal yang Anda buat" tone="blue" />
+                    <StatCard label="Penugasan" value={loading ? '...' : summary?.cards?.total_penugasan ?? 0} description="Relasi mapel & kelas" tone="rose" />
+                    <StatCard label="Ujian Aktif" value={loading ? '...' : summary?.cards?.ujian_aktif ?? 0} description="Jadwal CBT aktif" tone="amber" />
                 </div>
             </section>
 
-            <section className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
-                <div className="rounded-3xl border border-slate-200 bg-slate-950 p-6 text-white shadow-sm">
-                    <p className="text-sm font-medium uppercase tracking-[0.3em] text-slate-400">Panduan Awal</p>
-                    <h3 className="mt-3 text-2xl font-semibold">Alur kerja guru</h3>
-                    <div className="mt-6 grid gap-3 sm:grid-cols-2">
-                        <div className="rounded-2xl bg-white/5 p-4"><p className="text-sm text-slate-300">1. Buat Bank Soal</p><p className="mt-1 text-sm text-slate-400">Isi topik materi dan Bloom C1-C6.</p></div>
-                        <div className="rounded-2xl bg-white/5 p-4"><p className="text-sm text-slate-300">2. Catat Berita Acara</p><p className="mt-1 text-sm text-slate-400">Presensi lengkap per kelas, evaluasi, dan penguatan siswa opsional.</p></div>
-                        <div className="rounded-2xl bg-white/5 p-4"><p className="text-sm text-slate-300">3. Sinkron dengan Admin</p><p className="mt-1 text-sm text-slate-400">Data kelas/mapel mengikuti penugasan aktif.</p></div>
-                        <div className="rounded-2xl bg-white/5 p-4"><p className="text-sm text-slate-300">4. Dampak ke Siswa</p><p className="mt-1 text-sm text-slate-400">Instrumen dan pembelajaran terdokumentasi rapi.</p></div>
-                    </div>
-                </div>
-
-                <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-                    <p className="text-sm font-medium uppercase tracking-[0.3em] text-slate-500">Jadwal Asesmen (CBT) Mendatang</p>
-                    <h3 className="mt-2 text-xl font-semibold text-slate-900">Jadwal terdekat</h3>
-                    <div className="mt-6 space-y-4">
+            <section className="grid gap-6 xl:grid-cols-[1fr_2fr]">
+                <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm flex flex-col">
+                    <p className="text-sm font-medium uppercase tracking-[0.3em] text-slate-500">Jadwal Asesmen</p>
+                    <h3 className="mt-2 text-xl font-semibold text-slate-900">Pelaksanaan Mendatang</h3>
+                    <p className="mt-1 text-sm text-slate-500">Daftar agenda CBT terdekat.</p>
+                    <div className="mt-6 flex-grow space-y-4">
                         {(summary?.upcoming_schedules || []).map((item) => (
-                            <div key={item.title + item.meta} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                            <div key={item.title + item.meta} className="rounded-2xl border border-slate-200 bg-slate-50 p-4 transition hover:bg-slate-100 hover:shadow-sm cursor-default">
                                 <p className="font-semibold text-slate-900">{item.title}</p>
                                 <p className="mt-1 text-sm text-slate-500">{item.meta}</p>
-                                <p className="mt-2 text-sm font-medium text-slate-700">{item.note}</p>
+                                <p className="mt-2 inline-block rounded-lg bg-amber-100 px-2.5 py-1 text-xs font-medium text-amber-800">{item.note}</p>
                             </div>
                         ))}
                         {!loading && (summary?.upcoming_schedules || []).length === 0 ? (
-                            <div className="rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-500">Belum ada jadwal mendatang.</div>
+                            <div className="flex h-32 items-center justify-center rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-500 text-center border border-dashed border-slate-300">
+                                Belum ada jadwal asesmen mendatang yang diagendakan.
+                            </div>
+                        ) : null}
+                    </div>
+                </div>
+
+                <div className="rounded-3xl border border-slate-200 bg-slate-950 p-6 text-white shadow-sm flex flex-col">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <p className="text-sm font-medium uppercase tracking-[0.3em] text-slate-400">Dasbor Analitik</p>
+                            <h3 className="mt-2 text-xl font-semibold">Perkembangan & Diagnostik Siswa</h3>
+                        </div>
+                        <span className="rounded-full bg-rose-500/20 px-3 py-1 text-xs font-medium text-rose-300 ring-1 ring-rose-500/30">AI Powered</span>
+                    </div>
+                    <p className="mt-2 text-sm text-slate-400">Deteksi tren penurunan nilai maupun kelemahan spesifik secara lebih dini untuk evaluasi pembelajaran.</p>
+                    
+                    <div className="mt-6 grid gap-4 sm:grid-cols-2 flex-grow">
+                        {(diagnostics?.data || []).slice(0, 4).map((item) => (
+                            <div key={item.id_analisis} className="flex flex-col justify-between rounded-2xl border border-white/10 bg-white/5 p-4 transition hover:bg-white/10">
+                                <div>
+                                    <div className="flex items-start justify-between gap-2">
+                                        <p className="font-semibold text-white">{item.siswa?.nama_lengkap || 'Siswa'}</p>
+                                        <span className={`shrink-0 rounded-md px-2 py-1 text-xs font-bold ${item.skor_total >= 80 ? 'bg-emerald-500/20 text-emerald-300' : item.skor_total >= 60 ? 'bg-amber-500/20 text-amber-300' : 'bg-rose-500/20 text-rose-300'}`}>{item.skor_total} Poin</span>
+                                    </div>
+                                    <p className="mt-1 text-xs text-slate-400">{item.sesi_asesmen?.mata_pelajaran?.nama_mapel || 'Mapel'} • {item.tanggal_generate}</p>
+                                </div>
+                                <div className="mt-4 pt-4 border-t border-white/10">
+                                    <p className="text-xs font-medium text-slate-300">Area Peningkatan:</p>
+                                    <p className="mt-1 text-xs text-slate-400 line-clamp-3">
+                                        {item.area_peningkatan || 'Masih membutuhkan lebih banyak latihan untuk menemukan pola kelemahan yang spesifik.'}
+                                    </p>
+                                </div>
+                            </div>
+                        ))}
+                        {!loading && (diagnostics?.data || []).length === 0 ? (
+                            <div className="col-span-full flex h-32 items-center justify-center rounded-2xl border border-dashed border-white/20 bg-white/5 text-sm text-slate-400">
+                                Belum ada data analisis diagnostik yang diproses oleh AI.
+                            </div>
                         ) : null}
                     </div>
                 </div>
             </section>
-        </>
+        </div>
     );
 
     const renderBankSoal = () => (
@@ -1231,6 +1253,8 @@ export default function GuruDashboard({ session, onLogout, mode = 'dashboard' })
                                             <tr>
                                                 <th className="px-4 py-3 font-semibold text-slate-600">Pilih</th>
                                                 <th className="px-4 py-3 font-semibold text-slate-600">Isi Soal</th>
+                                                <th className="px-4 py-3 font-semibold text-slate-600">Kode</th>
+                                                <th className="px-4 py-3 font-semibold text-slate-600">Tingkat</th>
                                                 <th className="px-4 py-3 font-semibold text-slate-600">Mapel</th>
                                                 <th className="px-4 py-3 font-semibold text-slate-600">Jenis</th>
                                                 <th className="px-4 py-3 font-semibold text-slate-600">Bobot</th>
@@ -1622,30 +1646,7 @@ export default function GuruDashboard({ session, onLogout, mode = 'dashboard' })
 
                 {renderContent()}
 
-                {mode === 'dashboard' ? (
-                    <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-                        <p className="text-sm font-medium uppercase tracking-[0.3em] text-slate-500">Analisis Diagnostik Terbaru</p>
-                        <h3 className="mt-2 text-xl font-semibold text-slate-900">Pantau siswa yang butuh perhatian</h3>
-                        <div className="mt-6 space-y-3">
-                            {(diagnostics?.data || []).slice(0, 4).map((item) => (
-                                <div key={item.id_analisis} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                                    <div className="flex items-center justify-between gap-3">
-                                        <div>
-                                            <p className="font-semibold text-slate-900">{item.siswa?.nama_lengkap || 'Siswa'}</p>
-                                            <p className="mt-1 text-xs text-slate-500">
-                                                {item.sesi_asesmen?.jenis_asesmen || item.sesiAsesmen?.jenis_asesmen || 'asesmen'} • {item.tanggal_generate}
-                                            </p>
-                                        </div>
-                                        <span className="rounded-full bg-slate-900 px-3 py-1 text-xs font-semibold text-white">{item.skor_total}</span>
-                                    </div>
-                                </div>
-                            ))}
-                            {!loading && (diagnostics?.data || []).length === 0 ? (
-                                <div className="rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-500">Belum ada analisis diagnostik yang tersedia.</div>
-                            ) : null}
-                        </div>
-                    </section>
-                ) : null}
+                {/* Section Analisis Diagnostik dihapus dari bawah karena sudah diintegrasikan ke renderDashboard */}
             </div>
         </DashboardLayout>
     );

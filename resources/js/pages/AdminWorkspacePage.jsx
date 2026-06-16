@@ -25,11 +25,11 @@ const MENU_META = {
         lead: 'Susun daftar mapel inti dengan tingkat kelas X, XI, dan XII.',
     },
     'kelas-siswa': {
-        title: 'Penempatan Siswa-Kelas',
+        title: 'Penempatan Siswa',
         lead: 'Kelola relasi siswa dengan kelas aktif maupun riwayat kelas secara terstruktur.',
     },
     'penugasan-pembelajaran': {
-        title: 'Penugasan Guru-Mapel',
+        title: 'Penugasan Guru',
         lead: 'Kelola penugasan guru mengampu mata pelajaran pada kelas tertentu.',
     },
     'import-akun': {
@@ -273,8 +273,9 @@ export default function AdminWorkspacePage({ session, onLogout, mode = 'dashboar
         { label: 'Tahun Ajaran', href: '/admin/tahun-ajaran', badge: 'Master' },
         { label: 'Kelas', href: '/admin/kelas', badge: 'CRUD' },
         { label: 'Mata Pelajaran', href: '/admin/mata-pelajaran', badge: 'CRUD' },
-        { label: 'Siswa-Kelas', href: '/admin/kelas-siswa', badge: 'Relasi' },
-        { label: 'Guru-Mapel', href: '/admin/penugasan-pembelajaran', badge: 'Relasi' },
+        { label: 'Penempatan Siswa', href: '/admin/kelas-siswa', badge: 'Relasi' },
+        { label: 'Penugasan Guru', href: '/admin/penugasan-pembelajaran', badge: 'Relasi' },
+        { label: 'Pemetaan Akademik', href: '/admin/pemetaan-akademik', badge: 'Lihat' },
         { label: 'Import Akun', href: '/admin/import-akun', badge: 'Excel' },
     ]), []);
 

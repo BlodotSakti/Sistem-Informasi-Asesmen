@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import DashboardLayout from '../components/layout/DashboardLayout';
+import { guruNavigation } from './guru/guruNavigation';
 
 function apiBase(path) {
     return `${window.location.origin}${path}`;
@@ -83,13 +84,7 @@ export default function GuruSiswaPage({ session, onLogout }) {
         .map(a => a.mata_pelajaran?.nama_lengkap || a.mata_pelajaran?.nama_mapel)
         .filter(Boolean);
 
-    const navigation = [
-        { label: 'Dashboard', href: '/guru/dashboard', badge: 'Home' },
-        { label: 'Daftar Siswa', href: '/guru/siswa', badge: 'Data' },
-        { label: 'Jadwal CBT', href: '/guru/jadwal-cbt', badge: 'Ujian' },
-        { label: 'Bank Soal', href: '/guru/bank-soal', badge: 'Soal' },
-        { label: 'Berita Acara', href: '/guru/berita-acara', badge: 'Presensi' },
-    ];
+    const navigation = guruNavigation;
 
     return (
         <DashboardLayout title="Daftar Siswa & Kelas" user={session?.user} navigation={navigation} onLogout={onLogout}>

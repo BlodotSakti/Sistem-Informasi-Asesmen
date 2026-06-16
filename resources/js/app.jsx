@@ -3,17 +3,18 @@ import { createRoot } from 'react-dom/client';
 import '../css/app.css';
 import LoginPage from './pages/LoginPage';
 import AdminWorkspacePage from './pages/AdminWorkspacePage';
+import AdminAcademicMappingPage from './pages/AdminAcademicMappingPage';
 import GuruDashboard from './pages/GuruDashboard';
 import SiswaDashboard from './pages/SiswaDashboard';
 import SiswaProfilePage from './pages/SiswaProfilePage';
 import SiswaSessionsPage from './pages/SiswaSessionsPage';
 import SiswaLearningPlanPage from './pages/SiswaLearningPlanPage';
 import SiswaLearningHistoryPage from './pages/SiswaLearningHistoryPage';
-import SiswaTrendPage from './pages/SiswaTrendPage';
 import SiswaAppreciationPage from './pages/SiswaAppreciationPage';
 import SiswaCbtPage from './pages/SiswaCbtPage';
 import SiswaCbtHistoryPage from './pages/SiswaCbtHistoryPage';
 import GuruSiswaPage from './pages/GuruSiswaPage';
+import GuruProfilePage from './pages/GuruProfilePage';
 
 const STORAGE_KEY = 'sia-session';
 
@@ -55,18 +56,19 @@ function App() {
             '/admin/mata-pelajaran',
             '/admin/kelas-siswa',
             '/admin/penugasan-pembelajaran',
+            '/admin/pemetaan-akademik',
             '/admin/import-akun',
             '/guru/dashboard',
             '/guru/jadwal-cbt',
             '/guru/bank-soal',
             '/guru/berita-acara',
             '/guru/siswa',
+            '/guru/profil',
             '/siswa/dashboard',
             '/siswa/profil',
             '/siswa/sesi-aktif',
             '/siswa/rencana-belajar',
             '/siswa/riwayat-pembelajaran',
-            '/siswa/tren-nilai',
             '/siswa/apresiasi',
             '/siswa/riwayat-cbt',
         ];
@@ -149,10 +151,14 @@ function App() {
             '/admin/mata-pelajaran': 'mata-pelajaran',
             '/admin/kelas-siswa': 'kelas-siswa',
             '/admin/penugasan-pembelajaran': 'penugasan-pembelajaran',
+            '/admin/pemetaan-akademik': 'pemetaan-akademik',
             '/admin/import-akun': 'import-akun',
         };
 
         if (adminRouteMap[pathname]) {
+            if (pathname === '/admin/pemetaan-akademik') {
+                return <AdminAcademicMappingPage session={session} onLogout={onLogout} />;
+            }
             return <AdminWorkspacePage session={session} onLogout={onLogout} mode={adminRouteMap[pathname]} />;
         }
 
@@ -168,6 +174,10 @@ function App() {
         }
 
         if (pathname === '/guru/siswa') return <GuruSiswaPage session={session} onLogout={onLogout} />;
+
+        if (pathname === '/guru/profil') {
+            return <GuruProfilePage session={session} onLogout={onLogout} />;
+        }
 
         if (pathname === '/siswa/dashboard') return <SiswaDashboard session={session} onLogout={onLogout} />;
 
@@ -185,10 +195,6 @@ function App() {
 
         if (pathname === '/siswa/riwayat-pembelajaran') {
             return <SiswaLearningHistoryPage session={session} onLogout={onLogout} />;
-        }
-
-        if (pathname === '/siswa/tren-nilai') {
-            return <SiswaTrendPage session={session} onLogout={onLogout} />;
         }
 
         if (pathname === '/siswa/apresiasi') {

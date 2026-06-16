@@ -10,7 +10,9 @@ return new class extends Migration
      */
     public function up(): void
     {
-        DB::statement("ALTER TABLE bank_soal MODIFY COLUMN jenis_soal ENUM('pilihan_ganda', 'esai', 'pilihan_ganda_kompleks') NOT NULL");
+        if (DB::getDriverName() !== 'sqlite') {
+            DB::statement("ALTER TABLE bank_soal MODIFY COLUMN jenis_soal ENUM('pilihan_ganda', 'esai', 'pilihan_ganda_kompleks') NOT NULL");
+        }
     }
 
     /**
@@ -18,6 +20,8 @@ return new class extends Migration
      */
     public function down(): void
     {
-        DB::statement("ALTER TABLE bank_soal MODIFY COLUMN jenis_soal ENUM('pilihan_ganda', 'esai') NOT NULL");
+        if (DB::getDriverName() !== 'sqlite') {
+            DB::statement("ALTER TABLE bank_soal MODIFY COLUMN jenis_soal ENUM('pilihan_ganda', 'esai') NOT NULL");
+        }
     }
 };

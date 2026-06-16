@@ -26,15 +26,17 @@ Route::view('/admin/mata-pelajaran', 'app');
 Route::view('/admin/kelas-siswa', 'app');
 Route::view('/admin/penugasan-pembelajaran', 'app');
 Route::view('/admin/import-akun', 'app');
+Route::get('/admin/{path?}', function () {
+    return view('app');
+})->where('path', 'dashboard|pengguna|tahun-ajaran|kelas|mata-pelajaran|kelas-siswa|penugasan-pembelajaran|import-akun|pemetaan-akademik');
 Route::get('/guru/{path?}', function () {
     return view('app');
-})->where('path', 'dashboard|jadwal-cbt|bank-soal|berita-acara|siswa');
+})->where('path', 'dashboard|jadwal-cbt|bank-soal|berita-acara|siswa|profil');
 Route::view('/siswa/dashboard', 'app');
 Route::view('/siswa/profil', 'app');
 Route::view('/siswa/sesi-aktif', 'app');
 Route::view('/siswa/rencana-belajar', 'app');
 Route::view('/siswa/riwayat-pembelajaran', 'app');
-Route::view('/siswa/tren-nilai', 'app');
 Route::view('/siswa/apresiasi', 'app');
 Route::view('/siswa/riwayat-cbt', 'app');
 Route::view('/siswa/cbt/{id}', 'app');

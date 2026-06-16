@@ -17,6 +17,15 @@ export default function DashboardLayout({ title, user, navigation, onLogout, pro
         <div className="min-h-screen bg-slate-100 text-slate-900">
             <div className="grid min-h-screen grid-cols-1 lg:h-screen lg:grid-cols-[280px_1fr] lg:overflow-hidden">
                 <aside className="flex flex-col bg-slate-950 text-slate-100 shadow-2xl shadow-slate-950/20 lg:sticky lg:top-0 lg:h-screen lg:overflow-y-auto">
+                    <div className="flex items-center gap-3 border-b border-white/10 px-6 py-5">
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white p-1 shadow-sm overflow-hidden">
+                            <img src="/logo-sman.jpg" alt="Logo SMAN" className="h-full w-full object-contain" />
+                        </div>
+                        <div>
+                            <p className="text-[10px] uppercase tracking-[0.2em] text-slate-400">SMAN Sumatera Selatan</p>
+                            <h1 className="text-sm font-semibold text-slate-100">CBT Asesmen</h1>
+                        </div>
+                    </div>
                     <div className="border-b border-white/10 p-6">
                         {profileHref ? (
                             <a href={profileHref} aria-label="Buka halaman profil" className="block focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950">

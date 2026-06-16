@@ -5,6 +5,5 @@ export const siswaNavigation = [
     { label: 'Riwayat CBT', href: '/siswa/riwayat-cbt', badge: 'Nilai' },
     { label: 'Rencana Belajar', href: '/siswa/rencana-belajar', badge: 'Plan' },
     { label: 'Riwayat Pembelajaran', href: '/siswa/riwayat-pembelajaran', badge: 'BAP' },
-    { label: 'Tren Nilai', href: '/siswa/tren-nilai', badge: 'Grafik' },
     { label: 'Apresiasi', href: '/siswa/apresiasi', badge: 'Badge' },
 ];

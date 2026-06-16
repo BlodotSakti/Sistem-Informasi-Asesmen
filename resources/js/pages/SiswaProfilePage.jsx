@@ -3,6 +3,7 @@ import DashboardLayout from '../components/layout/DashboardLayout';
 import StatCard from '../components/ui/StatCard';
 import { apiFetch } from '../lib/api';
 import { siswaNavigation } from './siswa/siswaNavigation';
+import ProfileCredentialsForm from '../components/profile/ProfileCredentialsForm';
 
 export default function SiswaProfilePage({ session, onLogout }) {
     const [summary, setSummary] = useState(null);
@@ -147,6 +148,8 @@ export default function SiswaProfilePage({ session, onLogout }) {
                                 </div>
                             </div>
                         </div>
+
+                        <ProfileCredentialsForm session={session} />
 
                         <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
                             <p className="text-sm font-medium uppercase tracking-[0.3em] text-slate-500">Riwayat Kelas</p>

@@ -1,81 +1,133 @@
+import { useMemo, useState } from 'react';
 import DashboardLayout from '../components/layout/DashboardLayout';
 import StatCard from '../components/ui/StatCard';
 import { siswaNavigation } from './siswa/siswaNavigation';
 import { useSiswaData } from './siswa/useSiswaData';
+import {
+    AreaChart,
+    Area,
+    XAxis,
+    YAxis,
+    CartesianGrid,
+    Tooltip,
+    ResponsiveContainer,
+} from 'recharts';
+
+const CustomTooltip = ({ active, payload, label }) => {
+    if (active && payload && payload.length) {
+        return (
+            <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-lg">
+                <p className="mb-1 text-sm font-semibold text-slate-600">{label}</p>
+                <p className="text-2xl font-bold text-blue-600">
+                    {payload[0].value} <span className="text-sm font-normal text-slate-500">Poin</span>
+                </p>
+            </div>
+        );
+    }
+    return null;
+};
 
 export default function SiswaDashboard({ session, onLogout }) {
     const { summary, loading, error } = useSiswaData(session);
     const cards = summary?.cards || {};
+    const trendPoints = summary?.trend || [];
+
+    const chartData = useMemo(() => {
+        return trendPoints.map((point, index) => ({
+            id: index,
+            name: point.label ? `${point.label} (Ke-${index + 1})` : `M${index + 1}`,
+            Nilai: Number(point.value || 0),
+        }));
+    }, [trendPoints]);
 
     return (
         <DashboardLayout title="Dashboard Siswa" user={session?.user} navigation={siswaNavigation} onLogout={onLogout} profileHref="/siswa/profil">
             <div className="space-y-6">
                 <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-                    <div className="flex flex-col gap-3 text-center">
+                    <div className="flex flex-col gap-3">
                         <p className="text-sm font-medium uppercase tracking-[0.3em] text-slate-500">Ringkasan Siswa</p>
-                        <h3 className="text-2xl font-semibold text-slate-900">Akses cepat ke setiap halaman siswa</h3>
-                        <p className="mx-auto max-w-2xl text-sm text-slate-500">Dashboard ini hanya berisi ringkasan utama. Detail profil, sesi, rencana belajar, tren, dan apresiasi ada di halaman masing-masing.</p>
+                        <h3 className="text-2xl font-semibold text-slate-900">Halo, {session?.user?.nama_lengkap || 'Siswa'}! 👋</h3>
+                        <p className="max-w-2xl text-sm text-slate-500">Selamat datang di dashboard akademik Anda. Pantau perkembangan nilai, ujian terdekat, dan apresiasi yang Anda raih di sini.</p>
                     </div>
 
-                    <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-                        <StatCard label="Rata-rata" value={loading ? '...' : cards.rata_rata ?? 0} description="Nilai semester berjalan" tone="blue" />
+                    <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                        <StatCard label="Rata-rata Nilai" value={loading ? '...' : cards.rata_rata ?? 0} description="Rata-rata CBT semester ini" tone="blue" />
                         <StatCard label="Ujian Menunggu" value={loading ? '...' : cards.ujian_menunggu ?? 0} description="CBT terdekat siap dikerjakan" tone="amber" />
-                        <StatCard label="Tugas Aktif" value={loading ? '...' : cards.tugas_aktif ?? 0} description="Jawaban yang tercatat" tone="slate" />
-                        <StatCard label="Apresiasi" value={loading ? '...' : cards.apresiasi ?? 0} description="Badge dari guru mapel" tone="rose" />
+                        <StatCard label="Tugas / Sesi Selesai" value={loading ? '...' : cards.tugas_aktif ?? 0} description="CBT yang telah dikerjakan" tone="slate" />
+                        <StatCard label="Badge Apresiasi" value={loading ? '...' : cards.apresiasi ?? 0} description="Apresiasi dari guru" tone="rose" />
                     </div>
-                </section>
-
-                <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                    <a href="/siswa/profil" className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
-                        <p className="text-sm font-medium uppercase tracking-[0.3em] text-slate-500">Profil</p>
-                        <h3 className="mt-2 text-xl font-semibold text-slate-900">Buka halaman profil siswa</h3>
-                        <p className="mt-2 text-sm text-slate-500">Nama, NISN, kelas aktif, dan riwayat kelas.</p>
-                    </a>
-                    <a href="/siswa/sesi-aktif" className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
-                        <p className="text-sm font-medium uppercase tracking-[0.3em] text-slate-500">Sesi Aktif</p>
-                        <h3 className="mt-2 text-xl font-semibold text-slate-900">Lihat CBT yang sedang berjalan</h3>
-                        <p className="mt-2 text-sm text-slate-500">Semua sesi aktif berada di halaman sendiri.</p>
-                    </a>
-                    <a href="/siswa/rencana-belajar" className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
-                        <p className="text-sm font-medium uppercase tracking-[0.3em] text-slate-500">Rencana</p>
-                        <h3 className="mt-2 text-xl font-semibold text-slate-900">Kelola kartu belajar pribadi</h3>
-                        <p className="mt-2 text-sm text-slate-500">Tambah dan lihat daftar rencana belajar.</p>
-                    </a>
-                    <a href="/siswa/riwayat-pembelajaran" className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
-                        <p className="text-sm font-medium uppercase tracking-[0.3em] text-slate-500">Riwayat</p>
-                        <h3 className="mt-2 text-xl font-semibold text-slate-900">Lihat BAP dan kehadiran per pertemuan</h3>
-                        <p className="mt-2 text-sm text-slate-500">Topik, mapel, kelas, dan status kehadiran tampil terpisah per pertemuan.</p>
-                    </a>
-                    <a href="/siswa/tren-nilai" className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
-                        <p className="text-sm font-medium uppercase tracking-[0.3em] text-slate-500">Tren</p>
-                        <h3 className="mt-2 text-xl font-semibold text-slate-900">Pantau grafik nilai</h3>
-                        <p className="mt-2 text-sm text-slate-500">Visualisasi skor akademik per periode.</p>
-                    </a>
-                    <a href="/siswa/apresiasi" className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md md:col-span-2 xl:col-span-2">
-                        <p className="text-sm font-medium uppercase tracking-[0.3em] text-slate-500">Apresiasi</p>
-                        <h3 className="mt-2 text-xl font-semibold text-slate-900">Badge dan catatan terbaru</h3>
-                        <p className="mt-2 text-sm text-slate-500">Ringkasan apresiasi guru dan catatan privat terbaru.</p>
-                    </a>
                 </section>
 
                 {error ? <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div> : null}
 
-                <section className="grid gap-6 xl:grid-cols-2">
-                    <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-                        <p className="text-sm font-medium uppercase tracking-[0.3em] text-slate-500">Kelas Aktif</p>
-                        <h3 className="mt-2 text-xl font-semibold text-slate-900">Ringkasan kelas yang sedang diikuti</h3>
-                        <div className="mt-4 rounded-2xl bg-slate-50 px-4 py-3">
-                            <p className="font-semibold text-slate-900">{summary?.profile?.kelas_aktif?.nama_kelas || 'Belum ada kelas aktif'}</p>
-                            <p className="text-sm text-slate-500">{summary?.profile?.kelas_aktif?.guru_wali ? `Wali kelas: ${summary.profile.kelas_aktif.guru_wali}` : 'Wali kelas belum ditetapkan'}</p>
+                <section className="grid gap-6 xl:grid-cols-3">
+                    <div className="xl:col-span-2 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm flex flex-col">
+                        <div className="flex items-center justify-between mb-6">
+                            <div>
+                                <p className="text-sm font-medium uppercase tracking-[0.3em] text-slate-500">Grafik Nilai</p>
+                                <h3 className="mt-2 text-xl font-semibold text-slate-900">Tren Perkembangan Akademik</h3>
+                            </div>
+                        </div>
+                        <div className="h-72 w-full flex-grow rounded-2xl border border-slate-200 bg-slate-50 p-5">
+                            {chartData.length > 0 ? (
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                                        <defs>
+                                            <linearGradient id="colorNilai" x1="0" y1="0" x2="0" y2="1">
+                                                <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
+                                                <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
+                                            </linearGradient>
+                                        </defs>
+                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                                        <XAxis 
+                                            dataKey="name" 
+                                            axisLine={false} 
+                                            tickLine={false} 
+                                            tick={{ fill: '#64748b', fontSize: 12 }} 
+                                            dy={10}
+                                        />
+                                        <YAxis 
+                                            axisLine={false} 
+                                            tickLine={false} 
+                                            tick={{ fill: '#64748b', fontSize: 12 }}
+                                        />
+                                        <Tooltip content={<CustomTooltip />} cursor={{ stroke: '#94a3b8', strokeWidth: 1, strokeDasharray: '4 4' }} />
+                                        <Area 
+                                            type="monotone" 
+                                            dataKey="Nilai" 
+                                            stroke="#2563eb" 
+                                            strokeWidth={3}
+                                            fillOpacity={1} 
+                                            fill="url(#colorNilai)" 
+                                            activeDot={{ r: 6, fill: '#2563eb', stroke: '#fff', strokeWidth: 2 }}
+                                        />
+                                    </AreaChart>
+                                </ResponsiveContainer>
+                            ) : (
+                                <div className="flex h-full items-center justify-center text-sm text-slate-500">
+                                    Belum ada data tren nilai yang cukup untuk divisualisasikan.
+                                </div>
+                            )}
                         </div>
                     </div>
 
-                    <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-                        <p className="text-sm font-medium uppercase tracking-[0.3em] text-slate-500">Mapel Aktif</p>
-                        <h3 className="mt-2 text-xl font-semibold text-slate-900">Mata pelajaran yang terhubung</h3>
-                        <div className="mt-4 rounded-2xl bg-slate-50 px-4 py-3">
-                            <p className="font-semibold text-slate-900">{(summary?.profile?.mata_pelajaran || []).length} mapel aktif</p>
-                            <p className="text-sm text-slate-500">Terkait dengan penugasan guru pada kelas aktif.</p>
+                    <div className="flex flex-col gap-6">
+                        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+                            <p className="text-sm font-medium uppercase tracking-[0.3em] text-slate-500">Kelas Aktif</p>
+                            <h3 className="mt-2 text-xl font-semibold text-slate-900">Kelas & Wali</h3>
+                            <div className="mt-4 rounded-2xl bg-slate-50 px-4 py-3">
+                                <p className="font-semibold text-slate-900">{summary?.profile?.kelas_aktif?.nama_kelas || 'Belum ada kelas aktif'}</p>
+                                <p className="text-sm text-slate-500">{summary?.profile?.kelas_aktif?.guru_wali ? `Wali kelas: ${summary.profile.kelas_aktif.guru_wali}` : 'Wali kelas belum ditetapkan'}</p>
+                            </div>
+                        </div>
+
+                        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+                            <p className="text-sm font-medium uppercase tracking-[0.3em] text-slate-500">Mapel Aktif</p>
+                            <h3 className="mt-2 text-xl font-semibold text-slate-900">Tergabung di Kelas</h3>
+                            <div className="mt-4 rounded-2xl bg-slate-50 px-4 py-3">
+                                <p className="font-semibold text-slate-900">{(summary?.profile?.mata_pelajaran || []).length} Mata Pelajaran</p>
+                                <p className="text-sm text-slate-500">Terkait dengan penugasan guru di kelas.</p>
+                            </div>
                         </div>
                     </div>
                 </section>
