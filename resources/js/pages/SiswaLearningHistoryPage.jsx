@@ -87,10 +87,10 @@ export default function SiswaLearningHistoryPage({ session, onLogout }) {
     return (
         <DashboardLayout title="Riwayat Pembelajaran" user={session?.user} navigation={siswaNavigation} onLogout={onLogout} profileHref="/siswa/profil">
             <div className="space-y-6">
-                <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-                    <p className="text-sm font-medium uppercase tracking-[0.3em] text-slate-500">Riwayat BAP</p>
-                    <h3 className="mt-2 text-2xl font-semibold text-slate-900">Jejak setiap pertemuan dan mata pelajaran</h3>
-                    <p className="mt-2 text-sm text-slate-500">Halaman ini menampilkan topik yang dipelajari, status kehadiran Anda, dan ringkasan per mata pelajaran.</p>
+                <section className="overflow-hidden rounded-[2rem] border border-slate-200 bg-gradient-to-br from-slate-900 via-blue-900 to-cyan-800 px-6 py-8 text-white shadow-2xl shadow-slate-950/20 lg:px-8">
+                    <p className="text-sm font-medium uppercase tracking-[0.3em] text-indigo-300">Riwayat BAP</p>
+                    <h3 className="mt-2 text-2xl font-semibold text-slate-100">Jejak setiap pertemuan dan mata pelajaran</h3>
+                    <p className="mt-2 text-sm text-slate-300">Halaman ini menampilkan topik yang dipelajari, status kehadiran Anda, dan ringkasan per mata pelajaran.</p>
 
                     <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
                         <StatCard label="Total Pertemuan" value={loading ? '...' : history?.total_pertemuan ?? 0} description="Seluruh BAP yang relevan" tone="blue" />

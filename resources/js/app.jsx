@@ -4,6 +4,7 @@ import '../css/app.css';
 import LoginPage from './pages/LoginPage';
 import AdminWorkspacePage from './pages/AdminWorkspacePage';
 import AdminAcademicMappingPage from './pages/AdminAcademicMappingPage';
+import AdminDashboard from './pages/AdminDashboard';
 import GuruDashboard from './pages/GuruDashboard';
 import SiswaDashboard from './pages/SiswaDashboard';
 import SiswaProfilePage from './pages/SiswaProfilePage';
@@ -158,6 +159,9 @@ function App() {
         if (adminRouteMap[pathname]) {
             if (pathname === '/admin/pemetaan-akademik') {
                 return <AdminAcademicMappingPage session={session} onLogout={onLogout} />;
+            }
+            if (pathname === '/admin/dashboard') {
+                return <AdminDashboard session={session} onLogout={onLogout} />;
             }
             return <AdminWorkspacePage session={session} onLogout={onLogout} mode={adminRouteMap[pathname]} />;
         }

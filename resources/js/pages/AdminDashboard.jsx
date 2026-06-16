@@ -1,879 +1,257 @@
-import { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import DashboardLayout from '../components/layout/DashboardLayout';
 import StatCard from '../components/ui/StatCard';
 import { apiFetch } from '../lib/api';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
-export default function AdminDashboard({ session, onLogout, activePage = 'dashboard' }) {
-    const [summary, setSummary] = useState(null);
-    const [masterData, setMasterData] = useState({ tahun_ajaran: [], kelas: [], mata_pelajaran: [], guru_options: [] });
+const MENU_META = {
+    dashboard: {
+        title: 'Dashboard Admin',
+        lead: 'Ringkasan sistem, grafik aktivitas, dan log riwayat terbaru.',
+    },
+};
+
+export default function AdminDashboard({ session, onLogout }) {
+    const [data, setData] = useState({
+        summary: {
+            total_guru: 0,
+            total_siswa: 0,
+            total_kelas: 0,
+        },
+        chart: [],
+        logs: [],
+    });
     const [loading, setLoading] = useState(true);
-    const [loadingMaster, setLoadingMaster] = useState(true);
     const [error, setError] = useState('');
-    const [toast, setToast] = useState(null);
-    const toastTimer = useRef(null);
 
-    const pageTitleMap = {
-        dashboard: 'Dashboard Admin',
-        'tahun-ajaran': 'Tahun Ajaran',
-        kelas: 'Kelas',
-        'mata-pelajaran': 'Mata Pelajaran',
-        'import-akun': 'Import Akun',
-    };
-
-    const pageLeadMap = {
-        dashboard: 'Ringkasan kondisi sistem dan aktivitas terbaru.',
-        'tahun-ajaran': 'Kelola periode akademik per semester agar filter kelas dan laporan lebih rapi.',
-        kelas: 'Kelola wali kelas dan periode aktif yang dipakai pada sesi asesmen.',
-        'mata-pelajaran': 'Susun daftar mapel inti dengan tingkat kelas yang terstandar.',
-        'import-akun': 'Impor akun guru dan siswa dari Excel dengan username otomatis dari NIP/NISN.',
-    };
-
-    const showToast = (message, type = 'success') => {
-        setToast({ message, type });
-
-        if (toastTimer.current) {
-            window.clearTimeout(toastTimer.current);
-        }
-
-        toastTimer.current = window.setTimeout(() => {
-            setToast(null);
-        }, 3600);
-    };
-
-    useEffect(() => () => {
-        if (toastTimer.current) {
-            window.clearTimeout(toastTimer.current);
-        }
-    }, []);
-
-    const [tahunAjaranForm, setTahunAjaranForm] = useState({
-        nama_tahun_ajaran: '',
-        semester: 'ganjil',
-        tanggal_mulai: '',
-        tanggal_selesai: '',
-        is_aktif: true,
-        keterangan: '',
-    });
-    const [tahunAjaranId, setTahunAjaranId] = useState(null);
-
-    const [kelasForm, setKelasForm] = useState({
-        id_guru_wali: '',
-        nama_kelas: '',
-        tahun_ajaran: '',
-    });
-    const [kelasId, setKelasId] = useState(null);
-
-    const [mapelForm, setMapelForm] = useState({
-        nama_mapel: '',
-        tingkat: '',
-    });
-    const [mapelId, setMapelId] = useState(null);
-
-    const [importForm, setImportForm] = useState({
-        default_role: 'guru',
-        file: null,
-    });
-    const [importResult, setImportResult] = useState(null);
-
-    const loadSummary = async () => {
-        const payload = await apiFetch('/api/admin/dashboard-summary', session);
-        setSummary(payload);
-    };
-
-    const loadMasterData = async () => {
-        const payload = await apiFetch('/api/admin/master-data', session);
-        setMasterData(payload);
-        setKelasForm((current) => ({
-            ...current,
-            tahun_ajaran: current.tahun_ajaran || payload.tahun_ajaran?.[0]?.periode_label || '',
-        }));
-    };
-
-    const refreshData = async () => {
-        setError('');
-        setLoading(true);
-        setLoadingMaster(true);
-
-        try {
-            await Promise.all([loadSummary(), loadMasterData()]);
-        } catch (exception) {
-            setError(exception.message || 'Gagal memuat data admin.');
-        } finally {
-            setLoading(false);
-            setLoadingMaster(false);
-        }
-    };
+    const navigation = useMemo(() => ([
+        { label: 'Dashboard', href: '/admin/dashboard', badge: 'Home' },
+        { label: 'Akun Pengguna', href: '/admin/pengguna', badge: 'CRUD' },
+        { label: 'Tahun Ajaran', href: '/admin/tahun-ajaran', badge: 'Master' },
+        { label: 'Kelas', href: '/admin/kelas', badge: 'CRUD' },
+        { label: 'Mata Pelajaran', href: '/admin/mata-pelajaran', badge: 'CRUD' },
+        { label: 'Penempatan Siswa', href: '/admin/kelas-siswa', badge: 'Relasi' },
+        { label: 'Penugasan Guru', href: '/admin/penugasan-pembelajaran', badge: 'Relasi' },
+        { label: 'Pemetaan Akademik', href: '/admin/pemetaan-akademik', badge: 'Lihat' },
+        { label: 'Import Akun', href: '/admin/import-akun', badge: 'Excel' },
+    ]), []);
 
     useEffect(() => {
-        let mounted = true;
+        const loadDashboard = async () => {
+            setLoading(true);
+            try {
+                const payload = await apiFetch('/api/admin/dashboard', session);
+                setData(payload);
+            } catch (err) {
+                setError(err.message || 'Gagal memuat data dashboard.');
+            } finally {
+                setLoading(false);
+            }
+        };
 
         if (session?.token) {
-            refreshData().finally(() => {
-                if (!mounted) {
-                    return;
-                }
-            });
+            loadDashboard();
         }
-
-        return () => {
-            mounted = false;
-        };
     }, [session]);
 
-    const resetTahunAjaranForm = () => {
-        setTahunAjaranForm({
-            nama_tahun_ajaran: '',
-            semester: 'ganjil',
-            tanggal_mulai: '',
-            tanggal_selesai: '',
-            is_aktif: true,
-            keterangan: '',
-        });
-        setTahunAjaranId(null);
-    };
-
-    const resetKelasForm = () => {
-        setKelasForm({
-            id_guru_wali: masterData.guru_options?.[0]?.id_guru || '',
-            nama_kelas: '',
-            tahun_ajaran: masterData.tahun_ajaran?.[0]?.periode_label || '',
-        });
-        setKelasId(null);
-    };
-
-    const resetMapelForm = () => {
-        setMapelForm({ nama_mapel: '', tingkat: '' });
-        setMapelId(null);
-    };
-
-    const submitTahunAjaran = async (event) => {
-        event.preventDefault();
-
-        const payload = {
-            ...tahunAjaranForm,
-            is_aktif: Boolean(tahunAjaranForm.is_aktif),
-        };
-
-        if (tahunAjaranId) {
-            await apiFetch(`/api/admin/tahun-ajaran/${tahunAjaranId}`, session, {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload),
-            });
-            showToast('Tahun ajaran berhasil diperbarui.');
-        } else {
-            await apiFetch('/api/admin/tahun-ajaran', session, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload),
-            });
-            showToast('Tahun ajaran berhasil ditambahkan.');
-        }
-
-        resetTahunAjaranForm();
-        await refreshData();
-    };
-
-    const submitKelas = async (event) => {
-        event.preventDefault();
-
-        if (kelasId) {
-            await apiFetch(`/api/admin/kelas/${kelasId}`, session, {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(kelasForm),
-            });
-            showToast('Kelas berhasil diperbarui.');
-        } else {
-            await apiFetch('/api/admin/kelas', session, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(kelasForm),
-            });
-            showToast('Kelas berhasil ditambahkan.');
-        }
-
-        resetKelasForm();
-        await refreshData();
-    };
-
-    const submitMapel = async (event) => {
-        event.preventDefault();
-
-        if (mapelId) {
-            await apiFetch(`/api/admin/mata-pelajaran/${mapelId}`, session, {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(mapelForm),
-            });
-            showToast('Mata pelajaran berhasil diperbarui.');
-        } else {
-            await apiFetch('/api/admin/mata-pelajaran', session, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(mapelForm),
-            });
-            showToast('Mata pelajaran berhasil ditambahkan.');
-        }
-
-        resetMapelForm();
-        await refreshData();
-    };
-
-    const deleteRecord = async (path, label) => {
-        if (!window.confirm(`Hapus ${label} ini?`)) {
-            return;
-        }
-
-        await apiFetch(path, session, { method: 'DELETE' });
-        showToast(`${label} berhasil dihapus.`);
-        await refreshData();
-    };
-
-    const submitImport = async (event) => {
-        event.preventDefault();
-        setImportResult(null);
-
-        if (!importForm.file) {
-            showToast('Pilih file Excel terlebih dahulu.', 'error');
-            return;
-        }
-
-        try {
-            const formData = new FormData();
-            formData.append('file', importForm.file);
-            formData.append('default_role', importForm.default_role);
-
-            const payload = await apiFetch('/api/admin/pengguna/bulk-import', session, {
-                method: 'POST',
-                body: formData,
-            });
-
-            setImportResult(payload);
-            setImportForm((current) => ({ ...current, file: null }));
-            showToast(`${payload.message || 'Import akun selesai diproses.'} Created: ${payload.created || 0}, Updated: ${payload.updated || 0}, Skipped: ${payload.skipped || 0}.`, 'success');
-            await refreshData();
-        } catch (exception) {
-            showToast(exception.message || 'Import akun gagal diproses.', 'error');
-        }
-    };
-
-    const navigation = [
-        { label: 'Dashboard', href: '/admin/dashboard', badge: 'Home' },
-        { label: 'Tahun Ajaran', href: '/admin/tahun-ajaran', badge: 'Master' },
-        { label: 'Manajemen Kelas', href: '/admin/kelas', badge: 'CRUD' },
-        { label: 'Mata Pelajaran', href: '/admin/mata-pelajaran', badge: 'CRUD' },
-        { label: 'Import Akun', href: '/admin/import-akun', badge: 'Excel' },
-    ];
-
-    const pageTitle = pageTitleMap[activePage] || 'Dashboard Admin';
-    const pageLead = pageLeadMap[activePage] || pageLeadMap.dashboard;
-
-    return (
-        <DashboardLayout
-            title={pageTitle}
-            user={session?.user}
-            navigation={navigation}
-            onLogout={onLogout}
-        >
-            <div className="space-y-8">
-                <section id="overview" className="overflow-hidden rounded-[2rem] border border-slate-200 bg-gradient-to-br from-slate-950 via-slate-900 to-amber-900 px-6 py-8 text-white shadow-2xl shadow-slate-950/20 lg:px-8">
-                    <div className="grid gap-8 lg:grid-cols-[1.2fr_0.8fr] lg:items-center">
-                        <div>
-                            <p className="text-xs uppercase tracking-[0.45em] text-amber-200/80">{pageTitle}</p>
-                            <h3 className="mt-4 max-w-2xl text-3xl font-semibold leading-tight text-white md:text-4xl">
-                                {pageLead}
-                            </h3>
-                            <p className="mt-4 max-w-2xl text-sm leading-7 text-slate-200 md:text-base">
-                                Panel operator sekolah dirancang agar alur kerja terasa jelas: pilih menu di sidebar, isi data master, lalu kelola akun dan sesi dari halaman yang sesuai.
-                            </p>
+    const renderDashboard = () => (
+        <div className="space-y-8">
+            <section className="overflow-hidden rounded-[2rem] border border-slate-200 bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950 px-6 py-8 text-white shadow-2xl shadow-slate-950/20 lg:px-8">
+                <div className="grid gap-8 lg:grid-cols-[1.5fr_0.5fr] lg:items-center">
+                    <div>
+                        <p className="text-xs uppercase tracking-[0.45em] text-indigo-300">Sistem Informasi Asesmen</p>
+                        <h3 className="mt-4 max-w-2xl text-3xl font-semibold leading-tight text-white md:text-4xl">
+                            Selamat Datang, {session?.user?.admin?.nama_lengkap || session?.user?.username || 'Admin'}
+                        </h3>
+                        <p className="mt-4 max-w-2xl text-sm leading-7 text-slate-300 md:text-base">
+                            Pusat pengendalian utama sistem. Pantau ringkasan data, grafik aktivitas pengguna, serta akses cepat ke manajemen data pokok.
+                        </p>
+                        <div className="mt-6 flex flex-wrap gap-4">
+                            <a
+                                href="/admin/pengguna"
+                                className="inline-flex items-center rounded-full bg-white px-5 py-2 text-sm font-semibold text-slate-900 transition hover:bg-slate-100"
+                            >
+                                Kelola Pengguna
+                            </a>
+                            <a
+                                href="/admin/pemetaan-akademik"
+                                className="inline-flex items-center rounded-full border border-white/20 bg-white/10 px-5 py-2 text-sm font-semibold text-white backdrop-blur transition hover:bg-white/20"
+                            >
+                                Lihat Pemetaan Akademik
+                            </a>
                         </div>
+                    </div>
 
-                        <div className="grid gap-3 rounded-[1.75rem] border border-white/10 bg-white/10 p-5 backdrop-blur">
-                            <div className="flex items-center justify-between rounded-2xl bg-white/10 px-4 py-3">
-                                <span className="text-sm text-slate-200">Ringkasan master data</span>
-                                <span className="text-xs uppercase tracking-[0.28em] text-amber-200">Live</span>
+                    <div className="hidden lg:block">
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="rounded-[1.5rem] bg-white/5 p-4 backdrop-blur border border-white/10">
+                                <div className="text-indigo-300 mb-1">
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                                    </svg>
+                                </div>
+                                <div className="text-2xl font-bold">{loading ? '...' : data.summary.total_guru}</div>
+                                <div className="text-xs text-slate-400 mt-1">Guru Aktif</div>
                             </div>
-                            <div className="grid grid-cols-2 gap-3 text-sm text-slate-100">
-                                <div className="rounded-2xl bg-slate-950/40 px-4 py-3">
-                                    <p className="text-xs uppercase tracking-[0.24em] text-slate-300">Tahun Ajaran</p>
-                                    <p className="mt-2 text-2xl font-semibold">{loading ? '...' : summary?.cards?.total_tahun_ajaran ?? 0}</p>
+                            <div className="rounded-[1.5rem] bg-white/5 p-4 backdrop-blur border border-white/10">
+                                <div className="text-indigo-300 mb-1">
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                      <path d="M12 14l9-5-9-5-9 5 9 5z" />
+                                      <path d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z" />
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 14l9-5-9-5-9 5 9 5zm0 0l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14zm-4 6v-7.5l4-2.222" />
+                                    </svg>
                                 </div>
-                                <div className="rounded-2xl bg-slate-950/40 px-4 py-3">
-                                    <p className="text-xs uppercase tracking-[0.24em] text-slate-300">Kelas</p>
-                                    <p className="mt-2 text-2xl font-semibold">{loading ? '...' : summary?.cards?.total_kelas ?? 0}</p>
-                                </div>
-                                <div className="rounded-2xl bg-slate-950/40 px-4 py-3">
-                                    <p className="text-xs uppercase tracking-[0.24em] text-slate-300">Mapel</p>
-                                    <p className="mt-2 text-2xl font-semibold">{loading ? '...' : summary?.cards?.total_mapel ?? 0}</p>
-                                </div>
-                                <div className="rounded-2xl bg-slate-950/40 px-4 py-3">
-                                    <p className="text-xs uppercase tracking-[0.24em] text-slate-300">Akun Baru</p>
-                                    <p className="mt-2 text-2xl font-semibold">{loading ? '...' : (summary?.recent_activities?.length ?? 0)}</p>
-                                </div>
+                                <div className="text-2xl font-bold">{loading ? '...' : data.summary.total_siswa}</div>
+                                <div className="text-xs text-slate-400 mt-1">Siswa Terdaftar</div>
                             </div>
                         </div>
                     </div>
-                </section>
+                </div>
+            </section>
 
-                {error ? (
-                    <div className="rounded-3xl border border-rose-200 bg-rose-50 px-5 py-4 text-sm text-rose-700">
-                        {error}
+            {error && (
+                <div className="rounded-2xl border border-rose-200 bg-rose-50 px-5 py-4 text-sm text-rose-600">
+                    {error}
+                </div>
+            )}
+
+            <section className="grid gap-4 md:grid-cols-3">
+                <StatCard 
+                    label="Total Guru" 
+                    value={loading ? '...' : data.summary.total_guru} 
+                    description="Total akun guru yang terdaftar dalam sistem." 
+                    tone="blue" 
+                />
+                <StatCard 
+                    label="Total Siswa" 
+                    value={loading ? '...' : data.summary.total_siswa} 
+                    description="Total data siswa dalam basis data." 
+                    tone="indigo" 
+                />
+                <StatCard 
+                    label="Total Kelas Aktif" 
+                    value={loading ? '...' : data.summary.total_kelas} 
+                    description="Jumlah rombongan belajar pada tahun ajaran ini." 
+                    tone="slate" 
+                />
+            </section>
+
+            <div className="grid gap-8 lg:grid-cols-3">
+                <section className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm lg:col-span-2">
+                    <div className="mb-6">
+                        <h4 className="text-lg font-semibold text-slate-900">Grafik Pendaftaran Pengguna</h4>
+                        <p className="text-sm text-slate-500">Jumlah akun baru yang ditambahkan dalam 7 hari terakhir.</p>
                     </div>
-                ) : null}
-
-                {toast ? (
-                    <div className={`fixed right-6 top-6 z-50 max-w-md rounded-3xl border px-5 py-4 text-sm shadow-2xl ${toast.type === 'error' ? 'border-rose-200 bg-rose-50 text-rose-800' : 'border-emerald-200 bg-emerald-50 text-emerald-800'}`}>
-                        <p className="text-xs font-semibold uppercase tracking-[0.28em] opacity-80">{toast.type === 'error' ? 'Gagal' : 'Berhasil'}</p>
-                        <p className="mt-2 leading-6">{toast.message}</p>
-                    </div>
-                ) : null}
-
-                <section className="grid gap-4 md:grid-cols-4">
-                    <StatCard
-                        label="Total Guru"
-                        value={loading ? '...' : summary?.cards?.total_guru ?? 0}
-                        description="Guru aktif dalam sistem"
-                        tone="blue"
-                    />
-                    <StatCard
-                        label="Total Siswa"
-                        value={loading ? '...' : summary?.cards?.total_siswa ?? 0}
-                        description="Data siswa terdaftar"
-                        tone="amber"
-                    />
-                    <StatCard
-                        label="Total Kelas"
-                        value={loading ? '...' : summary?.cards?.total_kelas ?? 0}
-                        description="Kelas berjalan semester ini"
-                        tone="slate"
-                    />
-                    <StatCard
-                        label="Tahun Ajaran"
-                        value={loading ? '...' : summary?.cards?.total_tahun_ajaran ?? 0}
-                        description="Riwayat periode akademik"
-                        tone="amber"
-                    />
-                </section>
-
-                <section className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
-                    <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-                        <div className="flex items-start justify-between gap-4">
-                            <div>
-                                <p className="text-sm font-medium uppercase tracking-[0.3em] text-slate-500">Distribusi Aktivitas</p>
-                                <h3 className="mt-2 text-xl font-semibold text-slate-900">Statistik penggunaan sistem</h3>
+                    <div className="h-[300px] w-full">
+                        {loading ? (
+                            <div className="flex h-full items-center justify-center rounded-xl bg-slate-50 border border-dashed border-slate-200 text-sm text-slate-400">
+                                Memuat grafik...
                             </div>
-                            <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">7 hari terakhir</span>
-                        </div>
-
-                        <div className="mt-8 flex h-80 items-end gap-4 rounded-2xl bg-slate-50 p-4">
-                            {(summary?.chart?.values || [12, 18, 14, 22, 16, 20, 24]).map((height, index) => (
-                                <div key={index} className="flex flex-1 flex-col items-center gap-3">
-                                    <div
-                                        className="w-full max-w-[42px] rounded-t-2xl bg-slate-900/80 shadow-[0_14px_40px_rgba(15,23,42,0.25)]"
-                                        style={{ height: `${Math.max(10, Number(height)) * 3}%` }}
+                        ) : (
+                            <ResponsiveContainer width="100%" height="100%">
+                                <LineChart data={data.chart} margin={{ top: 5, right: 20, bottom: 5, left: -20 }}>
+                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                                    <XAxis 
+                                        dataKey="tanggal" 
+                                        axisLine={false} 
+                                        tickLine={false} 
+                                        tick={{ fontSize: 12, fill: '#64748b' }} 
+                                        dy={10} 
                                     />
-                                    <span className="text-xs text-slate-500">{summary?.chart?.labels?.[index] || `H${index + 1}`}</span>
+                                    <YAxis 
+                                        allowDecimals={false} 
+                                        axisLine={false} 
+                                        tickLine={false} 
+                                        tick={{ fontSize: 12, fill: '#64748b' }} 
+                                    />
+                                    <Tooltip 
+                                        contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)' }}
+                                        labelStyle={{ fontWeight: 'bold', color: '#0f172a', marginBottom: '4px' }}
+                                    />
+                                    <Line 
+                                        type="monotone" 
+                                        dataKey="total" 
+                                        name="Akun Baru"
+                                        stroke="#4f46e5" 
+                                        strokeWidth={3} 
+                                        dot={{ r: 4, strokeWidth: 2, fill: '#fff' }} 
+                                        activeDot={{ r: 6, stroke: '#4f46e5', strokeWidth: 2, fill: '#fff' }} 
+                                    />
+                                </LineChart>
+                            </ResponsiveContainer>
+                        )}
+                    </div>
+                </section>
+
+                <section className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
+                    <div className="mb-6 flex items-center justify-between">
+                        <div>
+                            <h4 className="text-lg font-semibold text-slate-900">Catatan Sistem</h4>
+                            <p className="text-sm text-slate-500">Log aktivitas terbaru.</p>
+                        </div>
+                    </div>
+                    
+                    {loading ? (
+                        <div className="animate-pulse space-y-4">
+                            {[1, 2, 3, 4, 5].map((i) => (
+                                <div key={i} className="flex gap-4">
+                                    <div className="h-10 w-10 shrink-0 rounded-full bg-slate-200"></div>
+                                    <div className="w-full space-y-2 py-1">
+                                        <div className="h-3 w-3/4 rounded bg-slate-200"></div>
+                                        <div className="h-2 w-1/2 rounded bg-slate-200"></div>
+                                    </div>
                                 </div>
                             ))}
                         </div>
-                    </div>
-
-                    <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-                        <p className="text-sm font-medium uppercase tracking-[0.3em] text-slate-500">Detail Sekolah</p>
-                        <h3 className="mt-2 text-xl font-semibold text-slate-900">Ringkasan kondisi data sekolah</h3>
-
-                        <div className="mt-6 grid gap-3 sm:grid-cols-2">
-                            <div className="rounded-2xl bg-slate-50 px-4 py-3">
-                                <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Mata Pelajaran</p>
-                                <p className="mt-2 text-2xl font-semibold text-slate-900">{loading ? '...' : summary?.cards?.total_mapel ?? 0}</p>
-                            </div>
-                            <div className="rounded-2xl bg-slate-50 px-4 py-3">
-                                <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Aktivitas Hari Ini</p>
-                                <p className="mt-2 text-2xl font-semibold text-slate-900">{loading ? '...' : (summary?.recent_activities?.length ?? 0)}</p>
-                            </div>
-                            <div className="rounded-2xl bg-slate-50 px-4 py-3 sm:col-span-2">
-                                <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Aksi cepat operator</p>
-                                <ul className="mt-3 space-y-2 text-sm text-slate-600">
-                                    <li>• Tambahkan data kelas dan wali kelas baru sebelum tahun ajaran dimulai.</li>
-                                    <li>• Pastikan mapel terdaftar agar sesi CBT tidak kosong.</li>
-                                    <li>• Gunakan import akun untuk menghemat input manual.</li>
-                                </ul>
-                            </div>
-                        </div>
-                    </div>
-                </section>
-
-                <section id="tahun-ajaran" className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-                    <div className="flex items-center justify-between gap-4">
-                        <div>
-                            <p className="text-sm font-medium uppercase tracking-[0.3em] text-slate-500">Tahun Ajaran</p>
-                            <h3 className="mt-2 text-xl font-semibold text-slate-900">Master periode akademik</h3>
-                        </div>
-                        <span className="text-sm text-slate-500">Aktifkan satu periode utama</span>
-                    </div>
-
-                    <div className="mt-6 grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
-                        <form onSubmit={submitTahunAjaran} className="space-y-4 rounded-3xl bg-slate-50 p-5">
-                            <div className="grid gap-4 md:grid-cols-2">
-                                <label className="space-y-2 text-sm font-medium text-slate-700 md:col-span-2">
-                                    <span>Nama Tahun Ajaran</span>
-                                    <input
-                                        value={tahunAjaranForm.nama_tahun_ajaran}
-                                        onChange={(event) => setTahunAjaranForm((current) => ({ ...current, nama_tahun_ajaran: event.target.value }))}
-                                        className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-slate-900"
-                                        placeholder="2025/2026"
-                                    />
-                                </label>
-                                <label className="space-y-2 text-sm font-medium text-slate-700 md:col-span-2">
-                                    <span>Semester</span>
-                                    <select
-                                        value={tahunAjaranForm.semester}
-                                        onChange={(event) => setTahunAjaranForm((current) => ({ ...current, semester: event.target.value }))}
-                                        className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-slate-900"
-                                    >
-                                        <option value="ganjil">Ganjil</option>
-                                        <option value="genap">Genap</option>
-                                    </select>
-                                </label>
-                                <label className="space-y-2 text-sm font-medium text-slate-700">
-                                    <span>Tanggal Mulai</span>
-                                    <input
-                                        type="date"
-                                        value={tahunAjaranForm.tanggal_mulai}
-                                        onChange={(event) => setTahunAjaranForm((current) => ({ ...current, tanggal_mulai: event.target.value }))}
-                                        className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-slate-900"
-                                    />
-                                </label>
-                                <label className="space-y-2 text-sm font-medium text-slate-700">
-                                    <span>Tanggal Selesai</span>
-                                    <input
-                                        type="date"
-                                        value={tahunAjaranForm.tanggal_selesai}
-                                        onChange={(event) => setTahunAjaranForm((current) => ({ ...current, tanggal_selesai: event.target.value }))}
-                                        className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-slate-900"
-                                    />
-                                </label>
-                                <label className="flex items-center gap-3 rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-medium text-slate-700 md:col-span-2">
-                                    <input
-                                        type="checkbox"
-                                        checked={Boolean(tahunAjaranForm.is_aktif)}
-                                        onChange={(event) => setTahunAjaranForm((current) => ({ ...current, is_aktif: event.target.checked }))}
-                                        className="h-4 w-4 rounded border-slate-300 text-slate-950 focus:ring-slate-900"
-                                    />
-                                    Jadikan periode aktif
-                                </label>
-                                <label className="space-y-2 text-sm font-medium text-slate-700 md:col-span-2">
-                                    <span>Keterangan</span>
-                                    <textarea
-                                        value={tahunAjaranForm.keterangan}
-                                        onChange={(event) => setTahunAjaranForm((current) => ({ ...current, keterangan: event.target.value }))}
-                                        rows="3"
-                                        className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-slate-900"
-                                        placeholder="Contoh: Periode aktif semester ganjil"
-                                    />
-                                </label>
-                            </div>
-                            <div className="flex flex-wrap gap-3">
-                                <button type="submit" className="rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800">
-                                    {tahunAjaranId ? 'Perbarui Tahun Ajaran' : 'Simpan Tahun Ajaran'}
-                                </button>
-                                {tahunAjaranId ? (
-                                    <button type="button" onClick={resetTahunAjaranForm} className="rounded-full border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-100">
-                                        Batal Edit
-                                    </button>
-                                ) : null}
-                            </div>
-                        </form>
-
-                        <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white">
-                            <div className="border-b border-slate-200 px-5 py-4">
-                                <h4 className="text-lg font-semibold text-slate-900">Daftar Tahun Ajaran</h4>
-                                <p className="text-sm text-slate-500">Gunakan satu data aktif untuk membantu filter kelas dan laporan.</p>
-                            </div>
-                            <div className="divide-y divide-slate-100">
-                                {(masterData.tahun_ajaran || []).map((item) => (
-                                    <div key={item.id_tahun_ajaran} className="flex flex-col gap-3 px-5 py-4 md:flex-row md:items-center md:justify-between">
-                                        <div>
-                                            <div className="flex flex-wrap items-center gap-2">
-                                                <p className="font-semibold text-slate-900">{item.nama_tahun_ajaran}</p>
-                                                {item.is_aktif ? <span className="rounded-full bg-emerald-100 px-2 py-1 text-xs font-semibold text-emerald-700">Aktif</span> : null}
-                                                <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-700">
-                                                    Semester {String(item.semester || 'ganjil').toUpperCase()}
-                                                </span>
-                                            </div>
-                                            <p className="mt-1 text-sm text-slate-500">
-                                                {item.tanggal_mulai || '-'} sampai {item.tanggal_selesai || '-'}
-                                            </p>
-                                            {item.keterangan ? <p className="mt-1 text-sm text-slate-600">{item.keterangan}</p> : null}
+                    ) : (
+                        <div className="flex flex-col gap-4">
+                            {data.logs.length === 0 ? (
+                                <p className="text-sm text-slate-500 py-4 text-center">Belum ada riwayat aktivitas.</p>
+                            ) : (
+                                data.logs.map((log) => (
+                                    <div key={log.id} className="flex items-start gap-3 rounded-xl p-2 transition hover:bg-slate-50">
+                                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-indigo-50 text-indigo-600">
+                                            {log.role === 'admin' && (
+                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                                    <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
+                                                </svg>
+                                            )}
+                                            {log.role === 'guru' && (
+                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                                    <path d="M10.394 2.08a1 1 0 00-.788 0l-7 3a1 1 0 000 1.84L5.25 8.051a.999.999 0 01.356-.257l4-1.714a1 1 0 11.788 1.838L7.667 9.088l1.94.831a1 1 0 00.787 0l7-3a1 1 0 000-1.838l-7-3zM3.31 9.397L5 10.12v4.102a8.969 8.969 0 00-1.05-.174 1 1 0 01-.89-.89 11.115 11.115 0 01.25-3.762zM9.3 16.573A9.026 9.026 0 007 14.935v-3.957l1.818.78a3 3 0 002.364 0l5.508-2.361a11.026 11.026 0 01.25 3.762 1 1 0 01-.89.89 8.968 8.968 0 00-5.35 2.524 1 1 0 01-1.4 0zM6 18a1 1 0 001-1v-2.065a8.935 8.935 0 00-2-.712V17a1 1 0 001 1z" />
+                                                </svg>
+                                            )}
+                                            {log.role === 'siswa' && (
+                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                                    <path d="M9 4.804A7.968 7.968 0 005.5 4c-1.255 0-2.443.29-3.5.804v10A7.969 7.969 0 015.5 14c1.669 0 3.218.51 4.5 1.385A7.962 7.962 0 0114.5 14c1.255 0 2.443.29 3.5.804v-10A7.968 7.968 0 0014.5 4c-1.255 0-2.443.29-3.5.804V12a1 1 0 11-2 0V4.804z" />
+                                                </svg>
+                                            )}
                                         </div>
-                                        <div className="flex flex-wrap gap-2">
-                                            <button
-                                                type="button"
-                                                onClick={() => {
-                                                    setTahunAjaranId(item.id_tahun_ajaran);
-                                                    setTahunAjaranForm({
-                                                        nama_tahun_ajaran: item.nama_tahun_ajaran || '',
-                                                        semester: item.semester || 'ganjil',
-                                                        tanggal_mulai: item.tanggal_mulai || '',
-                                                        tanggal_selesai: item.tanggal_selesai || '',
-                                                        is_aktif: Boolean(item.is_aktif),
-                                                        keterangan: item.keterangan || '',
-                                                    });
-                                                }}
-                                                className="rounded-full border border-slate-300 px-4 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-100"
-                                            >
-                                                Edit
-                                            </button>
-                                            <button
-                                                type="button"
-                                                onClick={() => deleteRecord(`/api/admin/tahun-ajaran/${item.id_tahun_ajaran}`, 'Tahun ajaran')}
-                                                className="rounded-full border border-rose-200 px-4 py-2 text-xs font-semibold text-rose-700 transition hover:bg-rose-50"
-                                            >
-                                                Hapus
-                                            </button>
+                                        <div className="flex-1 overflow-hidden">
+                                            <p className="truncate text-sm font-medium text-slate-900">{log.nama_lengkap}</p>
+                                            <p className="truncate text-xs text-slate-500">{log.deskripsi}</p>
+                                        </div>
+                                        <div className="shrink-0 text-right">
+                                            <span className="text-xs font-medium text-slate-400">{log.tanggal}</span>
                                         </div>
                                     </div>
-                                ))}
-                                {!loadingMaster && (masterData.tahun_ajaran || []).length === 0 ? (
-                                    <div className="px-5 py-6 text-sm text-slate-500">
-                                        Belum ada tahun ajaran. Tambahkan periode pertama dari form di sebelah kiri.
-                                    </div>
-                                ) : null}
-                            </div>
+                                ))
+                            )}
                         </div>
-                    </div>
-                </section>
-
-                <section id="kelas" className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-                    <div className="flex items-center justify-between gap-4">
-                        <div>
-                            <p className="text-sm font-medium uppercase tracking-[0.3em] text-slate-500">Kelas</p>
-                            <h3 className="mt-2 text-xl font-semibold text-slate-900">Kelola wali kelas dan periode aktif</h3>
-                        </div>
-                        <span className="text-sm text-slate-500">Pastikan guru wali sudah tersedia</span>
-                    </div>
-
-                    <div className="mt-6 grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
-                        <form onSubmit={submitKelas} className="space-y-4 rounded-3xl bg-slate-50 p-5">
-                            <div className="grid gap-4">
-                                <label className="space-y-2 text-sm font-medium text-slate-700">
-                                    <span>Nama Kelas</span>
-                                    <input
-                                        value={kelasForm.nama_kelas}
-                                        onChange={(event) => setKelasForm((current) => ({ ...current, nama_kelas: event.target.value }))}
-                                        className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-slate-900"
-                                        placeholder="XI IPA 1"
-                                    />
-                                </label>
-                                <label className="space-y-2 text-sm font-medium text-slate-700">
-                                    <span>Guru Wali</span>
-                                    <select
-                                        value={kelasForm.id_guru_wali}
-                                        onChange={(event) => setKelasForm((current) => ({ ...current, id_guru_wali: event.target.value }))}
-                                        className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-slate-900"
-                                    >
-                                        <option value="">Pilih guru wali</option>
-                                        {(masterData.guru_options || []).map((guru) => (
-                                            <option key={guru.id_guru} value={guru.id_guru}>
-                                                {guru.nama_lengkap} {guru.nip ? `(${guru.nip})` : ''}
-                                            </option>
-                                        ))}
-                                    </select>
-                                </label>
-                                <label className="space-y-2 text-sm font-medium text-slate-700">
-                                    <span>Tahun Ajaran</span>
-                                    {masterData.tahun_ajaran?.length ? (
-                                        <select
-                                            value={kelasForm.tahun_ajaran}
-                                            onChange={(event) => setKelasForm((current) => ({ ...current, tahun_ajaran: event.target.value }))}
-                                            className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-slate-900"
-                                        >
-                                            <option value="">Pilih tahun ajaran</option>
-                                            {(masterData.tahun_ajaran || []).map((item) => (
-                                                <option key={item.id_tahun_ajaran} value={item.periode_label || item.nama_tahun_ajaran}>
-                                                    {item.periode_label || item.nama_tahun_ajaran}
-                                                </option>
-                                            ))}
-                                        </select>
-                                    ) : (
-                                        <input
-                                            value={kelasForm.tahun_ajaran}
-                                            onChange={(event) => setKelasForm((current) => ({ ...current, tahun_ajaran: event.target.value }))}
-                                            className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-slate-900"
-                                            placeholder="2025/2026"
-                                        />
-                                    )}
-                                </label>
-                            </div>
-                            <div className="flex flex-wrap gap-3">
-                                <button type="submit" className="rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800">
-                                    {kelasId ? 'Perbarui Kelas' : 'Simpan Kelas'}
-                                </button>
-                                {kelasId ? (
-                                    <button type="button" onClick={resetKelasForm} className="rounded-full border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-100">
-                                        Batal Edit
-                                    </button>
-                                ) : null}
-                            </div>
-                        </form>
-
-                        <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white">
-                            <div className="border-b border-slate-200 px-5 py-4">
-                                <h4 className="text-lg font-semibold text-slate-900">Daftar Kelas</h4>
-                                <p className="text-sm text-slate-500">Gunakan daftar ini untuk melihat relasi guru wali dan periode kelas.</p>
-                            </div>
-                            <div className="divide-y divide-slate-100">
-                                {(masterData.kelas || []).map((item) => (
-                                    <div key={item.id_kelas} className="flex flex-col gap-3 px-5 py-4 md:flex-row md:items-center md:justify-between">
-                                        <div>
-                                            <p className="font-semibold text-slate-900">{item.nama_kelas}</p>
-                                            <p className="mt-1 text-sm text-slate-500">
-                                                {item.guru_wali?.nama_lengkap || 'Belum ditentukan'} • {item.tahun_ajaran}
-                                            </p>
-                                        </div>
-                                        <div className="flex flex-wrap gap-2">
-                                            <button
-                                                type="button"
-                                                onClick={() => {
-                                                    setKelasId(item.id_kelas);
-                                                    setKelasForm({
-                                                        id_guru_wali: item.id_guru_wali || '',
-                                                        nama_kelas: item.nama_kelas || '',
-                                                        tahun_ajaran: item.tahun_ajaran || '',
-                                                    });
-                                                }}
-                                                className="rounded-full border border-slate-300 px-4 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-100"
-                                            >
-                                                Edit
-                                            </button>
-                                            <button
-                                                type="button"
-                                                onClick={() => deleteRecord(`/api/admin/kelas/${item.id_kelas}`, 'Kelas')}
-                                                className="rounded-full border border-rose-200 px-4 py-2 text-xs font-semibold text-rose-700 transition hover:bg-rose-50"
-                                            >
-                                                Hapus
-                                            </button>
-                                        </div>
-                                    </div>
-                                ))}
-                                {!loadingMaster && (masterData.kelas || []).length === 0 ? (
-                                    <div className="px-5 py-6 text-sm text-slate-500">
-                                        Belum ada kelas yang didaftarkan.
-                                    </div>
-                                ) : null}
-                            </div>
-                        </div>
-                    </div>
-                </section>
-
-                <section id="mapel" className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-                    <div className="flex items-center justify-between gap-4">
-                        <div>
-                            <p className="text-sm font-medium uppercase tracking-[0.3em] text-slate-500">Mata Pelajaran</p>
-                            <h3 className="mt-2 text-xl font-semibold text-slate-900">Kelola daftar mapel inti</h3>
-                        </div>
-                        <span className="text-sm text-slate-500">Gunakan kode tingkat untuk filter sesi</span>
-                    </div>
-
-                    <div className="mt-6 grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
-                        <form onSubmit={submitMapel} className="space-y-4 rounded-3xl bg-slate-50 p-5">
-                            <div className="grid gap-4">
-                                <label className="space-y-2 text-sm font-medium text-slate-700">
-                                    <span>Nama Mata Pelajaran</span>
-                                    <input
-                                        value={mapelForm.nama_mapel}
-                                        onChange={(event) => setMapelForm((current) => ({ ...current, nama_mapel: event.target.value }))}
-                                        className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-slate-900"
-                                        placeholder="Matematika"
-                                    />
-                                </label>
-                                <label className="space-y-2 text-sm font-medium text-slate-700">
-                                    <span>Tingkat</span>
-                                    <select
-                                        value={mapelForm.tingkat}
-                                        onChange={(event) => setMapelForm((current) => ({ ...current, tingkat: event.target.value }))}
-                                        className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-slate-900"
-                                    >
-                                        <option value="">Pilih tingkat kelas</option>
-                                        <option value="X">X</option>
-                                        <option value="XI">XI</option>
-                                        <option value="XII">XII</option>
-                                    </select>
-                                </label>
-                            </div>
-                            <div className="flex flex-wrap gap-3">
-                                <button type="submit" className="rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800">
-                                    {mapelId ? 'Perbarui Mapel' : 'Simpan Mapel'}
-                                </button>
-                                {mapelId ? (
-                                    <button type="button" onClick={resetMapelForm} className="rounded-full border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-100">
-                                        Batal Edit
-                                    </button>
-                                ) : null}
-                            </div>
-                        </form>
-
-                        <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white">
-                            <div className="border-b border-slate-200 px-5 py-4">
-                                <h4 className="text-lg font-semibold text-slate-900">Daftar Mata Pelajaran</h4>
-                                <p className="text-sm text-slate-500">Data mapel dipakai untuk bank soal dan jadwal sesi asesmen.</p>
-                            </div>
-                            <div className="divide-y divide-slate-100">
-                                {(masterData.mata_pelajaran || []).map((item) => (
-                                    <div key={item.id_mapel} className="flex flex-col gap-3 px-5 py-4 md:flex-row md:items-center md:justify-between">
-                                        <div>
-                                            <p className="font-semibold text-slate-900">{item.nama_lengkap || item.nama_mapel}</p>
-                                        </div>
-                                        <div className="flex flex-wrap gap-2">
-                                            <button
-                                                type="button"
-                                                onClick={() => {
-                                                    setMapelId(item.id_mapel);
-                                                    setMapelForm({
-                                                        nama_mapel: item.nama_mapel || '',
-                                                        tingkat: item.tingkat || '',
-                                                    });
-                                                }}
-                                                className="rounded-full border border-slate-300 px-4 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-100"
-                                            >
-                                                Edit
-                                            </button>
-                                            <button
-                                                type="button"
-                                                onClick={() => deleteRecord(`/api/admin/mata-pelajaran/${item.id_mapel}`, 'Mata pelajaran')}
-                                                className="rounded-full border border-rose-200 px-4 py-2 text-xs font-semibold text-rose-700 transition hover:bg-rose-50"
-                                            >
-                                                Hapus
-                                            </button>
-                                        </div>
-                                    </div>
-                                ))}
-                                {!loadingMaster && (masterData.mata_pelajaran || []).length === 0 ? (
-                                    <div className="px-5 py-6 text-sm text-slate-500">
-                                        Belum ada mata pelajaran yang didaftarkan.
-                                    </div>
-                                ) : null}
-                            </div>
-                        </div>
-                    </div>
-                </section>
-
-                <section id="import" className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-                    <div className="flex items-center justify-between gap-4">
-                        <div>
-                            <p className="text-sm font-medium uppercase tracking-[0.3em] text-slate-500">Import Akun</p>
-                            <h3 className="mt-2 text-xl font-semibold text-slate-900">Bulk import guru dan siswa dari Excel</h3>
-                        </div>
-                        <span className="text-sm text-slate-500">Username otomatis dari NIP / NISN</span>
-                    </div>
-
-                    <div className="mt-6 grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
-                        <form onSubmit={submitImport} className="space-y-4 rounded-3xl bg-slate-50 p-5">
-                            <label className="space-y-2 text-sm font-medium text-slate-700">
-                                <span>Default Role</span>
-                                <select
-                                    value={importForm.default_role}
-                                    onChange={(event) => setImportForm((current) => ({ ...current, default_role: event.target.value }))}
-                                    className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-slate-900"
-                                >
-                                    <option value="guru">Guru</option>
-                                    <option value="siswa">Siswa</option>
-                                </select>
-                            </label>
-                            <label className="space-y-2 text-sm font-medium text-slate-700">
-                                <span>File Excel</span>
-                                <input
-                                    type="file"
-                                    accept=".xlsx,.xls,.csv"
-                                    onChange={(event) => setImportForm((current) => ({ ...current, file: event.target.files?.[0] || null }))}
-                                    className="w-full rounded-2xl border border-dashed border-slate-300 bg-white px-4 py-3 text-sm text-slate-600 outline-none transition file:mr-4 file:rounded-full file:border-0 file:bg-slate-950 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white hover:border-slate-400"
-                                />
-                            </label>
-                            <div className="flex flex-wrap gap-3">
-                                <button type="submit" className="rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800">
-                                    Import Akun
-                                </button>
-                            </div>
-                        </form>
-
-                        <div className="space-y-4 rounded-3xl border border-slate-200 bg-slate-50 p-5">
-                            <div>
-                                <h4 className="text-lg font-semibold text-slate-900">Panduan file</h4>
-                                <p className="mt-1 text-sm text-slate-600">
-                                    Gunakan kolom <span className="font-semibold text-slate-900">role</span>, <span className="font-semibold text-slate-900">nama_lengkap</span>, dan salah satu kolom identitas <span className="font-semibold text-slate-900">nip</span> atau <span className="font-semibold text-slate-900">nisn</span>.
-                                </p>
-                            </div>
-                            <div className="rounded-2xl bg-white px-4 py-3 text-sm text-slate-600">
-                                <p className="font-semibold text-slate-900">Default password akun:</p>
-                                <p className="mt-1">{importResult?.default_password || 'SIA@12345'}</p>
-                                <p className="mt-2 text-xs text-slate-500">Password ini berlaku untuk semua akun hasil impor dan bisa langsung diubah setelah login pertama.</p>
-                            </div>
-                            {importResult ? (
-                                <div className="grid gap-3 sm:grid-cols-3">
-                                    <div className="rounded-2xl bg-white px-4 py-3">
-                                        <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Created</p>
-                                        <p className="mt-2 text-2xl font-semibold text-slate-900">{importResult.created || 0}</p>
-                                    </div>
-                                    <div className="rounded-2xl bg-white px-4 py-3">
-                                        <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Updated</p>
-                                        <p className="mt-2 text-2xl font-semibold text-slate-900">{importResult.updated || 0}</p>
-                                    </div>
-                                    <div className="rounded-2xl bg-white px-4 py-3">
-                                        <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Skipped</p>
-                                        <p className="mt-2 text-2xl font-semibold text-slate-900">{importResult.skipped || 0}</p>
-                                    </div>
-                                </div>
-                            ) : null}
-                            {importResult?.skipped_rows?.length ? (
-                                <div className="rounded-2xl bg-white p-4 text-sm text-slate-600">
-                                    <p className="font-semibold text-slate-900">Baris yang dilewati</p>
-                                    <ul className="mt-2 space-y-2">
-                                        {importResult.skipped_rows.map((item) => (
-                                            <li key={`${item.row}-${item.reason}`} className="rounded-xl bg-slate-50 px-3 py-2">
-                                                Baris {item.row}: {item.reason}
-                                            </li>
-                                        ))}
-                                    </ul>
-                                </div>
-                            ) : null}
-                            <div className="rounded-2xl bg-white px-4 py-3 text-sm text-slate-600">
-                                <p className="font-semibold text-slate-900">Saran tampilan yang perlu ada</p>
-                                <ul className="mt-2 space-y-2">
-                                    <li>• Ringkasan jumlah master data di bagian atas.</li>
-                                    <li>• Form input di sisi kiri dan daftar data di sisi kanan.</li>
-                                    <li>• Notifikasi sukses/gagal yang terlihat jelas setelah simpan, ubah, atau hapus.</li>
-                                    <li>• Import Excel dengan penjelasan kolom agar operator tidak bingung.</li>
-                                </ul>
-                            </div>
-                        </div>
-                    </div>
-                </section>
-
-                <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-                    <div className="flex items-center justify-between gap-4">
-                        <div>
-                            <p className="text-sm font-medium uppercase tracking-[0.3em] text-slate-500">Log Aktivitas Terakhir</p>
-                            <h3 className="mt-2 text-xl font-semibold text-slate-900">Riwayat perubahan terbaru</h3>
-                        </div>
-                        <span className="text-sm text-slate-500">Terbaru diperbarui otomatis</span>
-                    </div>
-
-                    <div className="mt-6 space-y-3">
-                        {(summary?.recent_activities || []).map((item) => (
-                            <div key={`${item.tanggal}-${item.deskripsi}`} className="rounded-2xl bg-slate-100 px-4 py-3 text-sm text-slate-700">
-                                <span className="mr-2 text-slate-500">[{item.tanggal}]</span>
-                                {item.deskripsi}
-                            </div>
-                        ))}
-                        {!loading && (summary?.recent_activities || []).length === 0 ? (
-                            <div className="rounded-2xl bg-slate-100 px-4 py-3 text-sm text-slate-500">
-                                Belum ada aktivitas terbaru.
-                            </div>
-                        ) : null}
-                    </div>
+                    )}
                 </section>
             </div>
+        </div>
+    );
+
+    return (
+        <DashboardLayout user={session?.user} onLogout={onLogout} title={MENU_META.dashboard.title} navigation={navigation}>
+            <div className="mb-8">
+                <h1 className="text-2xl font-bold tracking-tight text-slate-900">{MENU_META.dashboard.title}</h1>
+                <p className="mt-2 text-sm text-slate-600">{MENU_META.dashboard.lead}</p>
+            </div>
+
+            {renderDashboard()}
         </DashboardLayout>
     );
 }

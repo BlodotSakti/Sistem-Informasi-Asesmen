@@ -156,6 +156,7 @@ export default function AdminWorkspacePage({ session, onLogout, mode = 'dashboar
         is_aktif: true,
     });
     const [userId, setUserId] = useState(null);
+    const [showUserPassword, setShowUserPassword] = useState(false);
 
     const [importForm, setImportForm] = useState({
         default_role: 'guru',
@@ -1477,7 +1478,26 @@ export default function AdminWorkspacePage({ session, onLogout, mode = 'dashboar
                             ) : null}
                             <label className="space-y-2 text-sm font-medium text-slate-700">
                                 <span>Password</span>
-                                <input value={userForm.password} onChange={(event) => setUserForm((current) => ({ ...current, password: event.target.value }))} className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-slate-900" placeholder="Minimal 8 karakter" type="password" />
+                                <div className="relative">
+                                    <input value={userForm.password} onChange={(event) => setUserForm((current) => ({ ...current, password: event.target.value }))} className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-slate-900 pr-12" placeholder="Minimal 8 karakter" type={showUserPassword ? 'text' : 'password'} />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowUserPassword(!showUserPassword)}
+                                        className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 focus:outline-none"
+                                    >
+                                        {showUserPassword ? (
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                                <path fillRule="evenodd" d="M3.707 2.293a1 1 0 00-1.414 1.414l14 14a1 1 0 001.414-1.414l-1.473-1.473A10.014 10.014 0 0019.542 10C18.268 5.943 14.478 3 10 3a9.958 9.958 0 00-4.512 1.074l-1.78-1.781zm4.261 4.26l1.514 1.515a2.003 2.003 0 012.45 2.45l1.514 1.514a4 4 0 00-5.478-5.478z" clipRule="evenodd" />
+                                                <path d="M12.454 16.697L9.75 13.992a4 4 0 01-3.742-3.741L2.335 6.578A9.98 9.98 0 00.458 10c1.274 4.057 5.065 7 9.542 7 .847 0 1.669-.105 2.454-.303z" />
+                                            </svg>
+                                        ) : (
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                                <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
+                                                <path fillRule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clipRule="evenodd" />
+                                            </svg>
+                                        )}
+                                    </button>
+                                </div>
                             </label>
                         </div>
 
@@ -1668,10 +1688,10 @@ export default function AdminWorkspacePage({ session, onLogout, mode = 'dashboar
     return (
         <DashboardLayout title={pageTitle} user={session?.user} navigation={navigation} onLogout={onLogout}>
             <div className="space-y-8">
-                <section className="overflow-hidden rounded-[2rem] border border-slate-200 bg-gradient-to-br from-slate-950 via-slate-900 to-amber-900 px-6 py-8 text-white shadow-2xl shadow-slate-950/20 lg:px-8">
+                <section className="overflow-hidden rounded-[2rem] border border-slate-200 bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950 px-6 py-8 text-white shadow-2xl shadow-slate-950/20 lg:px-8">
                     <div className="grid gap-8 lg:grid-cols-[1.2fr_0.8fr] lg:items-center">
                         <div>
-                            <p className="text-xs uppercase tracking-[0.45em] text-amber-200/80">{pageTitle}</p>
+                            <p className="text-xs uppercase tracking-[0.45em] text-indigo-300">{pageTitle}</p>
                             <h3 className="mt-4 max-w-2xl text-3xl font-semibold leading-tight text-white md:text-4xl">{pageLead}</h3>
                             <p className="mt-4 max-w-2xl text-sm leading-7 text-slate-200 md:text-base">Sidebar sekarang membuka halaman sesuai menu. Dashboard hanya menampilkan rangkuman, sedangkan menu lain menampilkan modul yang spesifik.</p>
                         </div>

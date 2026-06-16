@@ -27,10 +27,10 @@ export default function SiswaSessionsPage({ session, onLogout }) {
     return (
         <DashboardLayout title="Sesi Aktif" user={session?.user} navigation={siswaNavigation} onLogout={onLogout} profileHref="/siswa/profil">
             <div className="space-y-6">
-                <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-                    <p className="text-sm font-medium uppercase tracking-[0.3em] text-slate-500">Sesi CBT</p>
-                    <h3 className="mt-2 text-2xl font-semibold text-slate-900">Semua sesi yang sedang aktif</h3>
-                    <p className="mt-2 text-sm text-slate-500">Halaman ini khusus untuk melihat jadwal CBT yang bisa diakses siswa saat ini.</p>
+                <section className="overflow-hidden rounded-[2rem] border border-slate-200 bg-gradient-to-br from-slate-900 via-blue-900 to-cyan-800 px-6 py-8 text-white shadow-2xl shadow-slate-950/20 lg:px-8">
+                    <p className="text-sm font-medium uppercase tracking-[0.3em] text-indigo-300">Sesi CBT</p>
+                    <h3 className="mt-2 text-2xl font-semibold text-slate-100">Semua sesi yang sedang aktif</h3>
+                    <p className="mt-2 text-sm text-slate-300">Halaman ini khusus untuk melihat jadwal CBT yang bisa diakses siswa saat ini.</p>
 
                     <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
                         <StatCard label="Sesi Aktif" value={loading ? '...' : sessions.length} description="Jadwal yang tersedia" tone="blue" />

@@ -80,13 +80,13 @@ export default function SiswaCbtHistoryPage({ session, onLogout }) {
         <DashboardLayout title="Riwayat CBT" user={session?.user} navigation={siswaNavigation} onLogout={onLogout} profileHref="/siswa/profil">
             <div className="space-y-6">
                 {/* Stats */}
-                <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-                    <p className="text-sm font-medium uppercase tracking-[0.3em] text-slate-500">Riwayat Ujian CBT</p>
-                    <h3 className="mt-2 text-2xl font-semibold text-slate-900">Nilai CBT yang pernah dikerjakan</h3>
+                <section className="overflow-hidden rounded-[2rem] border border-slate-200 bg-gradient-to-br from-slate-900 via-blue-900 to-cyan-800 px-6 py-8 text-white shadow-2xl shadow-slate-950/20 lg:px-8">
+                    <p className="text-sm font-medium uppercase tracking-[0.3em] text-indigo-300">Riwayat Ujian CBT</p>
+                    <h3 className="mt-2 text-2xl font-semibold text-slate-100">Nilai CBT yang pernah dikerjakan</h3>
                     <div className="mt-6 grid gap-4 md:grid-cols-3">
                         <StatCard label="Total CBT" value={loading ? '...' : stats.total} description="Ujian yang pernah dikerjakan" tone="blue" />
                         <StatCard label="Rata-Rata" value={loading ? '...' : `${stats.rataRata}%`} description="Persentase rata-rata skor" tone="amber" />
-                        <StatCard label="Tertinggi" value={loading ? '...' : `${stats.tertinggi}%`} description="Persentase skor tertinggi" tone="emerald" />
+                        <StatCard label="Tertinggi" value={loading ? '...' : `${stats.tertinggi}%`} description="Persentase skor tertinggi" tone="slate" />
                     </div>
                 </section>
 
@@ -197,7 +197,12 @@ export default function SiswaCbtHistoryPage({ session, onLogout }) {
                                                             {item.is_correct ? '✓ Benar' : '✗ Salah'} — {item.skor_diperoleh}/{item.bobot_nilai}
                                                         </span>
                                                     </div>
-                                                    <p className="text-sm text-slate-600 mb-3">{item.isi_soal}</p>
+                                                    <p className="text-sm text-slate-600 mb-3 whitespace-pre-wrap">{item.isi_soal}</p>
+                                                    {item.gambar_soal && (
+                                                        <div className="mb-3">
+                                                            <img src={`/storage/${item.gambar_soal}`} alt="Gambar Soal" className="max-h-40 rounded-lg border border-slate-200 object-contain shadow-sm" />
+                                                        </div>
+                                                    )}
 
                                                     {/* Options with highlights */}
                                                     {item.opsi_jawaban && item.opsi_jawaban.length > 0 && (

@@ -44,6 +44,9 @@ export default function GuruDashboard({ session, onLogout, mode = 'dashboard' })
         kunci_jawaban_kompleks: [],
         topik_materi: '',
         level_kognitif: '',
+        gambar_soal: null,
+        gambar_soal_url: '',
+        hapus_gambar: false,
     });
     const [bankSearch, setBankSearch] = useState('');
     const [bankFilterMapel, setBankFilterMapel] = useState('');
@@ -471,6 +474,9 @@ export default function GuruDashboard({ session, onLogout, mode = 'dashboard' })
             kunci_jawaban_kompleks: item.jenis_soal === 'pilihan_ganda_kompleks' ? (function() { try { return JSON.parse(item.kunci_jawaban); } catch { return []; } })() : [],
             topik_materi: item.topik_materi || '',
             level_kognitif: item.level_kognitif || '',
+            gambar_soal: null,
+            gambar_soal_url: item.gambar_soal ? `/storage/${item.gambar_soal}` : '',
+            hapus_gambar: false,
         });
         window.scrollTo({ top: 0, behavior: 'smooth' });
     };
@@ -485,6 +491,9 @@ export default function GuruDashboard({ session, onLogout, mode = 'dashboard' })
             kunci_jawaban_kompleks: [],
             topik_materi: '',
             level_kognitif: '',
+            gambar_soal: null,
+            gambar_soal_url: '',
+            hapus_gambar: false,
         }));
     };
 
@@ -515,18 +524,41 @@ export default function GuruDashboard({ session, onLogout, mode = 'dashboard' })
                 .filter(Boolean);
 
             const isEditing = editingBankSoalId !== null;
+            
+            const formData = new FormData();
+            formData.append('id_mapel', Number(bankForm.id_mapel));
+            formData.append('isi_soal', bankForm.isi_soal);
+            formData.append('jenis_soal', bankForm.jenis_soal);
+            formData.append('topik_materi', bankForm.topik_materi);
+            formData.append('level_kognitif', bankForm.level_kognitif);
+
+            if (bankForm.jenis_soal === 'pilihan_ganda' || bankForm.jenis_soal === 'pilihan_ganda_kompleks') {
+                opsiJawaban.forEach(ops => {
+                    formData.append('opsi_jawaban[]', ops);
+                });
+            }
+
+            if (bankForm.jenis_soal === 'pilihan_ganda_kompleks') {
+                bankForm.kunci_jawaban_kompleks.forEach(kunci => {
+                    formData.append('kunci_jawaban[]', kunci);
+                });
+            } else {
+                formData.append('kunci_jawaban', bankForm.kunci_jawaban);
+            }
+
+            if (bankForm.gambar_soal instanceof File) {
+                formData.append('gambar_soal', bankForm.gambar_soal);
+            } else if (bankForm.hapus_gambar) {
+                formData.append('hapus_gambar', 'true');
+            }
+
+            if (isEditing) {
+                formData.append('_method', 'PATCH');
+            }
+
             await apiFetch(isEditing ? `/api/guru/bank-soal/${editingBankSoalId}` : '/api/guru/bank-soal', session, {
-                method: isEditing ? 'PATCH' : 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    id_mapel: Number(bankForm.id_mapel),
-                    isi_soal: bankForm.isi_soal,
-                    jenis_soal: bankForm.jenis_soal,
-                    opsi_jawaban: (bankForm.jenis_soal === 'pilihan_ganda' || bankForm.jenis_soal === 'pilihan_ganda_kompleks') ? opsiJawaban : [],
-                    kunci_jawaban: bankForm.jenis_soal === 'pilihan_ganda_kompleks' ? bankForm.kunci_jawaban_kompleks : bankForm.kunci_jawaban,
-                    topik_materi: bankForm.topik_materi,
-                    level_kognitif: bankForm.level_kognitif,
-                }),
+                method: 'POST',
+                body: formData,
             });
 
             showSuccessPopup('Berhasil', isEditing ? 'Bank soal berhasil diperbarui.' : 'Bank soal berhasil disimpan.');
@@ -742,6 +774,39 @@ export default function GuruDashboard({ session, onLogout, mode = 'dashboard' })
                             placeholder="Tulis soal secara lengkap"
                         />
                     </label>
+
+                    <div className="md:col-span-2">
+                        <label className="space-y-2 text-sm font-medium text-slate-700">
+                            <span>Gambar Pendukung (Opsional)</span>
+                            <div className="flex flex-col gap-3">
+                                {bankForm.gambar_soal_url && !bankForm.hapus_gambar && (
+                                    <div className="relative w-max">
+                                        <img src={bankForm.gambar_soal_url} alt="Gambar Soal" className="max-h-40 rounded-xl border border-slate-200 object-cover shadow-sm" />
+                                        <button 
+                                            type="button" 
+                                            onClick={() => setBankForm(curr => ({ ...curr, hapus_gambar: true, gambar_soal: null }))}
+                                            className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full bg-rose-500 text-white hover:bg-rose-600 shadow"
+                                            title="Hapus Gambar"
+                                        >
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                                <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                                            </svg>
+                                        </button>
+                                    </div>
+                                )}
+                                <input
+                                    type="file"
+                                    accept=".jpg,.jpeg,.png"
+                                    onChange={(e) => {
+                                        if (e.target.files && e.target.files[0]) {
+                                            setBankForm(curr => ({ ...curr, gambar_soal: e.target.files[0], hapus_gambar: false }));
+                                        }
+                                    }}
+                                    className="block w-full text-sm text-slate-500 file:mr-4 file:rounded-full file:border-0 file:bg-blue-50 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-blue-700 hover:file:bg-blue-100"
+                                />
+                            </div>
+                        </label>
+                    </div>
 
                     {bankForm.jenis_soal === 'pilihan_ganda' || bankForm.jenis_soal === 'pilihan_ganda_kompleks' ? (
                         <div className="md:col-span-2 space-y-3">
@@ -1072,7 +1137,7 @@ export default function GuruDashboard({ session, onLogout, mode = 'dashboard' })
                                                         <span className="text-sm font-bold text-slate-700">Soal {idx + 1} <span className="font-normal text-slate-400">({s.jenis_soal})</span></span>
                                                         <span className="text-xs font-medium text-slate-500">Bobot: {s.bobot_nilai}</span>
                                                     </div>
-                                                    <p className="text-sm text-slate-600">{s.isi_soal}</p>
+                                                    <p className="text-sm text-slate-600 whitespace-pre-wrap">{s.isi_soal}</p>
                                                     <p className="mt-1 text-xs text-emerald-600 font-medium">Kunci: {(() => { try { const arr = JSON.parse(s.kunci_jawaban); if (Array.isArray(arr)) return arr.join(', '); } catch {} return s.kunci_jawaban; })()}</p>
                                                 </div>
                                             ))}

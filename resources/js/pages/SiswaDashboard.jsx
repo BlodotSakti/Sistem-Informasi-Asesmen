@@ -43,11 +43,11 @@ export default function SiswaDashboard({ session, onLogout }) {
     return (
         <DashboardLayout title="Dashboard Siswa" user={session?.user} navigation={siswaNavigation} onLogout={onLogout} profileHref="/siswa/profil">
             <div className="space-y-6">
-                <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+                <section className="overflow-hidden rounded-[2rem] border border-slate-200 bg-gradient-to-br from-slate-900 via-blue-900 to-cyan-800 px-6 py-8 text-white shadow-2xl shadow-slate-950/20 lg:px-8">
                     <div className="flex flex-col gap-3">
-                        <p className="text-sm font-medium uppercase tracking-[0.3em] text-slate-500">Ringkasan Siswa</p>
-                        <h3 className="text-2xl font-semibold text-slate-900">Halo, {session?.user?.nama_lengkap || 'Siswa'}! 👋</h3>
-                        <p className="max-w-2xl text-sm text-slate-500">Selamat datang di dashboard akademik Anda. Pantau perkembangan nilai, ujian terdekat, dan apresiasi yang Anda raih di sini.</p>
+                        <p className="text-sm font-medium uppercase tracking-[0.3em] text-indigo-300">Ringkasan Siswa</p>
+                        <h3 className="text-2xl font-semibold text-slate-100">Halo, {session?.user?.nama_lengkap || 'Siswa'}! 👋</h3>
+                        <p className="max-w-2xl text-sm text-slate-300">Selamat datang di dashboard akademik Anda. Pantau perkembangan nilai, ujian terdekat, dan apresiasi yang Anda raih di sini.</p>
                     </div>
 
                     <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">

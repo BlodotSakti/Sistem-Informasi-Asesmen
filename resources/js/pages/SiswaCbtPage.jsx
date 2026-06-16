@@ -277,7 +277,12 @@ export default function SiswaCbtPage({ session, onLogout, idSesi }) {
                                         {item.skor_diperoleh == item.bobot_nilai ? '✓ Benar' : item.skor_diperoleh > 0 ? '○ Sebagian Benar' : '✗ Salah'} — {item.skor_diperoleh}/{item.bobot_nilai}
                                     </span>
                                 </div>
-                                <p className="mt-2 text-sm text-slate-600">{item.isi_soal}</p>
+                                <p className="mt-2 text-sm text-slate-600 whitespace-pre-wrap">{item.isi_soal}</p>
+                                {item.gambar_soal && (
+                                    <div className="mt-3">
+                                        <img src={`/storage/${item.gambar_soal}`} alt="Gambar Soal" className="max-h-48 rounded-lg border border-slate-200 object-contain shadow-sm" />
+                                    </div>
+                                )}
                                 {item.opsi_jawaban && item.opsi_jawaban.length > 0 && (
                                     <div className="mt-3 grid gap-2">
                                         {item.opsi_jawaban.map((opsi, oIdx) => {
@@ -488,8 +493,13 @@ export default function SiswaCbtPage({ session, onLogout, idSesi }) {
                                 </span>
                             </div>
 
-                            <div className="prose prose-slate max-w-none text-lg leading-relaxed text-slate-700">
+                            <div className="prose prose-slate max-w-none text-lg leading-relaxed text-slate-700 whitespace-pre-wrap">
                                 {activeSoal.isi_soal}
+                                {activeSoal.gambar_soal && (
+                                    <div className="mt-4">
+                                        <img src={`/storage/${activeSoal.gambar_soal}`} alt="Ilustrasi Soal" className="max-h-64 max-w-full rounded-xl border border-slate-200 shadow-sm" />
+                                    </div>
+                                )}
                             </div>
 
                             <div className="mt-8 space-y-4">

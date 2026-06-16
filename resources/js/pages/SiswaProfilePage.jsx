@@ -94,14 +94,14 @@ export default function SiswaProfilePage({ session, onLogout }) {
     return (
         <DashboardLayout title="Profil Siswa" user={session?.user} navigation={siswaNavigation} onLogout={onLogout} profileHref="/siswa/dashboard">
             <div className="space-y-6">
-                <section className="rounded-3xl border border-slate-200 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800 p-6 text-white shadow-sm">
+                <section className="rounded-3xl border border-slate-200 bg-gradient-to-br from-slate-900 via-blue-900 to-cyan-800 p-6 text-white shadow-sm">
                     <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
                         <div className="flex items-center gap-4">
                             <div className="flex h-20 w-20 items-center justify-center rounded-full border border-white/15 bg-slate-700 text-2xl font-semibold uppercase text-amber-300">
                                 {(profile.nama_lengkap || session?.user?.nama_lengkap || 'PR').slice(0, 2)}
                             </div>
                             <div>
-                                <p className="text-xs uppercase tracking-[0.35em] text-slate-400">Profil Siswa</p>
+                                <p className="text-xs uppercase tracking-[0.35em] text-indigo-400">Profil Siswa</p>
                                 <h3 className="mt-2 text-3xl font-semibold">{profile.nama_lengkap || session?.user?.nama_lengkap || '-'}</h3>
                                 <p className="mt-2 text-sm text-slate-300">NISN: {profile.nisn || session?.user?.profile?.nisn || '-'}</p>
                                 <p className="text-sm text-slate-300">

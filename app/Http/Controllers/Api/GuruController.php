@@ -117,6 +117,7 @@ class GuruController extends Controller
             'level_kognitif' => ['required', 'in:C1,C2,C3,C4,C5,C6'],
             'opsi_jawaban' => ['nullable', 'array'],
             'opsi_jawaban.*' => ['nullable', 'string', 'max:255'],
+            'gambar_soal' => ['nullable', 'image', 'mimes:jpeg,png,jpg', 'max:2048'],
         ]);
 
         $validator->after(function ($validator) use ($request): void {
@@ -154,6 +155,10 @@ class GuruController extends Controller
         });
 
         $data = $validator->validate();
+
+        if ($request->hasFile('gambar_soal')) {
+            $data['gambar_soal'] = $request->file('gambar_soal')->store('soal_images', 'public');
+        }
 
         $guruId = $request->user()->guru->id_guru;
         $this->ensureGuruMengampuMapel($guruId, (int) $data['id_mapel']);
@@ -193,6 +198,7 @@ class GuruController extends Controller
             'level_kognitif' => ['required', 'in:C1,C2,C3,C4,C5,C6'],
             'opsi_jawaban' => ['nullable', 'array'],
             'opsi_jawaban.*' => ['nullable', 'string', 'max:255'],
+            'gambar_soal' => ['nullable', 'image', 'mimes:jpeg,png,jpg', 'max:2048'],
         ]);
 
         $validator->after(function ($validator) use ($request): void {
@@ -229,6 +235,18 @@ class GuruController extends Controller
         });
 
         $data = $validator->validate();
+
+        if ($request->hasFile('gambar_soal')) {
+            if ($bankSoal->gambar_soal) {
+                \Illuminate\Support\Facades\Storage::disk('public')->delete($bankSoal->gambar_soal);
+            }
+            $data['gambar_soal'] = $request->file('gambar_soal')->store('soal_images', 'public');
+        } elseif ($request->input('hapus_gambar') === 'true') {
+            if ($bankSoal->gambar_soal) {
+                \Illuminate\Support\Facades\Storage::disk('public')->delete($bankSoal->gambar_soal);
+            }
+            $data['gambar_soal'] = null;
+        }
         $this->ensureGuruMengampuMapel($guruId, (int) $data['id_mapel']);
 
         $cleanOptions = collect($data['opsi_jawaban'] ?? [])
@@ -258,7 +276,11 @@ class GuruController extends Controller
         $bankSoal = BankSoal::query()->where('id_guru', $guruId)->findOrFail($id_soal);
 
         try {
+            $gambar_soal = $bankSoal->gambar_soal;
             $bankSoal->delete();
+            if ($gambar_soal) {
+                \Illuminate\Support\Facades\Storage::disk('public')->delete($gambar_soal);
+            }
             return response()->json(['message' => 'Soal berhasil dihapus.']);
         } catch (\Illuminate\Database\QueryException $e) {
             if ($e->getCode() === '23000') {

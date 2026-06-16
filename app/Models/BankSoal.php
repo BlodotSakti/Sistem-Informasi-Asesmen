@@ -57,6 +57,7 @@ class BankSoal extends Model
         'kunci_jawaban',
         'topik_materi',
         'level_kognitif',
+        'gambar_soal',
     ];
 
     protected $casts = [

@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\GuruController;
 use App\Http\Controllers\Api\SiswaController;
 use App\Http\Controllers\Api\AcademicMappingController;
+use App\Http\Controllers\Api\AdminDashboardController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('/auth/login', [AuthController::class, 'login']);
@@ -17,6 +18,7 @@ Route::middleware('auth:sanctum')->group(function (): void {
 		Route::post('/auth/profile', [ProfileController::class, 'update']);
 
 		Route::prefix('admin')->as('api.admin.')->middleware('role:admin')->group(function (): void {
+			Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
 			Route::get('/dashboard-summary', [AdminController::class, 'dashboardSummary'])->name('dashboard-summary');
 			Route::get('/master-data', [AdminController::class, 'masterData'])->name('master-data');
 			Route::get('/academic-mapping', [AcademicMappingController::class, 'index'])->name('academic-mapping');

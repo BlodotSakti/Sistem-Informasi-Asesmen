@@ -432,6 +432,7 @@ class SiswaController extends Controller
                 'id_detail' => $detail->id_detail,
                 'jenis_soal' => $bankSoal->jenis_soal,
                 'isi_soal' => $bankSoal->isi_soal,
+                'gambar_soal' => $bankSoal->gambar_soal,
                 'opsi_jawaban' => $bankSoal->opsi_jawaban,
                 'bobot_nilai' => $detail->bobot_nilai,
             ];
@@ -551,6 +552,7 @@ class SiswaController extends Controller
                 $resultPerSoal[] = [
                     'id_detail' => $detail->id_detail,
                     'isi_soal' => $bankSoal->isi_soal,
+                    'gambar_soal' => $bankSoal->gambar_soal,
                     'jenis_soal' => $bankSoal->jenis_soal,
                     'opsi_jawaban' => $bankSoal->opsi_jawaban,
                     'jawaban_siswa' => $teksJawaban,
@@ -769,6 +771,7 @@ class SiswaController extends Controller
             return [
                 'id_detail' => $detail->id_detail,
                 'isi_soal' => $bankSoal->isi_soal,
+                'gambar_soal' => $bankSoal->gambar_soal,
                 'jenis_soal' => $bankSoal->jenis_soal,
                 'opsi_jawaban' => $bankSoal->opsi_jawaban,
                 'kunci_jawaban' => $bankSoal->kunci_jawaban,
