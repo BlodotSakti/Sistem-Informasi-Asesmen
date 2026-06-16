@@ -282,6 +282,25 @@ export default function GuruDashboard({ session, onLogout, mode = 'dashboard' })
         });
     }, [bankSearch, bankFilterMapel, bankFilterJenis, bankFilterLevel, workspace.bank_soal]);
 
+    const groupedBankSoal = useMemo(() => {
+        return bankRows.reduce((acc, soal) => {
+            const id = soal.id_mapel;
+            if (!acc[id]) {
+                acc[id] = {
+                    mapel: soal.mata_pelajaran,
+                    soals: []
+                };
+            }
+            acc[id].soals.push(soal);
+            return acc;
+        }, {});
+    }, [bankRows]);
+
+    const [expandedBankFolders, setExpandedBankFolders] = useState({});
+    const toggleBankFolder = (id_mapel) => {
+        setExpandedBankFolders(prev => ({ ...prev, [id_mapel]: !prev[id_mapel] }));
+    };
+
     const beritaRows = useMemo(() => {
         const search = beritaSearch.trim().toLowerCase();
 
@@ -642,7 +661,7 @@ export default function GuruDashboard({ session, onLogout, mode = 'dashboard' })
                             <option value="">Pilih mapel</option>
                             {(workspace.mapel_options || []).map((item) => (
                                 <option key={item.id_mapel} value={item.id_mapel}>
-                                    {item.nama_mapel} {item.tingkat ? `(${item.tingkat})` : ''}
+                                    {item.nama_lengkap || item.nama_mapel}
                                 </option>
                             ))}
                         </select>
@@ -810,7 +829,7 @@ export default function GuruDashboard({ session, onLogout, mode = 'dashboard' })
                             <select value={bankFilterMapel} onChange={e => setBankFilterMapel(e.target.value)} className="w-full rounded-2xl border border-slate-300 px-4 py-2 outline-none transition focus:border-slate-900">
                                 <option value="">Semua Mapel</option>
                                 {(workspace.mapel_options || []).map(item => (
-                                    <option key={item.id_mapel} value={item.id_mapel}>{item.nama_mapel}</option>
+                                    <option key={item.id_mapel} value={item.id_mapel}>{item.nama_lengkap || item.nama_mapel}</option>
                                 ))}
                             </select>
                         </label>
@@ -855,25 +874,49 @@ export default function GuruDashboard({ session, onLogout, mode = 'dashboard' })
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100 bg-white">
-                            {bankRows.map((item, index) => (
-                                <tr key={item.id_soal} className="align-top hover:bg-slate-50/70">
-                                    <td className="px-5 py-4 font-semibold text-slate-500">{index + 1}</td>
-                                    <td className="px-5 py-4 font-semibold text-slate-900">{item.mata_pelajaran?.nama_mapel || '-'}</td>
-                                    <td className="px-5 py-4 text-slate-600">{item.topik_materi}</td>
-                                    <td className="px-5 py-4 text-slate-600">{item.level_kognitif}</td>
-                                    <td className="px-5 py-4 text-slate-600">{item.jenis_soal}</td>
-                                    <td className="px-5 py-4 text-slate-600">
-                                        {item.jenis_soal === 'pilihan_ganda_kompleks' && item.kunci_jawaban 
-                                            ? (() => { try { return JSON.parse(item.kunci_jawaban).join(', '); } catch { return item.kunci_jawaban; } })() 
-                                            : item.kunci_jawaban}
-                                    </td>
-                                    <td className="px-5 py-4 text-right">
-                                        <div className="flex items-center justify-end gap-3">
-                                            <button onClick={() => openEditBankSoal(item)} className="text-blue-600 hover:text-blue-800 font-medium">Edit</button>
-                                            <button onClick={() => handleDeleteBankSoal(item.id_soal)} className="text-rose-600 hover:text-rose-800 font-medium">Hapus</button>
-                                        </div>
-                                    </td>
-                                </tr>
+                            {Object.entries(groupedBankSoal).map(([id_mapel, group]) => (
+                                <React.Fragment key={id_mapel}>
+                                    <tr 
+                                        className="cursor-pointer bg-blue-50/50 hover:bg-blue-50 transition-colors"
+                                        onClick={() => toggleBankFolder(id_mapel)}
+                                    >
+                                        <td colSpan="7" className="px-5 py-4">
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center gap-3">
+                                                    <span className={`transform transition-transform ${expandedBankFolders[id_mapel] ? 'rotate-90' : ''}`}>
+                                                        ▶
+                                                    </span>
+                                                    <span className="font-bold text-slate-900">
+                                                        📁 {group.mapel?.nama_lengkap || group.mapel?.nama_mapel || 'Mapel Tidak Diketahui'}
+                                                    </span>
+                                                </div>
+                                                <span className="rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-semibold text-blue-800">
+                                                    {group.soals.length} Soal
+                                                </span>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {expandedBankFolders[id_mapel] && group.soals.map((item, index) => (
+                                        <tr key={item.id_soal} className="align-top hover:bg-slate-50/70 border-l-4 border-blue-500">
+                                            <td className="px-5 py-4 font-semibold text-slate-500 pl-6">{index + 1}</td>
+                                            <td className="px-5 py-4 font-semibold text-slate-900">{item.mata_pelajaran?.nama_lengkap || item.mata_pelajaran?.nama_mapel || '-'}</td>
+                                            <td className="px-5 py-4 text-slate-600">{item.topik_materi}</td>
+                                            <td className="px-5 py-4 text-slate-600">{item.level_kognitif}</td>
+                                            <td className="px-5 py-4 text-slate-600">{item.jenis_soal}</td>
+                                            <td className="px-5 py-4 text-slate-600">
+                                                {item.jenis_soal === 'pilihan_ganda_kompleks' && item.kunci_jawaban 
+                                                    ? (() => { try { return JSON.parse(item.kunci_jawaban).join(', '); } catch { return item.kunci_jawaban; } })() 
+                                                    : item.kunci_jawaban}
+                                            </td>
+                                            <td className="px-5 py-4 text-right">
+                                                <div className="flex items-center justify-end gap-3">
+                                                    <button onClick={() => openEditBankSoal(item)} className="text-blue-600 hover:text-blue-800 font-medium">Edit</button>
+                                                    <button onClick={() => handleDeleteBankSoal(item.id_soal)} className="text-rose-600 hover:text-rose-800 font-medium">Hapus</button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </React.Fragment>
                             ))}
                             {!loading && bankRows.length === 0 ? (
                                 <tr><td colSpan="7" className="px-5 py-6 text-sm text-slate-500">Belum ada data bank soal yang cocok.</td></tr>
@@ -917,7 +960,7 @@ export default function GuruDashboard({ session, onLogout, mode = 'dashboard' })
                                 <tr key={item.id_sesi} className="align-top hover:bg-slate-50/70">
                                     <td className="px-5 py-4 font-semibold text-slate-900">{item.tipe_soal}</td>
                                     <td className="px-5 py-4 text-slate-600">{item.kelas?.nama_kelas}</td>
-                                    <td className="px-5 py-4 text-slate-600">{item.mata_pelajaran?.nama_mapel}</td>
+                                    <td className="px-5 py-4 text-slate-600">{item.mata_pelajaran?.nama_lengkap || item.mata_pelajaran?.nama_mapel}</td>
                                     <td className="px-5 py-4 text-slate-600">{item.tipe_soal || '-'} • {item.jenis_asesmen || '-'}</td>
                                     <td className="px-5 py-4 text-slate-600">
                                         <div className="font-medium text-slate-900">{formatDateTimeLabel(item.waktu_mulai)}</div>
@@ -1132,8 +1175,8 @@ export default function GuruDashboard({ session, onLogout, mode = 'dashboard' })
                                 <label className="space-y-2 text-sm font-medium text-slate-700">
                                     <span>Mata Pelajaran</span>
                                     <select required value={sesiForm.id_mapel} onChange={e => setSesiForm(c => ({...c, id_mapel: e.target.value}))} className="w-full rounded-2xl border border-slate-300 px-4 py-3 outline-none transition focus:border-slate-900">
-                                        <option value="">Pilih mapel</option>
-                                        {(workspace.mapel_options || []).map(item => <option key={item.id_mapel} value={item.id_mapel}>{item.nama_mapel}</option>)}
+                                        <option value="">Pilih mata pelajaran</option>
+                                        {(workspace.mapel_options || []).map(item => <option key={item.id_mapel} value={item.id_mapel}>{item.nama_lengkap || item.nama_mapel}</option>)}
                                     </select>
                                 </label>
                                 <label className="space-y-2 text-sm font-medium text-slate-700">
@@ -1194,7 +1237,9 @@ export default function GuruDashboard({ session, onLogout, mode = 'dashboard' })
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-slate-100">
-                                            {(workspace.bank_soal || []).map(item => (
+                                            {(workspace.bank_soal || [])
+                                                .filter(item => sesiForm.id_mapel && String(item.id_mapel) === String(sesiForm.id_mapel))
+                                                .map(item => (
                                                 <tr key={item.id_soal} className="hover:bg-slate-50">
                                                     <td className="px-4 py-3">
                                                         <input 
@@ -1213,7 +1258,9 @@ export default function GuruDashboard({ session, onLogout, mode = 'dashboard' })
                                                         />
                                                     </td>
                                                     <td className="px-4 py-3 truncate max-w-xs">{item.isi_soal.substring(0, 50)}...</td>
-                                                    <td className="px-4 py-3">{item.mata_pelajaran?.nama_mapel}</td>
+                                                    <td className="px-4 py-3">{item.tipe_soal === 'pilihan_ganda_kompleks' ? 'PGK' : item.tipe_soal === 'esai' ? 'Esai' : 'PG'}</td>
+                                                    <td className="px-4 py-3">{item.mata_pelajaran?.nama_lengkap || item.mata_pelajaran?.nama_mapel}</td>
+                                                    <td className="px-4 py-3">{item.topik_materi}</td>
                                                     <td className="px-4 py-3 capitalize">{item.jenis_soal.replace(/_/g, ' ')}</td>
                                                     <td className="px-4 py-3">
                                                         <input 
@@ -1226,8 +1273,11 @@ export default function GuruDashboard({ session, onLogout, mode = 'dashboard' })
                                                     </td>
                                                 </tr>
                                             ))}
-                                            {(workspace.bank_soal || []).length === 0 && (
-                                                <tr><td colSpan="5" className="px-4 py-4 text-center text-slate-500">Bank soal kosong.</td></tr>
+                                            {!sesiForm.id_mapel && (
+                                                <tr><td colSpan="7" className="px-4 py-8 text-center text-slate-500">Silakan pilih Mata Pelajaran terlebih dahulu.</td></tr>
+                                            )}
+                                            {sesiForm.id_mapel && (workspace.bank_soal || []).filter(item => String(item.id_mapel) === String(sesiForm.id_mapel)).length === 0 && (
+                                                <tr><td colSpan="7" className="px-4 py-8 text-center text-slate-500">Bank soal kosong untuk mata pelajaran ini.</td></tr>
                                             )}
                                         </tbody>
                                     </table>
@@ -1290,7 +1340,7 @@ export default function GuruDashboard({ session, onLogout, mode = 'dashboard' })
                             <option value="">Pilih mapel</option>
                             {mapelBySelectedClass.map((item) => (
                                 <option key={item.id_mapel} value={item.id_mapel}>
-                                    {item.nama_mapel}
+                                    {item.nama_lengkap || item.nama_mapel}
                                 </option>
                             ))}
                         </select>
@@ -1485,7 +1535,7 @@ export default function GuruDashboard({ session, onLogout, mode = 'dashboard' })
                                     <td className="px-5 py-4 font-semibold text-slate-500">{index + 1}</td>
                                     <td className="px-5 py-4 text-slate-600">{formatDateLabel(item.tanggal)}</td>
                                     <td className="px-5 py-4 font-semibold text-slate-900">{item.kelas?.nama_kelas || '-'}</td>
-                                    <td className="px-5 py-4 text-slate-600">{item.mata_pelajaran?.nama_mapel || '-'}</td>
+                                    <td className="px-5 py-4 text-slate-600">{item.mata_pelajaran?.nama_lengkap || item.mata_pelajaran?.nama_mapel || '-'}</td>
                                     <td className="px-5 py-4 text-slate-600">Pertemuan ke-{item.pertemuan_ke}</td>
                                     <td className="px-5 py-4 text-slate-600">{item.materi_bahasan}</td>
                                     <td className="px-5 py-4 text-slate-600">

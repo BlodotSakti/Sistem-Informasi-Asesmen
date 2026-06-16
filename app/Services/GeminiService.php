@@ -16,64 +16,49 @@ class GeminiService
         $skorTotal = $rekap['skor_total'];
         $prompt = $this->buildPrompt($rekap['rekap_level_kognitif'], $rekap['rekap_topik_materi'] ?? []);
 
-        $narasiKekuatan = '';
-        $narasiKelemahan = '';
-        $geminiBerhasil = false;
-
-        try {
-            $response = Http::timeout(60)
-                ->acceptJson()
-                ->post($this->geminiUrl(), [
-                    'contents' => [
-                        [
-                            'role' => 'user',
-                            'parts' => [
-                                [
-                                    'text' => $prompt,
-                                ],
+        $response = Http::timeout(60)
+            ->acceptJson()
+            ->post($this->geminiUrl(), [
+                'contents' => [
+                    [
+                        'role' => 'user',
+                        'parts' => [
+                            [
+                                'text' => $prompt,
                             ],
                         ],
                     ],
-                    'generationConfig' => [
-                        'temperature' => 0.4,
-                        'topP' => 0.9,
-                        'maxOutputTokens' => 2048,
-                    ],
-                ]);
-
-            if ($response->failed()) {
-                throw new \RuntimeException('Gemini API gagal merespons dengan status '.$response->status());
-            }
-
-            $rawText = '';
-            $parts = data_get($response->json(), 'candidates.0.content.parts', []);
-            // Model thinking (gemini-2.5-flash) menempatkan "thought" di parts awal.
-            // Text output ada di part terakhir yang memiliki key 'text'.
-            foreach ($parts as $part) {
-                if (isset($part['text']) && !isset($part['thought'])) {
-                    $rawText = $part['text'];
-                }
-            }
-            // Fallback ke parts.0.text jika tidak ditemukan
-            if (empty($rawText)) {
-                $rawText = data_get($response->json(), 'candidates.0.content.parts.0.text', '');
-            }
-
-            Log::info('Gemini raw response', ['id_siswa' => $idSiswa, 'id_sesi' => $idSesi, 'raw' => mb_substr($rawText, 0, 500)]);
-
-            [$narasiKekuatan, $narasiKelemahan] = $this->parseGeminiResponse($rawText);
-
-            if (empty($narasiKekuatan) && empty($narasiKelemahan)) {
-                throw new \RuntimeException('Gemini mengembalikan narasi kosong setelah parsing.');
-            }
-
-            $geminiBerhasil = true;
-        } catch (Throwable $throwable) {
-            Log::warning('Gemini analysis failed, saving score only.', [
-                'id_siswa' => $idSiswa,
-                'id_sesi' => $idSesi,
-                'message' => $throwable->getMessage(),
+                ],
+                'generationConfig' => [
+                    'temperature' => 0.4,
+                    'topP' => 0.9,
+                    'maxOutputTokens' => 2048,
+                ],
             ]);
+
+        if ($response->failed()) {
+            throw new \RuntimeException('Gemini API gagal merespons dengan status '.$response->status());
+        }
+
+        $rawText = '';
+        $parts = data_get($response->json(), 'candidates.0.content.parts', []);
+        
+        foreach ($parts as $part) {
+            if (isset($part['text']) && !isset($part['thought'])) {
+                $rawText = $part['text'];
+            }
+        }
+        
+        if (empty($rawText)) {
+            $rawText = data_get($response->json(), 'candidates.0.content.parts.0.text', '');
+        }
+
+        Log::info('Gemini raw response', ['id_siswa' => $idSiswa, 'id_sesi' => $idSesi, 'raw' => mb_substr($rawText, 0, 500)]);
+
+        [$narasiKekuatan, $narasiKelemahan] = $this->parseGeminiResponse($rawText);
+
+        if (empty($narasiKekuatan) && empty($narasiKelemahan)) {
+            throw new \RuntimeException('Gemini mengembalikan narasi kosong setelah parsing.');
         }
 
         $existing = AnalisisDiagnostik::query()
@@ -81,18 +66,13 @@ class GeminiService
             ->where('id_sesi', $idSesi)
             ->first();
 
+        // Gunakan skor_total dari tabel jika sudah ada (karena cbtSubmit sudah menyimpannya instan)
         $attributes = [
-            'skor_total' => $skorTotal,
+            'skor_total' => $existing ? $existing->skor_total : $skorTotal,
             'tanggal_generate' => now(),
+            'narasi_kekuatan' => $narasiKekuatan,
+            'narasi_kelemahan' => $narasiKelemahan,
         ];
-
-        if ($geminiBerhasil) {
-            $attributes['narasi_kekuatan'] = $narasiKekuatan;
-            $attributes['narasi_kelemahan'] = $narasiKelemahan;
-        } elseif ($existing === null) {
-            $attributes['narasi_kekuatan'] = 'Analisis AI belum tersedia saat ini.';
-            $attributes['narasi_kelemahan'] = 'Analisis AI belum tersedia saat ini.';
-        }
 
         return AnalisisDiagnostik::updateOrCreate(
             [

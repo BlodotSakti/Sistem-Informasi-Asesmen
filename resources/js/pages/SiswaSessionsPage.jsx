@@ -68,7 +68,7 @@ export default function SiswaSessionsPage({ session, onLogout }) {
                                     const isBelumMulai = item.waktu_mulai && new Date() < new Date(item.waktu_mulai);
                                     return (
                                     <tr key={item.id_sesi} className="align-top hover:bg-slate-50/70">
-                                        <td className="px-4 py-3 font-semibold text-slate-900">{item.mata_pelajaran?.nama_mapel || item.mataPelajaran?.nama_mapel || '-'}</td>
+                                        <td className="px-4 py-3 font-semibold text-slate-900">{item.mata_pelajaran?.nama_lengkap || item.mata_pelajaran?.nama_mapel || item.mataPelajaran?.nama_lengkap || item.mataPelajaran?.nama_mapel || '-'}</td>
                                         <td className="px-4 py-3 text-slate-600">{item.kelas?.nama_kelas || '-'}</td>
                                         <td className="px-4 py-3 text-slate-600">{item.tipe_soal || '-'} • {item.jenis_asesmen || '-'}</td>
                                         <td className="px-4 py-3 text-slate-600">{item.durasi_menit || 0} menit</td>

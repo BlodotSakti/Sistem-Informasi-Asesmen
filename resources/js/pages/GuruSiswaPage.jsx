@@ -78,10 +78,9 @@ export default function GuruSiswaPage({ session, onLogout }) {
     const activeKelas = kelas_options.find(k => k.id_kelas === activeKelasId);
     const activeStudents = students_by_class[activeKelasId] || [];
     
-    // Find all subjects the teacher teaches for this specific class
     const activeMapel = teaching_assignments
         .filter(a => a.id_kelas === activeKelasId)
-        .map(a => a.mata_pelajaran?.nama_mapel)
+        .map(a => a.mata_pelajaran?.nama_lengkap || a.mata_pelajaran?.nama_mapel)
         .filter(Boolean);
 
     const navigation = [

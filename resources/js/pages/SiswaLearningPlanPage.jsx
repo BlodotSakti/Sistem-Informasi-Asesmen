@@ -118,7 +118,7 @@ export default function SiswaLearningPlanPage({ session, onLogout }) {
                                 <select value={planForm.id_mapel} onChange={(event) => setPlanForm((current) => ({ ...current, id_mapel: event.target.value }))} className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-slate-900">
                                     <option value="">Pilih mapel</option>
                                     {(summary?.available_subjects || []).map((item) => (
-                                        <option key={item.id_penugasan_pembelajaran} value={item.id_mapel}>{item.nama_mapel} {item.guru ? `- ${item.guru}` : ''}</option>
+                                        <option key={item.id_penugasan_pembelajaran} value={item.id_mapel}>{item.nama_lengkap || item.nama_mapel} {item.guru ? `- ${item.guru}` : ''}</option>
                                     ))}
                                 </select>
                             </label>
@@ -183,7 +183,7 @@ export default function SiswaLearningPlanPage({ session, onLogout }) {
                                 <tbody className="divide-y divide-slate-100 bg-white">
                                     {filteredPlans.map((item) => (
                                         <tr key={item.id_rencana_belajar} className="align-top hover:bg-slate-50/70">
-                                            <td className="px-4 py-3 font-semibold text-slate-900">{item.mata_pelajaran?.nama_mapel || item.mataPelajaran?.nama_mapel || '-'}</td>
+                                            <td className="px-4 py-3 font-semibold text-slate-900">{item.mata_pelajaran?.nama_lengkap || item.mata_pelajaran?.nama_mapel || item.mataPelajaran?.nama_lengkap || item.mataPelajaran?.nama_mapel || '-'}</td>
                                             <td className="px-4 py-3 text-slate-600">{item.status || '-'}</td>
                                             <td className="px-4 py-3 text-slate-600">{item.sumber || '-'}</td>
                                             <td className="px-4 py-3 text-slate-600">{item.catatan || '-'}</td>

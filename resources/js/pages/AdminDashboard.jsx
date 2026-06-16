@@ -723,8 +723,7 @@ export default function AdminDashboard({ session, onLogout, activePage = 'dashbo
                                 {(masterData.mata_pelajaran || []).map((item) => (
                                     <div key={item.id_mapel} className="flex flex-col gap-3 px-5 py-4 md:flex-row md:items-center md:justify-between">
                                         <div>
-                                            <p className="font-semibold text-slate-900">{item.nama_mapel}</p>
-                                            <p className="mt-1 text-sm text-slate-500">Tingkat {item.tingkat}</p>
+                                            <p className="font-semibold text-slate-900">{item.nama_lengkap || item.nama_mapel}</p>
                                         </div>
                                         <div className="flex flex-wrap gap-2">
                                             <button

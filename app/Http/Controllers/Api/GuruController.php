@@ -82,6 +82,7 @@ class GuruController extends Controller
                 ->map(fn (PenugasanPembelajaran $item): array => [
                     'id_mapel' => $item->id_mapel,
                     'nama_mapel' => $item->mataPelajaran?->nama_mapel,
+                    'nama_lengkap' => $item->mataPelajaran?->nama_lengkap,
                     'tingkat' => $item->mataPelajaran?->tingkat,
                 ])
                 ->unique('id_mapel')

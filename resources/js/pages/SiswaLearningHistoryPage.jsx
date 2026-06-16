@@ -118,7 +118,7 @@ export default function SiswaLearningHistoryPage({ session, onLogout }) {
                                 <select value={subjectFilter} onChange={(event) => setSubjectFilter(event.target.value)} className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-slate-900">
                                     <option value="">Semua mapel</option>
                                     {subjects.map((item) => (
-                                        <option key={item.id_mapel} value={item.id_mapel}>{item.nama_mapel}</option>
+                                        <option key={item.id_mapel} value={item.id_mapel}>{item.nama_lengkap || item.nama_mapel}</option>
                                     ))}
                                 </select>
                             </label>
@@ -141,7 +141,7 @@ export default function SiswaLearningHistoryPage({ session, onLogout }) {
                                     {subjects.map((item) => (
                                         <tr key={item.id_mapel} className="align-top hover:bg-slate-50/70">
                                             <td className="px-4 py-3 font-semibold text-slate-900">
-                                                <div>{item.nama_mapel || '-'}</div>
+                                                <div>{item.nama_lengkap || item.nama_mapel || '-'}</div>
                                                 <div className="mt-1 text-xs font-normal text-slate-500">Topik terakhir: {item.topik_terakhir || '-'}</div>
                                             </td>
                                             <td className="px-4 py-3 text-slate-600">
@@ -183,7 +183,7 @@ export default function SiswaLearningHistoryPage({ session, onLogout }) {
                                         <tr key={item.id_berita_acara} className="align-top hover:bg-slate-50/70">
                                             <td className="px-4 py-3 text-slate-600">{formatDateLabel(item.tanggal || item.tanggal_raw)}</td>
                                             <td className="px-4 py-3 font-semibold text-slate-900">{item.nama_kelas || '-'}</td>
-                                            <td className="px-4 py-3 text-slate-600">{item.nama_mapel || '-'}</td>
+                                            <td className="px-4 py-3 text-slate-600">{item.nama_lengkap || item.nama_mapel || '-'}</td>
                                             <td className="px-4 py-3 text-slate-600">{item.pertemuan_label || `Pertemuan ke-${item.pertemuan_ke}`}</td>
                                             <td className="px-4 py-3 text-slate-600">
                                                 <p className="font-medium text-slate-900">{item.materi_bahasan}</p>

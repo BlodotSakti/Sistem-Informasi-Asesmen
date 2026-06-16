@@ -1095,7 +1095,7 @@ export default function AdminWorkspacePage({ session, onLogout, mode = 'dashboar
                             {filteredMapel.map((item, index) => (
                                 <tr key={item.id_mapel} className={TABLE_BODY_ROW_CLASS}>
                                     <td className={TABLE_NUMBER_CELL_CLASS}>{index + 1}</td>
-                                    <td className={TABLE_TITLE_CELL_CLASS}>{item.nama_mapel}</td>
+                                    <td className={TABLE_TITLE_CELL_CLASS}>{item.nama_lengkap || item.nama_mapel}</td>
                                     <td className={TABLE_CELL_CLASS}>Tingkat {item.tingkat}</td>
                                     <td className={TABLE_ACTION_CELL_CLASS}>
                                         <div className={TABLE_ACTION_WRAP_CLASS}>
@@ -1292,7 +1292,7 @@ export default function AdminWorkspacePage({ session, onLogout, mode = 'dashboar
                         <span>Mata Pelajaran</span>
                         <select value={teachingAssignmentForm.id_mapel} onChange={(event) => setTeachingAssignmentForm((current) => ({ ...current, id_mapel: event.target.value }))} className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-slate-900">
                             <option value="">Pilih mata pelajaran</option>
-                            {(masterData.mata_pelajaran || []).map((mapel) => <option key={mapel.id_mapel} value={mapel.id_mapel}>{mapel.nama_mapel} • Tingkat {mapel.tingkat}</option>)}
+                            {(masterData.mata_pelajaran || []).map((mapel) => <option key={mapel.id_mapel} value={mapel.id_mapel}>{mapel.nama_lengkap || mapel.nama_mapel}</option>)}
                         </select>
                     </label>
                     <label className="space-y-2 text-sm font-medium text-slate-700">
@@ -1391,7 +1391,7 @@ export default function AdminWorkspacePage({ session, onLogout, mode = 'dashboar
                             {filteredTeachingAssignments.map((item, index) => (
                                 <tr key={item.id_penugasan_pembelajaran} className={TABLE_BODY_ROW_CLASS}>
                                     <td className={TABLE_NUMBER_CELL_CLASS}>{index + 1}</td>
-                                    <td className={TABLE_TITLE_CELL_CLASS}>{item.mata_pelajaran?.nama_mapel || '-'}</td>
+                                    <td className={TABLE_TITLE_CELL_CLASS}>{item.mata_pelajaran?.nama_lengkap || item.mata_pelajaran?.nama_mapel || '-'}</td>
                                     <td className={TABLE_CELL_CLASS}>{item.kelas?.nama_kelas || '-'}</td>
                                     <td className={TABLE_CELL_CLASS}>{item.guru?.nama_lengkap || '-'}</td>
                                     <td className={TABLE_CELL_CLASS}>{item.tahun_ajaran || '-'}</td>

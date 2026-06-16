@@ -43,6 +43,15 @@ class MataPelajaran extends Model
         'tingkat',
     ];
 
+    protected $appends = [
+        'nama_lengkap',
+    ];
+
+    public function getNamaLengkapAttribute(): string
+    {
+        return $this->nama_mapel . ($this->tingkat ? " ({$this->tingkat})" : '');
+    }
+
     public function bankSoal(): HasMany
     {
         return $this->hasMany(BankSoal::class, 'id_mapel', 'id_mapel');

@@ -1,6 +1,10 @@
 # CHANGELOG
 
 ## [Unreleased]
+### Changed
+- **Arsitektur Pemrosesan AI**: Mengubah logika pemanggilan Gemini AI (`GenerateAnalisisDiagnostikJob`) menjadi antrean asinkron (*background queue*) agar lebih andal saat digunakan oleh banyak siswa secara bersamaan.
+  - Submit CBT tidak lagi menunggu respons dari API Gemini, melainkan langsung menampilkan nilai instan dengan status narasi "Sedang diproses oleh AI...".
+  - Menambahkan limitasi *Rate Limit* dengan menggunakan penundaan `release(15)` jika terjadi error atau timeout pada Gemini API (kode 429/500).
 ### Fixed
 - **Bug Fix: Skor melebihi 100** — Perbaikan bug dimana skor siswa bisa melebihi total bobot (misal 115/100) karena data jawaban duplikat di tabel `jawaban_siswa`. Akar masalah: tidak ada unique constraint pada `(id_siswa, id_detail)`, sehingga submit ganda bisa menghasilkan record duplikat.
   - Menambahkan migration `unique index` pada kolom `(id_siswa, id_detail)` di tabel `jawaban_siswa`.

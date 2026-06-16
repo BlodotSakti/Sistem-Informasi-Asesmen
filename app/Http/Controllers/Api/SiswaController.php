@@ -12,6 +12,7 @@ use App\Models\JawabanSiswa;
 use App\Models\PenugasanPembelajaran;
 use App\Models\RencanaBelajar;
 use App\Models\SesiAsesmen;
+use App\Jobs\GenerateAnalisisDiagnostikJob;
 use App\Services\GeminiService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -178,6 +179,7 @@ class SiswaController extends Controller
                     'id_penugasan_pembelajaran' => $item->id_penugasan_pembelajaran,
                     'id_mapel' => $item->id_mapel,
                     'nama_mapel' => $item->mataPelajaran?->nama_mapel,
+                    'nama_lengkap' => $item->mataPelajaran?->nama_lengkap,
                     'guru' => $item->guru?->nama_lengkap,
                     'tahun_ajaran' => $item->tahun_ajaran,
                 ])->values(),
@@ -185,6 +187,7 @@ class SiswaController extends Controller
                     'id_rencana_belajar' => $item->id_rencana_belajar,
                     'id_mapel' => $item->id_mapel,
                     'nama_mapel' => $item->mataPelajaran?->nama_mapel,
+                    'nama_lengkap' => $item->mataPelajaran?->nama_lengkap,
                     'status' => $item->status,
                     'sumber' => $item->sumber,
                     'catatan' => $item->catatan,
@@ -211,6 +214,7 @@ class SiswaController extends Controller
                 'id_penugasan_pembelajaran' => $item->id_penugasan_pembelajaran,
                 'id_mapel' => $item->id_mapel,
                 'nama_mapel' => $item->mataPelajaran?->nama_mapel,
+                'nama_lengkap' => $item->mataPelajaran?->nama_lengkap,
                 'guru' => $item->guru?->nama_lengkap,
             ])->values(),
         ]);
@@ -278,6 +282,7 @@ class SiswaController extends Controller
                     'tahun_ajaran' => $item->kelas?->tahun_ajaran,
                     'id_mapel' => $item->id_mapel,
                     'nama_mapel' => $item->mataPelajaran?->nama_mapel,
+                    'nama_lengkap' => $item->mataPelajaran?->nama_lengkap,
                     'pertemuan_ke' => $item->pertemuan_ke,
                     'pertemuan_label' => 'Pertemuan ke-' . $item->pertemuan_ke,
                     'tanggal' => $item->tanggal?->format('d/m/Y'),
@@ -315,6 +320,7 @@ class SiswaController extends Controller
                 return [
                     'id_mapel' => $first['id_mapel'],
                     'nama_mapel' => $first['nama_mapel'],
+                    'nama_lengkap' => $first['nama_lengkap'] ?? null,
                     'total_pertemuan' => $items->count(),
                     'pertemuan_terakhir' => $first['tanggal'],
                     'topik_terakhir' => $first['materi_bahasan'],
@@ -558,11 +564,28 @@ class SiswaController extends Controller
 
         $jumlahBenar = collect($resultPerSoal)->where('is_correct', true)->count();
 
-        // --- Trigger Gemini AI Analisis Diagnostik ---
+        // --- Trigger Gemini AI Analisis Diagnostik (Asinkron) ---
         $analisisDiagnostik = null;
         try {
+            // 1. Simpan AnalisisDiagnostik awal (instan)
+            $analisis = AnalisisDiagnostik::updateOrCreate(
+                [
+                    'id_siswa' => $siswa->id_siswa,
+                    'id_sesi' => $id_sesi,
+                ],
+                [
+                    'skor_total' => $totalSkor,
+                    'tanggal_generate' => now(),
+                    'narasi_kekuatan' => 'Sedang diproses oleh AI...',
+                    'narasi_kelemahan' => 'Sedang diproses oleh AI...',
+                ]
+            );
+
+            // 2. Dispatch Job secara asinkron (background queue)
+            GenerateAnalisisDiagnostikJob::dispatch($siswa->id_siswa, $id_sesi);
+
+            // 3. Siapkan response instan untuk frontend
             $geminiService = new GeminiService();
-            $analisis = $geminiService->generateAnalisis($siswa->id_siswa, $id_sesi);
             $analisisDiagnostik = [
                 'id_analisis' => $analisis->id_analisis,
                 'skor_total' => $analisis->skor_total,
@@ -572,7 +595,7 @@ class SiswaController extends Controller
                 'rekap_kognitif' => $geminiService->buildRekapCognitive($siswa->id_siswa, $id_sesi)['rekap_level_kognitif'] ?? null,
             ];
         } catch (\Throwable $e) {
-            \Illuminate\Support\Facades\Log::warning('Gemini AI analysis failed after CBT submit.', [
+            \Illuminate\Support\Facades\Log::warning('Failed to dispatch Gemini AI analysis job.', [
                 'id_siswa' => $siswa->id_siswa,
                 'id_sesi' => $id_sesi,
                 'error' => $e->getMessage(),

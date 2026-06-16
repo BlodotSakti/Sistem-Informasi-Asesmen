@@ -211,7 +211,7 @@ export default function SiswaProfilePage({ session, onLogout }) {
                                     <tbody className="divide-y divide-slate-100 bg-white">
                                         {filteredSubjects.map((item) => (
                                             <tr key={item.id_penugasan_pembelajaran} className="align-top hover:bg-slate-50/70">
-                                                <td className="px-4 py-3 font-semibold text-slate-900">{item.nama_mapel || '-'}</td>
+                                                <td className="px-4 py-3 font-semibold text-slate-900">{item.nama_lengkap || item.nama_mapel || '-'}</td>
                                                 <td className="px-4 py-3 text-slate-600">{item.guru || '-'}</td>
                                                 <td className="px-4 py-3 text-slate-600">{item.tahun_ajaran || '-'}</td>
                                             </tr>
@@ -247,7 +247,7 @@ export default function SiswaProfilePage({ session, onLogout }) {
                                     <tbody className="divide-y divide-slate-100 bg-white">
                                         {filteredLearningPlans.map((item) => (
                                             <tr key={item.id_rencana_belajar} className="align-top hover:bg-slate-50/70">
-                                                <td className="px-4 py-3 font-semibold text-slate-900">{item.nama_mapel || '-'}</td>
+                                                <td className="px-4 py-3 font-semibold text-slate-900">{item.nama_lengkap || item.nama_mapel || '-'}</td>
                                                 <td className="px-4 py-3 text-slate-600">{item.status || '-'}</td>
                                                 <td className="px-4 py-3 text-slate-600">{item.sumber || '-'}</td>
                                             </tr>

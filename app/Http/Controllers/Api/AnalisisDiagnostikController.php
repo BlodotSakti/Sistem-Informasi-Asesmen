@@ -29,10 +29,11 @@ class AnalisisDiagnostikController extends Controller
     protected function dispatchAnalysis(int $idSiswa, int $idSesi): JsonResponse
     {
         try {
-            Bus::dispatchSync(new GenerateAnalisisDiagnostikJob($idSiswa, $idSesi));
+            // Dispatch secara asinkron agar tidak memblokir antarmuka dan mematuhi rate limit
+            GenerateAnalisisDiagnostikJob::dispatch($idSiswa, $idSesi);
 
             return response()->json([
-                'message' => 'Analisis diagnostik berhasil diproses.',
+                'message' => 'Analisis diagnostik berhasil masuk antrean untuk diproses.',
                 'data' => [
                     'id_siswa' => $idSiswa,
                     'id_sesi' => $idSesi,
