@@ -55,7 +55,7 @@ class GuruController extends Controller
 
         $bankSoal = BankSoal::query()
             ->with('mataPelajaran')
-            ->where('id_guru', $guruId)
+            ->where('created_by', $request->user()->id_pengguna)
             ->latest('id_soal')
             ->limit(30)
             ->get();
@@ -95,12 +95,12 @@ class GuruController extends Controller
 
     public function bankSoalIndex(Request $request): JsonResponse
     {
-        $guruId = $request->user()->guru->id_guru;
+        $penggunaId = $request->user()->id_pengguna;
 
         return response()->json(
             BankSoal::query()
                 ->with('mataPelajaran')
-                ->where('id_guru', $guruId)
+                ->where('created_by', $penggunaId)
                 ->latest('id_soal')
                 ->paginate(15)
         );
@@ -178,7 +178,7 @@ class GuruController extends Controller
             $data['kunci_jawaban'] = trim((string) $data['kunci_jawaban']);
         }
 
-        $data['id_guru'] = $guruId;
+        $data['created_by'] = $request->user()->id_pengguna;
         $data['opsi_jawaban'] = $cleanOptions;
 
         return response()->json(BankSoal::create($data), 201);
@@ -186,8 +186,9 @@ class GuruController extends Controller
 
     public function bankSoalUpdate(Request $request, int $id_soal): JsonResponse
     {
+        $penggunaId = $request->user()->id_pengguna;
         $guruId = $request->user()->guru->id_guru;
-        $bankSoal = BankSoal::query()->where('id_guru', $guruId)->findOrFail($id_soal);
+        $bankSoal = BankSoal::query()->where('created_by', $penggunaId)->findOrFail($id_soal);
 
         $validator = validator($request->all(), [
             'id_mapel' => ['required', 'integer', 'exists:mata_pelajaran,id_mapel'],
@@ -272,8 +273,8 @@ class GuruController extends Controller
 
     public function bankSoalDestroy(Request $request, int $id_soal): JsonResponse
     {
-        $guruId = $request->user()->guru->id_guru;
-        $bankSoal = BankSoal::query()->where('id_guru', $guruId)->findOrFail($id_soal);
+        $penggunaId = $request->user()->id_pengguna;
+        $bankSoal = BankSoal::query()->where('created_by', $penggunaId)->findOrFail($id_soal);
 
         try {
             $gambar_soal = $bankSoal->gambar_soal;
@@ -288,6 +289,55 @@ class GuruController extends Controller
             }
             throw $e;
         }
+    }
+
+    public function bankSoalShared(Request $request, int $id_mapel): JsonResponse
+    {
+        $guruId = $request->user()->guru->id_guru;
+        $this->ensureGuruMengampuMapel($guruId, $id_mapel);
+
+        return response()->json(
+            BankSoal::query()
+                ->with(['mataPelajaran', 'pembuat'])
+                ->where('id_mapel', $id_mapel)
+                ->latest('id_soal')
+                ->get()
+        );
+    }
+
+    public function bankSoalBulkStore(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'id_mapel' => ['required', 'integer', 'exists:mata_pelajaran,id_mapel'],
+            'soal' => ['required', 'array'],
+            'soal.*.isi_soal' => ['required', 'string'],
+            'soal.*.jenis_soal' => ['required', 'in:pilihan_ganda,esai,pilihan_ganda_kompleks'],
+            'soal.*.kunci_jawaban' => ['required'],
+            'soal.*.topik_materi' => ['required', 'string', 'max:255'],
+            'soal.*.level_kognitif' => ['required', 'in:C1,C2,C3,C4,C5,C6'],
+            'soal.*.opsi_jawaban' => ['nullable', 'array'],
+        ]);
+
+        $guruId = $request->user()->guru->id_guru;
+        $this->ensureGuruMengampuMapel($guruId, (int) $data['id_mapel']);
+        $penggunaId = $request->user()->id_pengguna;
+
+        $created = [];
+        foreach ($data['soal'] as $soal) {
+            $soal['created_by'] = $penggunaId;
+            $soal['id_mapel'] = $data['id_mapel'];
+            
+            if ($soal['jenis_soal'] === 'esai') {
+                $soal['opsi_jawaban'] = [];
+            }
+            if ($soal['jenis_soal'] === 'pilihan_ganda_kompleks' && is_string($soal['kunci_jawaban'])) {
+                $soal['kunci_jawaban'] = json_encode(array_values(array_filter(array_map('trim', explode(',', $soal['kunci_jawaban'])))));
+            }
+            
+            $created[] = BankSoal::create($soal);
+        }
+
+        return response()->json(['message' => count($created) . ' soal berhasil diimport.', 'data' => $created], 201);
     }
 
     public function sesiAsesmenDetail(Request $request, int $id_sesi): JsonResponse
@@ -776,7 +826,7 @@ class GuruController extends Controller
         return response()->json([
             'cards' => [
                 'total_kelas' => $kelasIds->count(),
-                'total_bank_soal' => BankSoal::query()->where('id_guru', $guruId)->count(),
+                'total_bank_soal' => BankSoal::query()->where('created_by', $request->user()->id_pengguna)->count(),
                 'total_penugasan' => $penugasan->count(),
                 'ujian_aktif' => SesiAsesmen::query()
                     ->when($kelasIds->isNotEmpty(), fn ($query) => $query->whereIn('id_kelas', $kelasIds))

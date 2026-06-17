@@ -33,6 +33,7 @@ export default function AdminDashboard({ session, onLogout }) {
         { label: 'Penempatan Siswa', href: '/admin/kelas-siswa', badge: 'Relasi' },
         { label: 'Penugasan Guru', href: '/admin/penugasan-pembelajaran', badge: 'Relasi' },
         { label: 'Pemetaan Akademik', href: '/admin/pemetaan-akademik', badge: 'Lihat' },
+        { label: 'Bank Soal', href: '/admin/bank-soal', badge: 'Pool' },
         { label: 'Import Akun', href: '/admin/import-akun', badge: 'Excel' },
     ]), []);
 

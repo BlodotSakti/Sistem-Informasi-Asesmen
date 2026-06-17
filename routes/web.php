@@ -28,7 +28,7 @@ Route::view('/admin/penugasan-pembelajaran', 'app');
 Route::view('/admin/import-akun', 'app');
 Route::get('/admin/{path?}', function () {
     return view('app');
-})->where('path', 'dashboard|pengguna|tahun-ajaran|kelas|mata-pelajaran|kelas-siswa|penugasan-pembelajaran|import-akun|pemetaan-akademik');
+})->where('path', 'dashboard|pengguna|tahun-ajaran|kelas|mata-pelajaran|kelas-siswa|penugasan-pembelajaran|import-akun|pemetaan-akademik|bank-soal');
 Route::get('/guru/{path?}', function () {
     return view('app');
 })->where('path', 'dashboard|jadwal-cbt|bank-soal|berita-acara|siswa|profil');

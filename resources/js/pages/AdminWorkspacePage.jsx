@@ -36,6 +36,10 @@ const MENU_META = {
         title: 'Import Akun',
         lead: 'Import akun guru dan siswa dari Excel dengan username otomatis dari NIP/NISN.',
     },
+    'bank-soal': {
+        title: 'Bank Soal',
+        lead: 'Manajemen Kolam Soal (Shared Pool) untuk semua Mata Pelajaran.',
+    },
 };
 
 function toInputDate(value) {
@@ -277,6 +281,7 @@ export default function AdminWorkspacePage({ session, onLogout, mode = 'dashboar
         { label: 'Penempatan Siswa', href: '/admin/kelas-siswa', badge: 'Relasi' },
         { label: 'Penugasan Guru', href: '/admin/penugasan-pembelajaran', badge: 'Relasi' },
         { label: 'Pemetaan Akademik', href: '/admin/pemetaan-akademik', badge: 'Lihat' },
+        { label: 'Bank Soal', href: '/admin/bank-soal', badge: 'Pool' },
         { label: 'Import Akun', href: '/admin/import-akun', badge: 'Excel' },
     ]), []);
 

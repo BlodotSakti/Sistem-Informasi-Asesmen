@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\AdminController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\ProfileController;
+use App\Http\Controllers\Api\AdminBankSoalController;
 use App\Http\Controllers\Api\GuruController;
 use App\Http\Controllers\Api\SiswaController;
 use App\Http\Controllers\Api\AcademicMappingController;
@@ -57,6 +58,11 @@ Route::middleware('auth:sanctum')->group(function (): void {
 			Route::patch('/kelas-siswa/{kelasSiswa}', [AdminController::class, 'kelasSiswaUpdate'])->name('kelas-siswa.update');
 			Route::delete('/kelas-siswa/{kelasSiswa}', [AdminController::class, 'kelasSiswaDestroy'])->name('kelas-siswa.destroy');
 
+			Route::get('/bank-soal', [AdminBankSoalController::class, 'index'])->name('bank-soal.index');
+			Route::post('/bank-soal', [AdminBankSoalController::class, 'store'])->name('bank-soal.store');
+			Route::patch('/bank-soal/{id_soal}', [AdminBankSoalController::class, 'update'])->name('bank-soal.update');
+			Route::delete('/bank-soal/{id_soal}', [AdminBankSoalController::class, 'destroy'])->name('bank-soal.destroy');
+			Route::post('/bank-soal/bulk', [AdminBankSoalController::class, 'bulkStore'])->name('bank-soal.bulk-store');
 			Route::get('/penugasan-pembelajaran', [AdminController::class, 'penugasanPembelajaranIndex'])->name('penugasan-pembelajaran.index');
 			Route::post('/penugasan-pembelajaran', [AdminController::class, 'penugasanPembelajaranStore'])->name('penugasan-pembelajaran.store');
 			Route::post('/penugasan-pembelajaran/bulk-import', [AdminController::class, 'penugasanPembelajaranBulkImport'])->name('penugasan-pembelajaran.bulk-import');
@@ -71,6 +77,8 @@ Route::middleware('auth:sanctum')->group(function (): void {
 			Route::get('/workspace-data', [GuruController::class, 'workspaceData'])->name('workspace-data');
 			Route::get('/bank-soal', [GuruController::class, 'bankSoalIndex'])->name('bank-soal.index');
 			Route::post('/bank-soal', [GuruController::class, 'bankSoalStore'])->name('bank-soal.store');
+			Route::post('/bank-soal/bulk', [GuruController::class, 'bankSoalBulkStore'])->name('bank-soal.bulk-store');
+			Route::get('/bank-soal-shared/{id_mapel}', [GuruController::class, 'bankSoalShared'])->name('bank-soal.shared');
 			Route::patch('/bank-soal/{id_soal}', [GuruController::class, 'bankSoalUpdate'])->name('bank-soal.update');
 			Route::delete('/bank-soal/{id_soal}', [GuruController::class, 'bankSoalDestroy'])->name('bank-soal.destroy');
 			Route::get('/sesi-asesmen', [GuruController::class, 'sesiAsesmenIndex'])->name('sesi-asesmen.index');
@@ -94,8 +102,6 @@ Route::middleware('auth:sanctum')->group(function (): void {
 			Route::get('/riwayat-pembelajaran', [SiswaController::class, 'riwayatPembelajaran'])->name('riwayat-pembelajaran.index');
 			Route::get('/catatan-privat', [SiswaController::class, 'catatanPrivat'])->name('catatan-privat.index');
 			Route::get('/apresiasi', [SiswaController::class, 'apresiasi'])->name('apresiasi.index');
-			Route::get('/rencana-belajar', [SiswaController::class, 'rencanaBelajarIndex'])->name('rencana-belajar.index');
-			Route::post('/rencana-belajar', [SiswaController::class, 'rencanaBelajarStore'])->name('rencana-belajar.store');
 			Route::get('/cbt/riwayat', [SiswaController::class, 'cbtHistory'])->name('cbt.history');
 			Route::get('/cbt/{id_sesi}', [SiswaController::class, 'cbtData'])->name('cbt.data');
 			Route::post('/cbt/{id_sesi}/submit', [SiswaController::class, 'cbtSubmit'])->name('cbt.submit');

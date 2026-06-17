@@ -5,11 +5,11 @@ import LoginPage from './pages/LoginPage';
 import AdminWorkspacePage from './pages/AdminWorkspacePage';
 import AdminAcademicMappingPage from './pages/AdminAcademicMappingPage';
 import AdminDashboard from './pages/AdminDashboard';
+import AdminBankSoalPage from './pages/AdminBankSoalPage';
 import GuruDashboard from './pages/GuruDashboard';
 import SiswaDashboard from './pages/SiswaDashboard';
 import SiswaProfilePage from './pages/SiswaProfilePage';
 import SiswaSessionsPage from './pages/SiswaSessionsPage';
-import SiswaLearningPlanPage from './pages/SiswaLearningPlanPage';
 import SiswaLearningHistoryPage from './pages/SiswaLearningHistoryPage';
 import SiswaAppreciationPage from './pages/SiswaAppreciationPage';
 import SiswaCbtPage from './pages/SiswaCbtPage';
@@ -59,6 +59,7 @@ function App() {
             '/admin/penugasan-pembelajaran',
             '/admin/pemetaan-akademik',
             '/admin/import-akun',
+            '/admin/bank-soal',
             '/guru/dashboard',
             '/guru/jadwal-cbt',
             '/guru/bank-soal',
@@ -68,7 +69,6 @@ function App() {
             '/siswa/dashboard',
             '/siswa/profil',
             '/siswa/sesi-aktif',
-            '/siswa/rencana-belajar',
             '/siswa/riwayat-pembelajaran',
             '/siswa/apresiasi',
             '/siswa/riwayat-cbt',
@@ -166,6 +166,10 @@ function App() {
             return <AdminWorkspacePage session={session} onLogout={onLogout} mode={adminRouteMap[pathname]} />;
         }
 
+        if (pathname === '/admin/bank-soal') {
+            return <AdminBankSoalPage session={session} onLogout={onLogout} />;
+        }
+
         const guruRouteMap = {
             '/guru/dashboard': 'dashboard',
             '/guru/jadwal-cbt': 'jadwal-cbt',
@@ -193,9 +197,6 @@ function App() {
             return <SiswaSessionsPage session={session} onLogout={onLogout} />;
         }
 
-        if (pathname === '/siswa/rencana-belajar') {
-            return <SiswaLearningPlanPage session={session} onLogout={onLogout} />;
-        }
 
         if (pathname === '/siswa/riwayat-pembelajaran') {
             return <SiswaLearningHistoryPage session={session} onLogout={onLogout} />;

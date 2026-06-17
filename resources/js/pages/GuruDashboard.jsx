@@ -1,4 +1,6 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useRef } from 'react';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import * as XLSX from 'xlsx';
 import DashboardLayout from '../components/layout/DashboardLayout';
 import StatCard from '../components/ui/StatCard';
 import { apiFetch } from '../lib/api';
@@ -71,6 +73,75 @@ export default function GuruDashboard({ session, onLogout, mode = 'dashboard' })
         boleh_ulang: false,
     });
     const [selectedSoalMap, setSelectedSoalMap] = useState({});
+    const [sharedBankSoal, setSharedBankSoal] = useState([]);
+    const [sharedBankSoalLoading, setSharedBankSoalLoading] = useState(false);
+    const fileInputRef = useRef(null);
+
+    const handleFileUpload = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = async (evt) => {
+            try {
+                const bstr = evt.target.result;
+                const wb = XLSX.read(bstr, { type: 'binary' });
+                const wsname = wb.SheetNames[0];
+                const ws = wb.Sheets[wsname];
+                const data = XLSX.utils.sheet_to_json(ws);
+                
+                if (data.length === 0) {
+                    alert('File Excel kosong atau format tidak sesuai.');
+                    return;
+                }
+
+                // Map data from excel
+                const mapelGroup = data.reduce((acc, row) => {
+                    const idMapel = row.id_mapel;
+                    if (!idMapel) return acc;
+                    if (!acc[idMapel]) acc[idMapel] = [];
+                    
+                    let opsi = [];
+                    if (row.opsi_a) opsi.push(row.opsi_a);
+                    if (row.opsi_b) opsi.push(row.opsi_b);
+                    if (row.opsi_c) opsi.push(row.opsi_c);
+                    if (row.opsi_d) opsi.push(row.opsi_d);
+                    if (row.opsi_e) opsi.push(row.opsi_e);
+
+                    acc[idMapel].push({
+                        isi_soal: row.isi_soal,
+                        jenis_soal: row.jenis_soal || 'pilihan_ganda',
+                        kunci_jawaban: row.kunci_jawaban,
+                        topik_materi: row.topik_materi || 'Umum',
+                        level_kognitif: row.level_kognitif || 'C1',
+                        opsi_jawaban: opsi
+                    });
+                    return acc;
+                }, {});
+
+                for (const [idMapel, soalArray] of Object.entries(mapelGroup)) {
+                    await apiFetch('/api/guru/bank-soal/bulk', session, {
+                        method: 'POST',
+                        body: JSON.stringify({
+                            id_mapel: parseInt(idMapel),
+                            soal: soalArray
+                        })
+                    });
+                }
+                
+                alert('Berhasil mengimpor soal dari Excel!');
+                
+                // Reload data
+                const response = await apiFetch('/api/guru/workspace-data', session);
+                setWorkspace(response);
+            } catch (err) {
+                console.error(err);
+                alert('Terjadi kesalahan saat memproses file Excel: ' + (err.message || err));
+            }
+        };
+        reader.readAsBinaryString(file);
+        if (fileInputRef.current) fileInputRef.current.value = '';
+    };
 
     const [beritaForm, setBeritaForm] = useState({
         id_kelas: '',
@@ -145,6 +216,28 @@ export default function GuruDashboard({ session, onLogout, mode = 'dashboard' })
             mounted = false;
         };
     }, [session]);
+
+    useEffect(() => {
+        const fetchSharedSoal = async () => {
+            if (!sesiForm.id_mapel) {
+                setSharedBankSoal([]);
+                return;
+            }
+            try {
+                setSharedBankSoalLoading(true);
+                const data = await apiFetch(`/api/guru/bank-soal-shared/${sesiForm.id_mapel}`, session);
+                setSharedBankSoal(data || []);
+            } catch (err) {
+                console.error("Failed to fetch shared bank soal", err);
+            } finally {
+                setSharedBankSoalLoading(false);
+            }
+        };
+
+        if (isSesiModalOpen) {
+            fetchSharedSoal();
+        }
+    }, [sesiForm.id_mapel, isSesiModalOpen, session]);
 
     const studentNameMap = useMemo(() => {
         const map = {};
@@ -908,6 +1001,12 @@ export default function GuruDashboard({ session, onLogout, mode = 'dashboard' })
                         <h4 className="text-lg font-semibold text-slate-900">Data Bank Soal</h4>
                         <p className="text-sm text-slate-500">Pastikan topik dan level Bloom terisi untuk semua soal.</p>
                     </div>
+                    <div className="flex items-center gap-3">
+                        <input type="file" accept=".xlsx, .xls" className="hidden" ref={fileInputRef} onChange={handleFileUpload} />
+                        <button type="button" onClick={() => fileInputRef.current?.click()} className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-sm font-semibold transition shadow-sm">
+                            Import Excel
+                        </button>
+                    </div>
                 </div>
                 <div className="border-b border-slate-200 px-5 py-4">
                     <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4 lg:items-end">
@@ -1326,8 +1425,8 @@ export default function GuruDashboard({ session, onLogout, mode = 'dashboard' })
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-slate-100">
-                                            {(workspace.bank_soal || [])
-                                                .filter(item => sesiForm.id_mapel && String(item.id_mapel) === String(sesiForm.id_mapel))
+                                            {sharedBankSoalLoading && <tr><td colSpan="7" className="px-4 py-8 text-center text-slate-500">Memuat bank soal...</td></tr>}
+                                            {!sharedBankSoalLoading && sharedBankSoal
                                                 .map(item => (
                                                 <tr key={item.id_soal} className="hover:bg-slate-50">
                                                     <td className="px-4 py-3">
@@ -1348,7 +1447,14 @@ export default function GuruDashboard({ session, onLogout, mode = 'dashboard' })
                                                     </td>
                                                     <td className="px-4 py-3 truncate max-w-xs">{item.isi_soal.substring(0, 50)}...</td>
                                                     <td className="px-4 py-3">{item.tipe_soal === 'pilihan_ganda_kompleks' ? 'PGK' : item.tipe_soal === 'esai' ? 'Esai' : 'PG'}</td>
-                                                    <td className="px-4 py-3">{item.mata_pelajaran?.nama_lengkap || item.mata_pelajaran?.nama_mapel}</td>
+                                                    <td className="px-4 py-3">
+                                                        <div className="flex flex-col">
+                                                            <span>{item.mata_pelajaran?.nama_lengkap || item.mata_pelajaran?.nama_mapel}</span>
+                                                            <span className={`mt-1 inline-flex w-max px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider ${item.created_by === session.user.id_pengguna ? 'bg-blue-100 text-blue-700' : 'bg-amber-100 text-amber-700'}`}>
+                                                                {item.created_by === session.user.id_pengguna ? 'Soal Anda' : (item.pembuat?.peran === 'admin' ? 'Soal Admin' : 'Soal Guru Lain')}
+                                                            </span>
+                                                        </div>
+                                                    </td>
                                                     <td className="px-4 py-3">{item.topik_materi}</td>
                                                     <td className="px-4 py-3 capitalize">{item.jenis_soal.replace(/_/g, ' ')}</td>
                                                     <td className="px-4 py-3">
@@ -1365,7 +1471,7 @@ export default function GuruDashboard({ session, onLogout, mode = 'dashboard' })
                                             {!sesiForm.id_mapel && (
                                                 <tr><td colSpan="7" className="px-4 py-8 text-center text-slate-500">Silakan pilih Mata Pelajaran terlebih dahulu.</td></tr>
                                             )}
-                                            {sesiForm.id_mapel && (workspace.bank_soal || []).filter(item => String(item.id_mapel) === String(sesiForm.id_mapel)).length === 0 && (
+                                            {!sharedBankSoalLoading && sesiForm.id_mapel && sharedBankSoal.length === 0 && (
                                                 <tr><td colSpan="7" className="px-4 py-8 text-center text-slate-500">Bank soal kosong untuk mata pelajaran ini.</td></tr>
                                             )}
                                         </tbody>

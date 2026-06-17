@@ -11,7 +11,6 @@ export default function SiswaProfilePage({ session, onLogout }) {
     const [error, setError] = useState('');
     const [classHistorySearch, setClassHistorySearch] = useState('');
     const [subjectSearch, setSubjectSearch] = useState('');
-    const [learningPlanSearch, setLearningPlanSearch] = useState('');
 
     useEffect(() => {
         let mounted = true;
@@ -46,7 +45,6 @@ export default function SiswaProfilePage({ session, onLogout }) {
 
     const profile = summary?.profile || {};
     const subjects = useMemo(() => profile.mata_pelajaran || [], [profile]);
-    const learningPlans = useMemo(() => profile.rencana_belajar || [], [profile]);
     const classHistory = useMemo(() => profile.riwayat_kelas || [], [profile]);
 
     const filteredClassHistory = useMemo(() => {
@@ -77,20 +75,6 @@ export default function SiswaProfilePage({ session, onLogout }) {
         });
     }, [subjectSearch, subjects]);
 
-    const filteredLearningPlans = useMemo(() => {
-        const search = learningPlanSearch.trim().toLowerCase();
-
-        return learningPlans.filter((item) => {
-            if (search === '') {
-                return true;
-            }
-
-            return [item.nama_mapel, item.status, item.sumber]
-                .filter(Boolean)
-                .some((value) => String(value).toLowerCase().includes(search));
-        });
-    }, [learningPlanSearch, learningPlans]);
-
     return (
         <DashboardLayout title="Profil Siswa" user={session?.user} navigation={siswaNavigation} onLogout={onLogout} profileHref="/siswa/dashboard">
             <div className="space-y-6">
@@ -117,11 +101,10 @@ export default function SiswaProfilePage({ session, onLogout }) {
                     </div>
                 </section>
 
-                <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                <section className="grid gap-4 md:grid-cols-3">
                     <StatCard label="Kelas Aktif" value={loading ? '...' : profile.kelas_aktif?.nama_kelas || '0'} description="Kelas yang sedang diikuti" tone="blue" />
                     <StatCard label="Riwayat Kelas" value={loading ? '...' : classHistory.length} description="Jejak perpindahan kelas" tone="amber" />
                     <StatCard label="Mapel Aktif" value={loading ? '...' : subjects.length} description="Penugasan guru terkait" tone="slate" />
-                    <StatCard label="Rencana Belajar" value={loading ? '...' : learningPlans.length} description="Kartu yang tersimpan" tone="rose" />
                 </section>
 
                 {error ? <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div> : null}
@@ -151,6 +134,9 @@ export default function SiswaProfilePage({ session, onLogout }) {
 
                         <ProfileCredentialsForm session={session} />
 
+                    </div>
+
+                    <div className="space-y-6">
                         <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
                             <p className="text-sm font-medium uppercase tracking-[0.3em] text-slate-500">Riwayat Kelas</p>
                             <h3 className="mt-2 text-xl font-semibold text-slate-900">Perpindahan dan histori kelas</h3>
@@ -190,9 +176,8 @@ export default function SiswaProfilePage({ session, onLogout }) {
                                 </table>
                             </div>
                         </div>
-                    </div>
 
-                    <div className="space-y-6">
+
                         <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
                             <p className="text-sm font-medium uppercase tracking-[0.3em] text-slate-500">Mapel Aktif</p>
                             <h3 className="mt-2 text-xl font-semibold text-slate-900">Mata pelajaran yang terhubung ke kelas aktif</h3>
@@ -229,41 +214,7 @@ export default function SiswaProfilePage({ session, onLogout }) {
                             </div>
                         </div>
 
-                        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-                            <p className="text-sm font-medium uppercase tracking-[0.3em] text-slate-500">Rencana Belajar</p>
-                            <h3 className="mt-2 text-xl font-semibold text-slate-900">Kartu belajar yang sudah disimpan</h3>
 
-                            <label className="mt-4 block space-y-2 text-sm font-medium text-slate-700">
-                                <span>Cari rencana belajar</span>
-                                <input value={learningPlanSearch} onChange={(event) => setLearningPlanSearch(event.target.value)} className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-slate-900" placeholder="Mapel, status, atau sumber" />
-                            </label>
-
-                            <div className="mt-6 overflow-x-auto rounded-3xl border border-slate-200">
-                                <table className="min-w-full divide-y divide-slate-200 text-left text-sm">
-                                    <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase tracking-[0.2em] text-slate-500">
-                                        <tr>
-                                            <th className="px-4 py-3 font-semibold">Mapel</th>
-                                            <th className="px-4 py-3 font-semibold">Status</th>
-                                            <th className="px-4 py-3 font-semibold">Sumber</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-slate-100 bg-white">
-                                        {filteredLearningPlans.map((item) => (
-                                            <tr key={item.id_rencana_belajar} className="align-top hover:bg-slate-50/70">
-                                                <td className="px-4 py-3 font-semibold text-slate-900">{item.nama_lengkap || item.nama_mapel || '-'}</td>
-                                                <td className="px-4 py-3 text-slate-600">{item.status || '-'}</td>
-                                                <td className="px-4 py-3 text-slate-600">{item.sumber || '-'}</td>
-                                            </tr>
-                                        ))}
-                                        {filteredLearningPlans.length === 0 ? (
-                                            <tr>
-                                                <td colSpan="3" className="px-4 py-4 text-sm text-slate-500">Belum ada kartu rencana belajar.</td>
-                                            </tr>
-                                        ) : null}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
                     </div>
                 </section>
             </div>

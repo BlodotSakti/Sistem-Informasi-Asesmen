@@ -2,6 +2,14 @@
 
 ## [Unreleased]
 ### Changed
+- **Arsitektur Bank Soal (Shared Pool)**: Mengubah struktur kepemilikan tabel `bank_soal` dari spesifik milik Guru (`id_guru`) menjadi bersifat komunal/bersama. 
+  - Admin kini dapat mengelola seluruh soal dari semua Mata Pelajaran dan Guru.
+  - Guru dapat membuat soal baru dan mengimpor soal dari Excel, namun hanya bisa mengedit/menghapus soal miliknya sendiri.
+  - Saat Guru membuat Jadwal CBT, daftar "Pilih Soal" kini mengambil data dari seluruh *Shared Pool* berdasarkan Mata Pelajaran (termasuk soal buatan Admin atau Guru lain), lengkap dengan label penanda "Soal Anda" atau "Soal Admin".
+  - Penambahan pustaka eksternal `xlsx` pada Frontend untuk fungsi Bulk Import tanpa memberatkan server.
+### Added
+- **UI Admin Bank Soal**: Penambahan Halaman Manajemen Bank Soal di sisi Admin untuk melihat, memfilter, dan menghapus soal, serta unggah masal via *Excel*.
+- **Bulk Import Excel**: Guru dan Admin kini dapat melakukan unggah soal masal menggunakan format `.xlsx`.
 - **Arsitektur Pemrosesan AI**: Mengubah logika pemanggilan Gemini AI (`GenerateAnalisisDiagnostikJob`) menjadi antrean asinkron (*background queue*) agar lebih andal saat digunakan oleh banyak siswa secara bersamaan.
   - Submit CBT tidak lagi menunggu respons dari API Gemini, melainkan langsung menampilkan nilai instan dengan status narasi "Sedang diproses oleh AI...".
   - Menambahkan limitasi *Rate Limit* dengan menggunakan penundaan `release(15)` jika terjadi error atau timeout pada Gemini API (kode 429/500).

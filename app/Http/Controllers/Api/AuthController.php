@@ -88,7 +88,6 @@ class AuthController extends Controller
             $pengguna->loadMissing([
                 'siswa.kelasAktifAssignment.kelas.guruWali',
                 'siswa.kelasRiwayat.kelas.guruWali',
-                'siswa.rencanaBelajar.mataPelajaran',
             ]);
 
             return;

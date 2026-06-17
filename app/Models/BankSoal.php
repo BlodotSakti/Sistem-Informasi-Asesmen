@@ -49,7 +49,7 @@ class BankSoal extends Model
     protected $primaryKey = 'id_soal';
 
     protected $fillable = [
-        'id_guru',
+        'created_by',
         'id_mapel',
         'isi_soal',
         'jenis_soal',
@@ -64,9 +64,9 @@ class BankSoal extends Model
         'opsi_jawaban' => 'array',
     ];
 
-    public function guru(): BelongsTo
+    public function pembuat(): BelongsTo
     {
-        return $this->belongsTo(Guru::class, 'id_guru', 'id_guru');
+        return $this->belongsTo(Pengguna::class, 'created_by', 'id_pengguna');
     }
 
     public function mataPelajaran(): BelongsTo

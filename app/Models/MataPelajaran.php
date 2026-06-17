@@ -66,9 +66,4 @@ class MataPelajaran extends Model
     {
         return $this->hasMany(PenugasanPembelajaran::class, 'id_mapel', 'id_mapel');
     }
-
-    public function rencanaBelajar(): HasMany
-    {
-        return $this->hasMany(RencanaBelajar::class, 'id_mapel', 'id_mapel');
-    }
 }

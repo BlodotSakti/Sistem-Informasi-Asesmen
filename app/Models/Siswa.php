@@ -90,9 +90,4 @@ class Siswa extends Model
             ->where('is_aktif', true)
             ->latestOfMany('tanggal_masuk');
     }
-
-    public function rencanaBelajar(): HasMany
-    {
-        return $this->hasMany(RencanaBelajar::class, 'id_siswa', 'id_siswa');
-    }
 }

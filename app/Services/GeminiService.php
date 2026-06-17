@@ -37,28 +37,31 @@ class GeminiService
             ]);
 
         if ($response->failed()) {
-            throw new \RuntimeException('Gemini API gagal merespons dengan status '.$response->status());
-        }
-
-        $rawText = '';
-        $parts = data_get($response->json(), 'candidates.0.content.parts', []);
-        
-        foreach ($parts as $part) {
-            if (isset($part['text']) && !isset($part['thought'])) {
-                $rawText = $part['text'];
+            Log::error('Gemini API Error Body: ' . $response->body());
+            
+            // Fallback generation logic if Gemini API is unavailable
+            [$narasiKekuatan, $narasiKelemahan] = $this->generateFallbackAnalisis($rekap['rekap_level_kognitif'], $rekap['rekap_topik_materi']);
+        } else {
+            $rawText = '';
+            $parts = data_get($response->json(), 'candidates.0.content.parts', []);
+            
+            foreach ($parts as $part) {
+                if (isset($part['text']) && !isset($part['thought'])) {
+                    $rawText = $part['text'];
+                }
             }
-        }
-        
-        if (empty($rawText)) {
-            $rawText = data_get($response->json(), 'candidates.0.content.parts.0.text', '');
-        }
+            
+            if (empty($rawText)) {
+                $rawText = data_get($response->json(), 'candidates.0.content.parts.0.text', '');
+            }
 
-        Log::info('Gemini raw response', ['id_siswa' => $idSiswa, 'id_sesi' => $idSesi, 'raw' => mb_substr($rawText, 0, 500)]);
+            Log::info('Gemini raw response', ['id_siswa' => $idSiswa, 'id_sesi' => $idSesi, 'raw' => mb_substr($rawText, 0, 500)]);
 
-        [$narasiKekuatan, $narasiKelemahan] = $this->parseGeminiResponse($rawText);
+            [$narasiKekuatan, $narasiKelemahan] = $this->parseGeminiResponse($rawText);
 
-        if (empty($narasiKekuatan) && empty($narasiKelemahan)) {
-            throw new \RuntimeException('Gemini mengembalikan narasi kosong setelah parsing.');
+            if (empty($narasiKekuatan) && empty($narasiKelemahan)) {
+                [$narasiKekuatan, $narasiKelemahan] = $this->generateFallbackAnalisis($rekap['rekap_level_kognitif'], $rekap['rekap_topik_materi']);
+            }
         }
 
         $existing = AnalisisDiagnostik::query()
@@ -213,6 +216,42 @@ PROMPT;
         if (preg_match('/"narasi_kelemahan"\s*:\s*"([^"]*)"/is', $rawText, $matchKelemahan)) {
             $narasiKelemahan = trim(str_replace('\"', '"', $matchKelemahan[1]));
         }
+
+        return [$narasiKekuatan, $narasiKelemahan];
+    }
+
+    protected function generateFallbackAnalisis(array $rekapKognitif, array $rekapTopik): array
+    {
+        $kekuatan = [];
+        $kelemahan = [];
+
+        foreach ($rekapKognitif as $level => $data) {
+            if ($data['jumlah_soal'] > 0) {
+                if ($data['persentase'] >= 75) {
+                    $kekuatan[] = "kemampuan kognitif level {$level}";
+                } elseif ($data['persentase'] < 50) {
+                    $kelemahan[] = "kemampuan kognitif level {$level}";
+                }
+            }
+        }
+
+        foreach ($rekapTopik as $topik => $data) {
+            if ($data['jumlah_soal'] > 0) {
+                if ($data['persentase'] >= 75) {
+                    $kekuatan[] = "penguasaan topik {$topik}";
+                } elseif ($data['persentase'] < 50) {
+                    $kelemahan[] = "penguasaan topik {$topik}";
+                }
+            }
+        }
+
+        $narasiKekuatan = !empty($kekuatan) 
+            ? "Berdasarkan data sistem, Anda menunjukkan pemahaman yang sangat baik pada " . implode(', ', $kekuatan) . ". Terus pertahankan prestasi ini!" 
+            : "Anda telah berusaha menyelesaikan asesmen dengan baik, namun perlu lebih banyak latihan agar pemahamannya lebih mantap.";
+        
+        $narasiKelemahan = !empty($kelemahan) 
+            ? "Anda perlu meningkatkan fokus dan berlatih lebih banyak pada " . implode(', ', $kelemahan) . ". Disarankan untuk mengulang kembali materi terkait." 
+            : "Anda sudah menguasai sebagian besar materi, namun disarankan untuk terus berlatih soal-soal bervariasi.";
 
         return [$narasiKekuatan, $narasiKelemahan];
     }

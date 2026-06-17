@@ -10,7 +10,6 @@ use App\Models\CatatanPrivat;
 use App\Models\KelasSiswa;
 use App\Models\JawabanSiswa;
 use App\Models\PenugasanPembelajaran;
-use App\Models\RencanaBelajar;
 use App\Models\SesiAsesmen;
 use App\Jobs\GenerateAnalisisDiagnostikJob;
 use App\Services\GeminiService;
@@ -115,7 +114,6 @@ class SiswaController extends Controller
         $pengguna = $request->user()->loadMissing([
             'siswa.kelasAktifAssignment.kelas.guruWali',
             'siswa.kelasRiwayat.kelas.guruWali',
-            'siswa.rencanaBelajar.mataPelajaran',
         ]);
 
         $siswa = $pengguna->siswa;
@@ -136,12 +134,6 @@ class SiswaController extends Controller
             ->with('kelas.guruWali')
             ->where('is_aktif', false)
             ->latest('tanggal_masuk')
-            ->limit(5)
-            ->get();
-
-        $rencanaBelajar = $siswa->rencanaBelajar()
-            ->with('mataPelajaran')
-            ->latest()
             ->limit(5)
             ->get();
 
@@ -182,15 +174,6 @@ class SiswaController extends Controller
                     'nama_lengkap' => $item->mataPelajaran?->nama_lengkap,
                     'guru' => $item->guru?->nama_lengkap,
                     'tahun_ajaran' => $item->tahun_ajaran,
-                ])->values(),
-                'rencana_belajar' => $rencanaBelajar->map(fn (RencanaBelajar $item): array => [
-                    'id_rencana_belajar' => $item->id_rencana_belajar,
-                    'id_mapel' => $item->id_mapel,
-                    'nama_mapel' => $item->mataPelajaran?->nama_mapel,
-                    'nama_lengkap' => $item->mataPelajaran?->nama_lengkap,
-                    'status' => $item->status,
-                    'sumber' => $item->sumber,
-                    'catatan' => $item->catatan,
                 ])->values(),
             ],
             'cards' => [
@@ -347,40 +330,6 @@ class SiswaController extends Controller
         ]);
     }
 
-    public function rencanaBelajarIndex(Request $request): JsonResponse
-    {
-        return response()->json(
-            RencanaBelajar::query()
-                ->where('id_siswa', $request->user()->siswa->id_siswa)
-                ->with('mataPelajaran')
-                ->latest()
-                ->paginate(15)
-        );
-    }
-
-    public function rencanaBelajarStore(Request $request): JsonResponse
-    {
-        $data = $request->validate([
-            'id_mapel' => ['required', 'integer', 'exists:mata_pelajaran,id_mapel'],
-            'catatan' => ['nullable', 'string', 'max:1000'],
-            'sumber' => ['sometimes', Rule::in(['manual', 'kelas', 'guru'])],
-            'status' => ['sometimes', Rule::in(['direncanakan', 'sedang_dipelajari', 'selesai'])],
-        ]);
-
-        $rencana = RencanaBelajar::query()->updateOrCreate(
-            [
-                'id_siswa' => $request->user()->siswa->id_siswa,
-                'id_mapel' => $data['id_mapel'],
-            ],
-            [
-                'catatan' => $data['catatan'] ?? null,
-                'sumber' => $data['sumber'] ?? 'manual',
-                'status' => $data['status'] ?? 'direncanakan',
-            ]
-        );
-
-        return response()->json($rencana->fresh('mataPelajaran'), 201);
-    }
 
     public function cbtData(Request $request, int $id_sesi): JsonResponse
     {
