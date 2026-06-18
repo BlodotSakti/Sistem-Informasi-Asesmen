@@ -190,9 +190,10 @@ class SiswaController extends Controller
             }),
             'highlight' => [
                 'latest_score' => $latestScore,
-                'badge' => Apresiasi::query()->where('id_siswa', $idSiswa)->latest('tanggal')->first(),
-                'notes' => CatatanPrivat::query()->where('id_siswa', $idSiswa)->latest('tanggal')->limit(3)->get(),
+                'badge' => Apresiasi::query()->where('id_siswa', $idSiswa)->with('guru')->latest('tanggal')->first(),
+                'notes' => CatatanPrivat::query()->where('id_siswa', $idSiswa)->with('guru')->latest('tanggal')->limit(3)->get(),
             ],
+            'badges' => Apresiasi::query()->where('id_siswa', $idSiswa)->with('guru')->latest('tanggal')->get(),
             'available_subjects' => $penugasan->map(fn (PenugasanPembelajaran $item): array => [
                 'id_penugasan_pembelajaran' => $item->id_penugasan_pembelajaran,
                 'id_mapel' => $item->id_mapel,

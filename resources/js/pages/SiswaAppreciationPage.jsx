@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import DashboardLayout from '../components/layout/DashboardLayout';
 import StatCard from '../components/ui/StatCard';
+import BadgeIcon from '../components/ui/BadgeIcon';
 import { formatDateLabel } from '../lib/date';
 import { siswaNavigation } from './siswa/siswaNavigation';
 import { useSiswaData } from './siswa/useSiswaData';
@@ -24,77 +25,164 @@ export default function SiswaAppreciationPage({ session, onLogout }) {
         });
     }, [noteSearch, summary?.highlight?.notes]);
 
+    const allBadges = useMemo(() => {
+        // We get badges from the summary cards or API, if available.
+        // Assuming the backend provides `all_badges` in summary (if we modify backend)
+        // or we just show the highlight badge if backend is not updated to return all badges.
+        // But let's assume `summary.badges` is an array if we map it, otherwise fallback to highlight badge.
+        if (summary?.badges && Array.isArray(summary.badges)) {
+            return summary.badges;
+        }
+        
+        // Mocking an array based on highlight if no all_badges available yet
+        if (summary?.highlight?.badge) {
+            return [summary.highlight.badge];
+        }
+        return [];
+    }, [summary]);
+
     return (
         <DashboardLayout title="Apresiasi" user={session?.user} navigation={siswaNavigation} onLogout={onLogout} profileHref="/siswa/profil">
-            <div className="space-y-6">
-                <section className="overflow-hidden rounded-[2rem] border border-slate-200 bg-gradient-to-br from-slate-900 via-blue-900 to-cyan-800 px-6 py-8 text-white shadow-2xl shadow-slate-950/20 lg:px-8">
-                    <p className="text-sm font-medium uppercase tracking-[0.3em] text-indigo-300">Badge dan Catatan</p>
-                    <h3 className="mt-2 text-2xl font-semibold text-slate-100">Semua apresiasi di satu halaman</h3>
-                    <p className="mt-2 text-sm text-slate-300">Badge, catatan privat, dan apresiasi terbaru ditaruh di halaman khusus supaya dashboard tetap ringkas.</p>
+            <div className="space-y-8">
+                {/* Gamified Header Section */}
+                <section className="relative overflow-hidden rounded-[2.5rem] border border-slate-800 bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950 px-6 py-10 text-white shadow-2xl lg:px-10">
+                    {/* Decorative Elements */}
+                    <div className="absolute -top-24 -right-24 h-96 w-96 rounded-full bg-indigo-500/10 blur-3xl"></div>
+                    <div className="absolute -bottom-24 -left-24 h-96 w-96 rounded-full bg-rose-500/10 blur-3xl"></div>
+                    
+                    <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-8">
+                        <div>
+                            <div className="inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-1.5 backdrop-blur-md border border-white/10 mb-4">
+                                <span className="text-xs font-bold uppercase tracking-widest text-amber-400">Pencapaian & Prestasi</span>
+                            </div>
+                            <h3 className="text-4xl font-black tracking-tight text-white sm:text-5xl drop-shadow-sm">Koleksi Lencana</h3>
+                            <p className="mt-4 text-lg text-indigo-200 max-w-xl">
+                                Kumpulkan berbagai lencana pencapaian akademik, karakter, dan sportivitas dari guru. Banggakan kemajuan belajarmu!
+                            </p>
+                        </div>
 
-                    <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-                        <StatCard label="Apresiasi" value={loading ? '...' : summary?.cards?.apresiasi ?? 0} description="Total badge masuk" tone="rose" />
-                        <StatCard label="Skor Terbaru" value={loading ? '...' : summary?.highlight?.latest_score ?? 0} description="Dari analisis terakhir" tone="blue" />
-                        <StatCard label="Catatan Privat" value={loading ? '...' : (summary?.highlight?.notes || []).length} description="Pesan terbaru guru" tone="amber" />
-                        <StatCard label="Akses Cepat" value={loading ? '...' : '1 halaman'} description="Fokus ke penghargaan" tone="slate" />
+                        {/* Showcase latest badge */}
+                        {summary?.highlight?.badge && (
+                            <div className="flex shrink-0 animate-fade-in-up items-center gap-6 rounded-3xl bg-white/5 p-6 backdrop-blur-sm border border-white/10 shadow-xl">
+                                <BadgeIcon name={summary.highlight.badge.jenis_badge} className="w-24 h-24" />
+                                <div>
+                                    <p className="text-xs font-bold uppercase tracking-widest text-amber-400">Lencana Terbaru</p>
+                                    <h4 className="mt-1 text-xl font-bold text-white">{summary.highlight.badge.jenis_badge || 'Apresiasi'}</h4>
+                                    <p className="mt-1 text-sm text-indigo-200">Dari: {summary.highlight.badge.guru?.nama_lengkap || '-'}</p>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </section>
 
+                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                    <StatCard label="Total Lencana" value={loading ? '...' : summary?.cards?.apresiasi ?? 0} description="Badge pencapaian" tone="amber" />
+                    <StatCard label="Catatan Privat" value={loading ? '...' : (summary?.highlight?.notes || []).length} description="Pesan khusus dari guru" tone="blue" />
+                    <StatCard label="Skor Terbaru" value={loading ? '...' : summary?.highlight?.latest_score ?? 0} description="Dari ujian terakhir" tone="rose" />
+                    <StatCard label="Status" value={loading ? '...' : 'Aktif'} description="Belajar terus!" tone="slate" />
+                </div>
+
                 {error ? <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div> : null}
 
-                <section className="space-y-6">
-                    <div className="rounded-3xl border border-slate-200 bg-slate-950 p-6 text-white shadow-sm">
-                        <p className="text-sm font-medium uppercase tracking-[0.3em] text-slate-400">Badge Terbaru</p>
-                        <h3 className="mt-2 text-2xl font-semibold">Apresiasi terakhir</h3>
+                <section className="grid gap-8 lg:grid-cols-[1.5fr_1fr]">
+                    {/* Daftar Badge (Gamified Grid) */}
+                    <div className="rounded-[2.5rem] border border-slate-200 bg-white p-8 shadow-sm">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <h3 className="text-2xl font-bold text-slate-900">Etalase Pencapaian</h3>
+                                <p className="mt-1 text-sm text-slate-500">Koleksi lencana yang telah kamu raih sejauh ini.</p>
+                            </div>
+                        </div>
 
-                        {summary?.highlight?.badge ? (
-                            <div className="mt-6 rounded-2xl bg-white/5 p-4">
-                                <p className="font-semibold">{summary.highlight.badge.jenis_badge || 'Apresiasi'}</p>
-                                <p className="mt-1 text-sm text-slate-300">Diberikan oleh: {summary.highlight.badge.guru?.nama_lengkap || '-'}</p>
-                                <p className="text-sm text-slate-300">Topik: {summary.highlight.badge.topik_materi || '-'}</p>
+                        {allBadges.length > 0 ? (
+                            <div className="mt-8 grid grid-cols-2 sm:grid-cols-3 gap-6">
+                                {allBadges.map((badge, idx) => (
+                                    <div key={idx} className="group relative flex flex-col items-center justify-center rounded-3xl border-2 border-slate-100 bg-slate-50 p-6 transition-all hover:border-indigo-100 hover:bg-indigo-50/50 hover:shadow-lg">
+                                        <BadgeIcon name={badge.jenis_badge} className="w-16 h-16 mb-4" />
+                                        <h4 className="text-center text-sm font-bold text-slate-900">{badge.jenis_badge}</h4>
+                                        <p className="mt-1 text-center text-xs text-slate-500">{formatDateLabel(badge.tanggal)}</p>
+                                        
+                                        {/* Tooltip */}
+                                        <div className="absolute bottom-full left-1/2 z-50 mb-4 w-48 -translate-x-1/2 scale-0 opacity-0 transition-all duration-300 group-hover:scale-100 group-hover:opacity-100">
+                                            <div className="relative rounded-2xl bg-slate-900 p-4 text-xs text-white shadow-xl">
+                                                <div className="font-bold text-amber-400 mb-1">{badge.jenis_badge}</div>
+                                                <p className="mb-2">Diberikan oleh: <span className="font-semibold">{badge.guru?.nama_lengkap}</span></p>
+                                                <p className="text-slate-300 italic">&quot;{badge.topik_materi}&quot;</p>
+                                                {/* Tooltip Arrow */}
+                                                <div className="absolute left-1/2 top-full -mt-2 h-4 w-4 -translate-x-1/2 rotate-45 bg-slate-900"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
                             </div>
                         ) : (
-                            <div className="mt-6 rounded-2xl bg-white/5 p-4 text-sm text-slate-300">Belum ada badge apresiasi.</div>
+                            <div className="mt-8 flex h-48 flex-col items-center justify-center rounded-3xl border-2 border-dashed border-slate-200 bg-slate-50 p-6 text-center">
+                                <div className="mb-4 text-4xl opacity-30">🏆</div>
+                                <h4 className="font-semibold text-slate-700">Belum Ada Lencana</h4>
+                                <p className="mt-1 text-sm text-slate-500">Terus aktif di kelas dan kerjakan ujian dengan baik untuk mendapatkan lencana pertamamu!</p>
+                            </div>
                         )}
                     </div>
 
-                    <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-                        <p className="text-sm font-medium uppercase tracking-[0.3em] text-slate-500">Catatan Privat</p>
-                        <h3 className="mt-2 text-xl font-semibold text-slate-900">Pesan terbaru dari guru</h3>
+                    {/* Catatan Privat */}
+                    <div className="rounded-[2.5rem] border border-slate-200 bg-slate-50 p-8 shadow-sm flex flex-col">
+                        <div className="mb-6">
+                            <h3 className="text-2xl font-bold text-slate-900">Pesan Khusus</h3>
+                            <p className="mt-1 text-sm text-slate-500">Catatan privat dari guru untuk kemajuanmu.</p>
+                        </div>
 
-                        <label className="mt-4 block space-y-2 text-sm font-medium text-slate-700">
-                            <span>Cari catatan privat</span>
-                            <input value={noteSearch} onChange={(event) => setNoteSearch(event.target.value)} className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-slate-900" placeholder="Nama guru, isi pesan, atau tanggal" />
-                        </label>
+                        <div className="mb-6">
+                            <input 
+                                value={noteSearch} 
+                                onChange={(event) => setNoteSearch(event.target.value)} 
+                                className="w-full rounded-2xl border-2 border-slate-200 bg-white px-5 py-3 outline-none transition focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10" 
+                                placeholder="Cari pesan atau nama guru..." 
+                            />
+                        </div>
 
-                        <div className="mt-6 overflow-x-auto rounded-3xl border border-slate-200">
-                            <table className="min-w-full divide-y divide-slate-200 text-left text-sm">
-                                <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase tracking-[0.2em] text-slate-500">
-                                    <tr>
-                                        <th className="px-4 py-3 font-semibold">Guru</th>
-                                        <th className="px-4 py-3 font-semibold">Pesan</th>
-                                        <th className="px-4 py-3 font-semibold">Tanggal</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-slate-100 bg-white">
-                                    {filteredNotes.map((note) => (
-                                        <tr key={`${note.tanggal}-${note.id_catatan}`} className="align-top hover:bg-slate-50/70">
-                                            <td className="px-4 py-3 font-semibold text-slate-900">{note.guru?.nama_lengkap || '-'}</td>
-                                            <td className="px-4 py-3 text-slate-600">{note.isi_pesan}</td>
-                                            <td className="px-4 py-3 text-slate-600">{formatDateLabel(note.tanggal)}</td>
-                                        </tr>
-                                    ))}
-                                    {filteredNotes.length === 0 ? (
-                                        <tr>
-                                            <td colSpan="3" className="px-4 py-4 text-sm text-slate-500">Belum ada catatan privat.</td>
-                                        </tr>
-                                    ) : null}
-                                </tbody>
-                            </table>
+                        <div className="flex-grow space-y-4 overflow-y-auto pr-2 custom-scrollbar">
+                            {filteredNotes.map((note) => (
+                                <div key={`${note.tanggal}-${note.id_catatan}`} className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-shadow hover:shadow-md">
+                                    <div className="absolute left-0 top-0 h-full w-1 bg-gradient-to-b from-blue-400 to-indigo-500"></div>
+                                    <div className="flex items-start justify-between gap-4 mb-2">
+                                        <h4 className="font-bold text-slate-900">{note.guru?.nama_lengkap || '-'}</h4>
+                                        <span className="shrink-0 text-xs font-medium text-slate-400 bg-slate-100 px-2 py-1 rounded-lg">{formatDateLabel(note.tanggal)}</span>
+                                    </div>
+                                    <p className="text-sm text-slate-600 leading-relaxed">&quot;{note.isi_pesan}&quot;</p>
+                                </div>
+                            ))}
+                            {filteredNotes.length === 0 ? (
+                                <div className="py-10 text-center">
+                                    <p className="text-sm text-slate-500">Belum ada catatan privat yang sesuai pencarian.</p>
+                                </div>
+                            ) : null}
                         </div>
                     </div>
                 </section>
             </div>
+            
+            <style jsx>{`
+                .custom-scrollbar::-webkit-scrollbar {
+                    width: 6px;
+                }
+                .custom-scrollbar::-webkit-scrollbar-track {
+                    background: transparent;
+                }
+                .custom-scrollbar::-webkit-scrollbar-thumb {
+                    background: #cbd5e1;
+                    border-radius: 10px;
+                }
+                .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+                    background: #94a3b8;
+                }
+                @keyframes fade-in-up {
+                    from { opacity: 0; transform: translateY(20px); }
+                    to { opacity: 1; transform: translateY(0); }
+                }
+                .animate-fade-in-up {
+                    animation: fade-in-up 0.6s ease-out forwards;
+                }
+            `}</style>
         </DashboardLayout>
     );
 }

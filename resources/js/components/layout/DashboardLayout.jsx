@@ -1,3 +1,5 @@
+import NotificationPanel from './NotificationPanel';
+
 export default function DashboardLayout({ title, user, navigation, onLogout, profileHref, children }) {
     const currentPath = window.location.pathname;
     const profileCard = (
@@ -60,13 +62,16 @@ export default function DashboardLayout({ title, user, navigation, onLogout, pro
                             <p className="text-xs uppercase tracking-[0.3em] text-slate-500">{user?.role || 'Dashboard'}</p>
                             <h2 className="text-2xl font-semibold text-slate-900">{title}</h2>
                         </div>
-                        <button
-                            type="button"
-                            onClick={onLogout}
-                            className="rounded-full bg-slate-950 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800"
-                        >
-                            Logout
-                        </button>
+                        <div className="flex items-center">
+                            {user?.role === 'siswa' && <NotificationPanel />}
+                            <button
+                                type="button"
+                                onClick={onLogout}
+                                className="rounded-full bg-slate-950 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800"
+                            >
+                                Logout
+                            </button>
+                        </div>
                     </header>
 
                     <section className="flex-1 p-6 lg:p-8">

@@ -10,6 +10,11 @@
 ### Added
 - **UI Admin Bank Soal**: Penambahan Halaman Manajemen Bank Soal di sisi Admin untuk melihat, memfilter, dan menghapus soal, serta unggah masal via *Excel*.
 - **Bulk Import Excel**: Guru dan Admin kini dapat melakukan unggah soal masal menggunakan format `.xlsx`.
+- **Panel Notifikasi Terpadu (Siswa)**: Penambahan fitur lonceng notifikasi *real-time* di Dashboard Siswa.
+  - Menggabungkan data dari 3 sumber: Lencana Apresiasi baru, Catatan Privat baru, dan Pengingat Ujian CBT (dalam 24 jam ke depan) ke dalam satu *dropdown* interaktif.
+  - Dilengkapi *badge counter* (angka merah) yang terhubung dengan `localStorage` untuk menandai pesan yang belum dibaca.
+  - Dibuat menggunakan `NotificationController` di backend dan komponen `NotificationPanel.jsx` di frontend.
+  - Termasuk unit test API baru di `SiswaNotificationTest.php`.
 - **Arsitektur Pemrosesan AI**: Mengubah logika pemanggilan Gemini AI (`GenerateAnalisisDiagnostikJob`) menjadi antrean asinkron (*background queue*) agar lebih andal saat digunakan oleh banyak siswa secara bersamaan.
   - Submit CBT tidak lagi menunggu respons dari API Gemini, melainkan langsung menampilkan nilai instan dengan status narasi "Sedang diproses oleh AI...".
   - Menambahkan limitasi *Rate Limit* dengan menggunakan penundaan `release(15)` jika terjadi error atau timeout pada Gemini API (kode 429/500).

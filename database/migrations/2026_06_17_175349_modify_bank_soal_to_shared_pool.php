@@ -16,12 +16,13 @@ return new class extends Migration
             $table->unsignedBigInteger('created_by')->after('id_soal')->nullable();
         });
 
-        // 2. Map existing id_guru to created_by (pengguna ID)
-        DB::statement('
-            UPDATE bank_soal
-            INNER JOIN guru ON bank_soal.id_guru = guru.id_guru
-            SET bank_soal.created_by = guru.id_pengguna
-        ');
+        $bankSoals = DB::table('bank_soal')->get();
+        foreach ($bankSoals as $soal) {
+            $guru = DB::table('guru')->where('id_guru', $soal->id_guru)->first();
+            if ($guru) {
+                DB::table('bank_soal')->where('id_soal', $soal->id_soal)->update(['created_by' => $guru->id_pengguna]);
+            }
+        }
 
         // Make it required and add foreign key
         Schema::table('bank_soal', function (Blueprint $table) {
@@ -48,11 +49,13 @@ return new class extends Migration
             $table->foreignId('id_guru')->after('id_soal')->nullable()->constrained('guru', 'id_guru')->cascadeOnDelete();
         });
 
-        DB::statement('
-            UPDATE bank_soal
-            INNER JOIN guru ON bank_soal.created_by = guru.id_pengguna
-            SET bank_soal.id_guru = guru.id_guru
-        ');
+        $bankSoals = DB::table('bank_soal')->get();
+        foreach ($bankSoals as $soal) {
+            $guru = DB::table('guru')->where('id_pengguna', $soal->created_by)->first();
+            if ($guru) {
+                DB::table('bank_soal')->where('id_soal', $soal->id_soal)->update(['id_guru' => $guru->id_guru]);
+            }
+        }
 
         Schema::table('bank_soal', function (Blueprint $table) {
             $table->dropForeign(['created_by']);

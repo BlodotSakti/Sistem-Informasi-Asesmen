@@ -9,9 +9,16 @@ import { guruNavigation } from './guru/guruNavigation';
 
 const BLOOM_OPTIONS = ['C1', 'C2', 'C3', 'C4', 'C5', 'C6'];
 const BADGE_OPTIONS = [
-    { value: 'emas', label: 'Emas' },
-    { value: 'perak', label: 'Perak' },
-    { value: 'perunggu', label: 'Perunggu' },
+    { value: 'Bintang Sains', label: '🌟 Bintang Sains (Akademik)' },
+    { value: 'Pemikir Kritis', label: '💡 Pemikir Kritis (Keaktifan)' },
+    { value: 'Teknolog Muda', label: '🚀 Teknolog Muda (STEM)' },
+    { value: 'Master Disiplin', label: '⏱️ Master Disiplin (Karakter)' },
+    { value: 'Pin Literasi', label: '📖 Pin Literasi (Bahasa)' },
+    { value: 'Seniman Budaya', label: '🎨 Seniman Budaya (Seni)' },
+    { value: 'Hati Emas', label: '❤️ Hati Emas (Spiritual/Empati)' },
+    { value: 'Atlet Tangguh', label: '👟 Atlet Tangguh (Fisik)' },
+    { value: 'Pahlawan Sportivitas', label: '🏅 Pahlawan Sportivitas (Karakter)' },
+    { value: 'Katalis Tim', label: '🙌 Katalis Tim (Kerja Sama)' },
 ];
 const ATTENDANCE_OPTIONS = [
     { value: 'hadir', label: 'Hadir' },

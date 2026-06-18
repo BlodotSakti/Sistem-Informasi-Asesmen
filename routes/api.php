@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\GuruController;
 use App\Http\Controllers\Api\SiswaController;
 use App\Http\Controllers\Api\AcademicMappingController;
 use App\Http\Controllers\Api\AdminDashboardController;
+use App\Http\Controllers\Api\NotificationController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('/auth/login', [AuthController::class, 'login']);
@@ -107,6 +108,7 @@ Route::middleware('auth:sanctum')->group(function (): void {
 			Route::post('/cbt/{id_sesi}/submit', [SiswaController::class, 'cbtSubmit'])->name('cbt.submit');
 			Route::post('/cbt/{id_sesi}/save-answer', [SiswaController::class, 'cbtSaveAnswer'])->name('cbt.save-answer');
 			Route::get('/cbt/{id_sesi}/review', [SiswaController::class, 'cbtReview'])->name('cbt.review');
+			Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
 		});
     });
 });

@@ -537,7 +537,7 @@ class GuruController extends Controller
             'kehadiran_siswa.*.id_siswa' => ['required', 'integer', 'exists:siswa,id_siswa'],
             'kehadiran_siswa.*.status_kehadiran' => ['required', Rule::in(['hadir', 'izin', 'sakit', 'alpa'])],
             'kehadiran_siswa.*.catatan_pribadi' => ['nullable', 'string', 'max:1000'],
-            'kehadiran_siswa.*.jenis_badge' => ['nullable', Rule::in(['emas', 'perak', 'perunggu'])],
+            'kehadiran_siswa.*.jenis_badge' => ['nullable', 'string', 'max:255'],
         ]);
 
         $this->ensureGuruMengampuKelasDanMapel($guruId, (int) $data['id_kelas'], (int) $data['id_mapel']);
@@ -612,7 +612,7 @@ class GuruController extends Controller
             'kehadiran_siswa.*.id_siswa' => ['required', 'integer', 'exists:siswa,id_siswa'],
             'kehadiran_siswa.*.status_kehadiran' => ['required', Rule::in(['hadir', 'izin', 'sakit', 'alpa'])],
             'kehadiran_siswa.*.catatan_pribadi' => ['nullable', 'string', 'max:1000'],
-            'kehadiran_siswa.*.jenis_badge' => ['nullable', Rule::in(['emas', 'perak', 'perunggu'])],
+            'kehadiran_siswa.*.jenis_badge' => ['nullable', 'string', 'max:255'],
         ]);
 
         $this->ensureGuruMengampuKelasDanMapel($guruId, (int) $data['id_kelas'], (int) $data['id_mapel']);
@@ -767,7 +767,7 @@ class GuruController extends Controller
         $data = $request->validate([
             'id_siswa' => ['required', 'integer', 'exists:siswa,id_siswa'],
             'tanggal' => ['required', 'date'],
-            'jenis_badge' => ['required', 'in:emas,perak,perunggu'],
+            'jenis_badge' => ['required', 'string', 'max:255'],
             'topik_materi' => ['required', 'string', 'max:255'],
         ]);
 
