@@ -778,13 +778,35 @@ class GuruController extends Controller
 
     public function analisisDiagnostikIndex(Request $request): JsonResponse
     {
-        $query = AnalisisDiagnostik::query()->with(['siswa', 'sesiAsesmen']);
+        $query = AnalisisDiagnostik::query()->with(['siswa', 'sesiAsesmen.mataPelajaran', 'sesiAsesmen.kelas']);
 
         if ($request->filled('id_sesi')) {
             $query->where('id_sesi', $request->integer('id_sesi'));
         }
 
+        if ($request->filled('search')) {
+            $search = $request->input('search');
+            $query->whereHas('siswa', function ($q) use ($search) {
+                $q->where('nama_lengkap', 'LIKE', "%{$search}%");
+            });
+        }
+
         return response()->json($query->latest('tanggal_generate')->paginate(15));
+    }
+
+    public function analisisDiagnostikShow(int $id_analisis): JsonResponse
+    {
+        $analisis = AnalisisDiagnostik::query()
+            ->with(['siswa', 'sesiAsesmen.mataPelajaran', 'sesiAsesmen.kelas'])
+            ->findOrFail($id_analisis);
+
+        $geminiService = app(\App\Services\GeminiService::class);
+        $rekapData = $geminiService->buildRekapCognitive($analisis->id_siswa, $analisis->id_sesi);
+
+        $analisisArray = $analisis->toArray();
+        $analisisArray['rekap_kognitif'] = $rekapData['rekap_level_kognitif'] ?? null;
+
+        return response()->json(['data' => $analisisArray]);
     }
 
     public function dashboardSummary(Request $request): JsonResponse

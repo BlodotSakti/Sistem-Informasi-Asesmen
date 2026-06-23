@@ -93,6 +93,7 @@ Route::middleware('auth:sanctum')->group(function (): void {
 			Route::post('/catatan-privat', [GuruController::class, 'catatanPrivatStore'])->name('catatan-privat.store');
 			Route::post('/apresiasi', [GuruController::class, 'apresiasiStore'])->name('apresiasi.store');
 			Route::get('/analisis-diagnostik', [GuruController::class, 'analisisDiagnostikIndex'])->name('analisis-diagnostik.index');
+			Route::get('/analisis-diagnostik/{id_analisis}', [GuruController::class, 'analisisDiagnostikShow'])->name('analisis-diagnostik.show');
 		});
 
 		Route::prefix('siswa')->as('api.siswa.')->middleware('role:siswa')->group(function (): void {

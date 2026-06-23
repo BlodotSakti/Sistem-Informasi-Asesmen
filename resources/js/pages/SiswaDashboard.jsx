@@ -1,25 +1,28 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import DashboardLayout from '../components/layout/DashboardLayout';
 import StatCard from '../components/ui/StatCard';
 import { siswaNavigation } from './siswa/siswaNavigation';
 import { useSiswaData } from './siswa/useSiswaData';
+import BadgeIcon from '../components/ui/BadgeIcon';
 import {
     AreaChart,
     Area,
+    BarChart,
+    Bar,
     XAxis,
     YAxis,
     CartesianGrid,
     Tooltip,
-    ResponsiveContainer,
+    ResponsiveContainer
 } from 'recharts';
 
 const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
         return (
-            <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-lg">
-                <p className="mb-1 text-sm font-semibold text-slate-600">{label}</p>
-                <p className="text-2xl font-bold text-blue-600">
-                    {payload[0].value} <span className="text-sm font-normal text-slate-500">Poin</span>
+            <div className="rounded-2xl border border-slate-200/60 bg-white/80 backdrop-blur-md p-4 shadow-xl">
+                <p className="mb-1 text-sm font-semibold text-slate-500 uppercase tracking-wider">{label}</p>
+                <p className="text-2xl font-black text-indigo-600">
+                    {payload[0].value} <span className="text-sm font-semibold text-slate-400">Pts</span>
                 </p>
             </div>
         );
@@ -40,95 +43,169 @@ export default function SiswaDashboard({ session, onLogout }) {
         }));
     }, [trendPoints]);
 
+    const timelineData = summary?.timeline || [];
+    const barChartData = summary?.bar_chart || [];
+    const badgeData = summary?.badges || [];
+
     return (
         <DashboardLayout title="Dashboard Siswa" user={session?.user} navigation={siswaNavigation} onLogout={onLogout} profileHref="/siswa/profil">
-            <div className="space-y-6">
-                <section className="overflow-hidden rounded-[2rem] border border-slate-200 bg-gradient-to-br from-slate-900 via-blue-900 to-cyan-800 px-6 py-8 text-white shadow-2xl shadow-slate-950/20 lg:px-8">
-                    <div className="flex flex-col gap-3">
-                        <p className="text-sm font-medium uppercase tracking-[0.3em] text-indigo-300">Ringkasan Siswa</p>
-                        <h3 className="text-2xl font-semibold text-slate-100">Halo, {session?.user?.nama_lengkap || 'Siswa'}! 👋</h3>
-                        <p className="max-w-2xl text-sm text-slate-300">Selamat datang di dashboard akademik Anda. Pantau perkembangan nilai, ujian terdekat, dan apresiasi yang Anda raih di sini.</p>
+            <div className="space-y-8">
+                <section className="overflow-hidden rounded-[2.5rem] border border-slate-200/60 bg-gradient-to-br from-indigo-900 via-slate-900 to-cyan-900 px-8 py-10 text-white shadow-2xl shadow-indigo-900/20 relative">
+                    <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10"></div>
+                    <div className="absolute -top-24 -right-24 w-64 h-64 bg-cyan-500/30 blur-[80px] rounded-full"></div>
+                    <div className="flex flex-col gap-3 relative z-10">
+                        <p className="text-xs font-bold uppercase tracking-[0.4em] text-cyan-300">Ringkasan Akademik</p>
+                        <h3 className="text-4xl font-extrabold text-white tracking-tight">Halo, {session?.user?.nama_lengkap || 'Siswa'}! 👋</h3>
+                        <p className="max-w-2xl text-base text-slate-300 font-medium">Jelajahi perkembangan nilai, raih lebih banyak lencana, dan jadilah yang terbaik di setiap tantangan asesmen.</p>
                     </div>
 
-                    <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-                        <StatCard label="Rata-rata Nilai" value={loading ? '...' : cards.rata_rata ?? 0} description="Rata-rata CBT semester ini" tone="blue" />
-                        <StatCard label="Ujian Menunggu" value={loading ? '...' : cards.ujian_menunggu ?? 0} description="CBT terdekat siap dikerjakan" tone="amber" />
-                        <StatCard label="Tugas / Sesi Selesai" value={loading ? '...' : cards.tugas_aktif ?? 0} description="CBT yang telah dikerjakan" tone="slate" />
-                        <StatCard label="Badge Apresiasi" value={loading ? '...' : cards.apresiasi ?? 0} description="Apresiasi dari guru" tone="rose" />
+                    <div className="mt-10 grid gap-4 md:grid-cols-2 xl:grid-cols-4 relative z-10">
+                        <StatCard label="Rata-rata Nilai" value={loading ? '...' : cards.rata_rata ?? 0} description="Skor CBT semester ini" tone="blue" />
+                        <StatCard label="Ujian Menunggu" value={loading ? '...' : cards.ujian_menunggu ?? 0} description="Misi CBT yang siap dikerjakan" tone="amber" />
+                        <StatCard label="Asesmen Selesai" value={loading ? '...' : cards.tugas_aktif ?? 0} description="CBT yang telah ditaklukkan" tone="emerald" />
+                        <StatCard label="Total Lencana" value={loading ? '...' : cards.apresiasi ?? 0} description="Penghargaan apresiasi guru" tone="indigo" />
                     </div>
                 </section>
 
                 {error ? <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div> : null}
 
                 <section className="grid gap-6 xl:grid-cols-3">
-                    <div className="xl:col-span-2 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm flex flex-col">
-                        <div className="flex items-center justify-between mb-6">
-                            <div>
-                                <p className="text-sm font-medium uppercase tracking-[0.3em] text-slate-500">Grafik Nilai</p>
-                                <h3 className="mt-2 text-xl font-semibold text-slate-900">Tren Perkembangan Akademik</h3>
+                    <div className="xl:col-span-2 space-y-6">
+                        {/* Grafik Area */}
+                        <div className="rounded-[2.5rem] border border-slate-200/60 bg-white/60 p-8 backdrop-blur-xl shadow-sm flex flex-col">
+                            <div className="flex items-center justify-between mb-6">
+                                <div>
+                                    <p className="text-xs font-bold uppercase tracking-[0.3em] text-slate-500">Grafik Performa</p>
+                                    <h3 className="mt-2 text-2xl font-extrabold text-slate-900 tracking-tight">Tren Perkembangan Nilai</h3>
+                                </div>
+                            </div>
+                            <div className="h-72 w-full flex-grow rounded-3xl border border-slate-200/50 bg-white p-5 shadow-inner">
+                                {chartData.length > 0 ? (
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                                            <defs>
+                                                <linearGradient id="colorNilai" x1="0" y1="0" x2="0" y2="1">
+                                                    <stop offset="5%" stopColor="#4f46e5" stopOpacity={0.4} />
+                                                    <stop offset="95%" stopColor="#4f46e5" stopOpacity={0} />
+                                                </linearGradient>
+                                            </defs>
+                                            <CartesianGrid strokeDasharray="4 4" vertical={false} stroke="#f1f5f9" />
+                                            <XAxis 
+                                                dataKey="name" 
+                                                axisLine={false} 
+                                                tickLine={false} 
+                                                tick={{ fill: '#64748b', fontSize: 12, fontWeight: 600 }} 
+                                                dy={10}
+                                            />
+                                            <YAxis 
+                                                axisLine={false} 
+                                                tickLine={false} 
+                                                tick={{ fill: '#64748b', fontSize: 12, fontWeight: 600 }}
+                                            />
+                                            <Tooltip content={<CustomTooltip />} cursor={{ stroke: '#cbd5e1', strokeWidth: 2, strokeDasharray: '4 4' }} />
+                                            <Area 
+                                                type="monotone" 
+                                                dataKey="Nilai" 
+                                                stroke="#4f46e5" 
+                                                strokeWidth={4}
+                                                fillOpacity={1} 
+                                                fill="url(#colorNilai)" 
+                                                activeDot={{ r: 8, fill: '#4f46e5', stroke: '#fff', strokeWidth: 3, shadow: '0 0 10px rgba(79,70,229,0.5)' }}
+                                            />
+                                        </AreaChart>
+                                    </ResponsiveContainer>
+                                ) : (
+                                    <div className="flex h-full flex-col items-center justify-center text-sm text-slate-500 font-medium">
+                                        <svg className="w-12 h-12 text-slate-300 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" />
+                                        </svg>
+                                        Belum ada data tren asesmen untuk divisualisasikan.
+                                    </div>
+                                )}
                             </div>
                         </div>
-                        <div className="h-72 w-full flex-grow rounded-2xl border border-slate-200 bg-slate-50 p-5">
-                            {chartData.length > 0 ? (
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                                        <defs>
-                                            <linearGradient id="colorNilai" x1="0" y1="0" x2="0" y2="1">
-                                                <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
-                                                <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
-                                            </linearGradient>
-                                        </defs>
-                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                                        <XAxis 
-                                            dataKey="name" 
-                                            axisLine={false} 
-                                            tickLine={false} 
-                                            tick={{ fill: '#64748b', fontSize: 12 }} 
-                                            dy={10}
-                                        />
-                                        <YAxis 
-                                            axisLine={false} 
-                                            tickLine={false} 
-                                            tick={{ fill: '#64748b', fontSize: 12 }}
-                                        />
-                                        <Tooltip content={<CustomTooltip />} cursor={{ stroke: '#94a3b8', strokeWidth: 1, strokeDasharray: '4 4' }} />
-                                        <Area 
-                                            type="monotone" 
-                                            dataKey="Nilai" 
-                                            stroke="#2563eb" 
-                                            strokeWidth={3}
-                                            fillOpacity={1} 
-                                            fill="url(#colorNilai)" 
-                                            activeDot={{ r: 6, fill: '#2563eb', stroke: '#fff', strokeWidth: 2 }}
-                                        />
-                                    </AreaChart>
-                                </ResponsiveContainer>
-                            ) : (
-                                <div className="flex h-full items-center justify-center text-sm text-slate-500">
-                                    Belum ada data tren nilai yang cukup untuk divisualisasikan.
-                                </div>
-                            )}
+
+                        {/* Timeline Pembelajaran */}
+                        <div className="rounded-[2.5rem] border border-slate-200/60 bg-white/60 p-8 backdrop-blur-xl shadow-sm">
+                            <p className="text-xs font-bold uppercase tracking-[0.3em] text-slate-500">Aktivitas</p>
+                            <h3 className="mt-2 text-2xl font-extrabold text-slate-900 tracking-tight">Timeline Pembelajaran</h3>
+                            <div className="mt-6 space-y-6 relative before:absolute before:inset-0 before:ml-5 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-slate-200 before:to-transparent">
+                                {timelineData.length > 0 ? timelineData.map((item) => (
+                                    <div key={item.id} className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
+                                        <div className="flex items-center justify-center w-10 h-10 rounded-full border-4 border-white bg-indigo-100 text-indigo-600 shadow shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 text-lg z-10 transition-transform group-hover:scale-110">
+                                            {item.icon}
+                                        </div>
+                                        <div className="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] p-4 rounded-2xl border border-slate-100 bg-white shadow-sm transition-all hover:shadow-md hover:border-indigo-100">
+                                            <div className="flex items-center justify-between mb-1">
+                                                <div className="font-bold text-slate-900">{item.title}</div>
+                                            </div>
+                                            <div className="text-sm font-medium text-slate-500">{item.date}</div>
+                                        </div>
+                                    </div>
+                                )) : (
+                                    <div className="text-center text-sm text-slate-500 italic py-4">Belum ada aktivitas belajar yang terekam.</div>
+                                )}
+                            </div>
                         </div>
                     </div>
 
                     <div className="flex flex-col gap-6">
-                        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-                            <p className="text-sm font-medium uppercase tracking-[0.3em] text-slate-500">Kelas Aktif</p>
-                            <h3 className="mt-2 text-xl font-semibold text-slate-900">Kelas & Wali</h3>
-                            <div className="mt-4 rounded-2xl bg-slate-50 px-4 py-3">
-                                <p className="font-semibold text-slate-900">{summary?.profile?.kelas_aktif?.nama_kelas || 'Belum ada kelas aktif'}</p>
-                                <p className="text-sm text-slate-500">{summary?.profile?.kelas_aktif?.guru_wali ? `Wali kelas: ${summary.profile.kelas_aktif.guru_wali}` : 'Wali kelas belum ditetapkan'}</p>
+                        {/* Bar Chart: Rata-rata per Mapel */}
+                        <div className="rounded-[2.5rem] border border-slate-200/60 bg-white/60 p-8 backdrop-blur-xl shadow-sm flex flex-col items-center">
+                            <div className="w-full text-left mb-4">
+                                <p className="text-xs font-bold uppercase tracking-[0.3em] text-cyan-600">Statistik Nilai</p>
+                                <h3 className="mt-2 text-xl font-extrabold text-slate-900">Rata-rata per Mata Pelajaran</h3>
+                            </div>
+                            <div className="w-full h-64">
+                                {barChartData.length > 0 ? (
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <BarChart data={barChartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }} layout="vertical">
+                                            <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="#f1f5f9" />
+                                            <XAxis type="number" domain={[0, 100]} hide />
+                                            <YAxis dataKey="subject" type="category" axisLine={false} tickLine={false} tick={{ fill: '#475569', fontSize: 11, fontWeight: 600 }} width={80} />
+                                            <Tooltip content={<CustomTooltip />} cursor={{ fill: '#f8fafc' }} />
+                                            <Bar dataKey="A" fill="#0ea5e9" radius={[0, 4, 4, 0]} barSize={20} />
+                                        </BarChart>
+                                    </ResponsiveContainer>
+                                ) : (
+                                    <div className="flex h-full items-center justify-center text-sm text-slate-500 italic">Data asesmen belum memadai.</div>
+                                )}
+                            </div>
+                            <p className="mt-2 text-xs text-center font-medium text-slate-500">Berdasarkan hasil analisis CBT terkini.</p>
+                        </div>
+
+                        {/* Galeri Lencana */}
+                        <div className="rounded-[2.5rem] border border-slate-200/60 bg-gradient-to-b from-slate-950 to-slate-900 p-8 shadow-xl flex flex-col relative overflow-hidden">
+                            <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/20 blur-[50px] rounded-full"></div>
+                            <div className="relative z-10 w-full text-left mb-6">
+                                <p className="text-xs font-bold uppercase tracking-[0.3em] text-amber-400">Gamifikasi</p>
+                                <h3 className="mt-2 text-2xl font-extrabold text-white">Galeri Lencana</h3>
+                                <p className="text-sm text-slate-400 mt-1">Koleksi apresiasi spesial dari gurumu!</p>
+                            </div>
+                            <div className="relative z-10 grid grid-cols-3 gap-3">
+                                {badgeData.length > 0 ? badgeData.map((badge) => {
+                                    return (
+                                        <div key={badge.id_apresiasi} className="group relative flex flex-col items-center">
+                                            <div className={`w-20 h-20 rounded-2xl flex items-center justify-center p-0.5 shadow-lg shadow-amber-500/10 transition-transform group-hover:scale-110 group-hover:rotate-3 cursor-pointer`}>
+                                                <BadgeIcon name={badge.jenis_badge} className="w-16 h-16" />
+                                            </div>
+                                            <div className="mt-2 text-center opacity-0 group-hover:opacity-100 transition-opacity absolute -bottom-8 w-[150%] bg-slate-800 text-white text-[10px] font-bold px-2 py-1 rounded-lg z-20 pointer-events-none shadow-xl">
+                                                {badge.jenis_badge}
+                                            </div>
+                                        </div>
+                                    );
+                                }) : (
+                                    <div className="col-span-3 text-center text-xs text-slate-400 italic">Belum ada lencana yang diraih.</div>
+                                )}
+                                {/* Empty Slot */}
+                                <div className="flex flex-col items-center justify-center">
+                                    <div className="w-16 h-16 rounded-2xl border-2 border-dashed border-slate-700 bg-slate-800/50 flex items-center justify-center text-slate-600 text-xl font-black">
+                                        ?
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
-                        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-                            <p className="text-sm font-medium uppercase tracking-[0.3em] text-slate-500">Mapel Aktif</p>
-                            <h3 className="mt-2 text-xl font-semibold text-slate-900">Tergabung di Kelas</h3>
-                            <div className="mt-4 rounded-2xl bg-slate-50 px-4 py-3">
-                                <p className="font-semibold text-slate-900">{(summary?.profile?.mata_pelajaran || []).length} Mata Pelajaran</p>
-                                <p className="text-sm text-slate-500">Terkait dengan penugasan guru di kelas.</p>
-                            </div>
-                        </div>
                     </div>
                 </section>
             </div>

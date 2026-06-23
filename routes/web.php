@@ -31,7 +31,8 @@ Route::get('/admin/{path?}', function () {
 })->where('path', 'dashboard|pengguna|tahun-ajaran|kelas|mata-pelajaran|kelas-siswa|penugasan-pembelajaran|import-akun|pemetaan-akademik|bank-soal');
 Route::get('/guru/{path?}', function () {
     return view('app');
-})->where('path', 'dashboard|jadwal-cbt|bank-soal|berita-acara|siswa|profil');
+})->where('path', 'dashboard|jadwal-cbt|bank-soal|berita-acara|siswa|profil|arsip-diagnostik');
+Route::view('/guru/laporan-diagnostik/{id}', 'app');
 Route::view('/siswa/dashboard', 'app');
 Route::view('/siswa/profil', 'app');
 Route::view('/siswa/sesi-aktif', 'app');

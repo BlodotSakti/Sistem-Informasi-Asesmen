@@ -57,53 +57,54 @@ export default function AdminDashboard({ session, onLogout }) {
 
     const renderDashboard = () => (
         <div className="space-y-8">
-            <section className="overflow-hidden rounded-[2rem] border border-slate-200 bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950 px-6 py-8 text-white shadow-2xl shadow-slate-950/20 lg:px-8">
+            <section className="overflow-hidden rounded-[2.5rem] border border-slate-200/60 bg-gradient-to-br from-white via-slate-50 to-indigo-50/30 px-8 py-10 shadow-sm backdrop-blur-xl">
                 <div className="grid gap-8 lg:grid-cols-[1.5fr_0.5fr] lg:items-center">
                     <div>
-                        <p className="text-xs uppercase tracking-[0.45em] text-indigo-300">Sistem Informasi Asesmen</p>
-                        <h3 className="mt-4 max-w-2xl text-3xl font-semibold leading-tight text-white md:text-4xl">
+                        <p className="text-xs uppercase tracking-[0.45em] text-indigo-600 font-semibold">Sistem Informasi Asesmen</p>
+                        <h3 className="mt-4 max-w-2xl text-4xl font-extrabold tracking-tight text-slate-900">
                             Selamat Datang, {session?.user?.admin?.nama_lengkap || session?.user?.username || 'Admin'}
                         </h3>
-                        <p className="mt-4 max-w-2xl text-sm leading-7 text-slate-300 md:text-base">
+                        <p className="mt-4 max-w-2xl text-base leading-relaxed text-slate-600">
                             Pusat pengendalian utama sistem. Pantau ringkasan data, grafik aktivitas pengguna, serta akses cepat ke manajemen data pokok.
                         </p>
-                        <div className="mt-6 flex flex-wrap gap-4">
+                        <div className="mt-8 flex flex-wrap gap-4">
                             <a
                                 href="/admin/pengguna"
-                                className="inline-flex items-center rounded-full bg-white px-5 py-2 text-sm font-semibold text-slate-900 transition hover:bg-slate-100"
+                                className="inline-flex items-center rounded-full bg-slate-900 px-6 py-3 text-sm font-semibold text-white shadow-md transition-all hover:bg-indigo-600 hover:scale-105 hover:shadow-indigo-500/25"
                             >
                                 Kelola Pengguna
                             </a>
                             <a
                                 href="/admin/pemetaan-akademik"
-                                className="inline-flex items-center rounded-full border border-white/20 bg-white/10 px-5 py-2 text-sm font-semibold text-white backdrop-blur transition hover:bg-white/20"
+                                className="inline-flex items-center rounded-full border border-slate-200 bg-white/50 px-6 py-3 text-sm font-semibold text-slate-700 backdrop-blur-md transition-all hover:bg-white hover:shadow-sm hover:scale-105"
                             >
                                 Lihat Pemetaan Akademik
                             </a>
                         </div>
                     </div>
 
-                    <div className="hidden lg:block">
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="rounded-[1.5rem] bg-white/5 p-4 backdrop-blur border border-white/10">
-                                <div className="text-indigo-300 mb-1">
+                    <div className="hidden lg:block relative">
+                        <div className="absolute -inset-4 bg-gradient-to-tr from-indigo-100 to-cyan-50 blur-2xl opacity-50 rounded-full"></div>
+                        <div className="relative grid grid-cols-2 gap-4">
+                            <div className="rounded-[1.5rem] bg-white/80 p-5 backdrop-blur-xl border border-white shadow-sm transition hover:shadow-md">
+                                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-indigo-100 text-indigo-600 mb-3">
                                     <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
                                     </svg>
                                 </div>
-                                <div className="text-2xl font-bold">{loading ? '...' : data.summary.total_guru}</div>
-                                <div className="text-xs text-slate-400 mt-1">Guru Aktif</div>
+                                <div className="text-3xl font-extrabold text-slate-900">{loading ? '...' : data.summary.total_guru}</div>
+                                <div className="text-sm font-medium text-slate-500 mt-1">Guru Aktif</div>
                             </div>
-                            <div className="rounded-[1.5rem] bg-white/5 p-4 backdrop-blur border border-white/10">
-                                <div className="text-indigo-300 mb-1">
+                            <div className="rounded-[1.5rem] bg-white/80 p-5 backdrop-blur-xl border border-white shadow-sm transition hover:shadow-md translate-y-4">
+                                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-cyan-100 text-cyan-600 mb-3">
                                     <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                       <path d="M12 14l9-5-9-5-9 5 9 5z" />
                                       <path d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z" />
                                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 14l9-5-9-5-9 5 9 5zm0 0l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14zm-4 6v-7.5l4-2.222" />
                                     </svg>
                                 </div>
-                                <div className="text-2xl font-bold">{loading ? '...' : data.summary.total_siswa}</div>
-                                <div className="text-xs text-slate-400 mt-1">Siswa Terdaftar</div>
+                                <div className="text-3xl font-extrabold text-slate-900">{loading ? '...' : data.summary.total_siswa}</div>
+                                <div className="text-sm font-medium text-slate-500 mt-1">Siswa Terdaftar</div>
                             </div>
                         </div>
                     </div>
@@ -116,29 +117,35 @@ export default function AdminDashboard({ session, onLogout }) {
                 </div>
             )}
 
-            <section className="grid gap-4 md:grid-cols-3">
+            <section className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
                 <StatCard 
                     label="Total Guru" 
                     value={loading ? '...' : data.summary.total_guru} 
-                    description="Total akun guru yang terdaftar dalam sistem." 
+                    description="Total akun guru yang terdaftar." 
                     tone="blue" 
                 />
                 <StatCard 
                     label="Total Siswa" 
                     value={loading ? '...' : data.summary.total_siswa} 
-                    description="Total data siswa dalam basis data." 
+                    description="Total data siswa terdaftar." 
                     tone="indigo" 
                 />
                 <StatCard 
-                    label="Total Kelas Aktif" 
+                    label="Kelas Aktif" 
                     value={loading ? '...' : data.summary.total_kelas} 
-                    description="Jumlah rombongan belajar pada tahun ajaran ini." 
-                    tone="slate" 
+                    description="Jumlah rombongan belajar saat ini." 
+                    tone="cyan" 
+                />
+                <StatCard 
+                    label="Status Server" 
+                    value="Online" 
+                    description="Sistem beroperasi optimal." 
+                    tone="emerald" 
                 />
             </section>
 
-            <div className="grid gap-8 lg:grid-cols-3">
-                <section className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm lg:col-span-2">
+            <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
+                <section className="rounded-[2.5rem] border border-slate-200/60 bg-white/60 backdrop-blur-xl p-8 shadow-sm">
                     <div className="mb-6">
                         <h4 className="text-lg font-semibold text-slate-900">Grafik Pendaftaran Pengguna</h4>
                         <p className="text-sm text-slate-500">Jumlah akun baru yang ditambahkan dalam 7 hari terakhir.</p>
@@ -184,7 +191,7 @@ export default function AdminDashboard({ session, onLogout }) {
                     </div>
                 </section>
 
-                <section className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
+                <section className="rounded-[2.5rem] border border-slate-200/60 bg-white/60 backdrop-blur-xl p-8 shadow-sm">
                     <div className="mb-6 flex items-center justify-between">
                         <div>
                             <h4 className="text-lg font-semibold text-slate-900">Catatan Sistem</h4>

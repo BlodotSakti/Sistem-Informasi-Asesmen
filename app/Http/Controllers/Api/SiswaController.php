@@ -151,6 +151,61 @@ class SiswaController extends Controller
                 ->count()
             : 0;
 
+        // --- Timeline Aggregation ---
+        $timeline = collect();
+
+        // 1. Dari Analisis / Ujian Selesai
+        foreach ($analisis as $item) {
+            $timeline->push([
+                'id' => 'exam_' . $item->id_analisis,
+                'title' => 'Menyelesaikan Ujian ' . ($item->sesiAsesmen?->mataPelajaran?->nama_mapel ?? 'Mapel'),
+                'date_raw' => clone $item->tanggal_generate,
+                'date' => \Carbon\Carbon::parse($item->tanggal_generate)->diffForHumans(),
+                'type' => 'exam',
+                'icon' => '📝',
+            ]);
+        }
+
+        // 2. Dari Apresiasi (Lencana)
+        $allBadges = Apresiasi::query()->where('id_siswa', $idSiswa)->with('guru')->latest('tanggal')->get();
+        foreach ($allBadges as $badge) {
+            $timeline->push([
+                'id' => 'badge_' . $badge->id_apresiasi,
+                'title' => 'Mendapat Lencana: ' . $badge->jenis_badge,
+                'date_raw' => clone $badge->tanggal,
+                'date' => \Carbon\Carbon::parse($badge->tanggal)->diffForHumans(),
+                'type' => 'badge',
+                'icon' => '🎖️',
+            ]);
+        }
+
+        // 3. Dari Catatan Privat
+        $allNotes = CatatanPrivat::query()->where('id_siswa', $idSiswa)->with('guru')->latest('tanggal')->get();
+        foreach ($allNotes as $note) {
+            $timeline->push([
+                'id' => 'note_' . $note->id_catatan,
+                'title' => 'Mendapat Catatan dari ' . ($note->guru?->nama_lengkap ?? 'Guru'),
+                'date_raw' => clone $note->tanggal,
+                'date' => \Carbon\Carbon::parse($note->tanggal)->diffForHumans(),
+                'type' => 'note',
+                'icon' => '💬',
+            ]);
+        }
+
+        $timeline = $timeline->sortByDesc('date_raw')->take(10)->values();
+
+        // --- Bar Chart Aggregation (Rata-rata per Mapel) ---
+        $barChartData = collect();
+        if ($analisis->isNotEmpty()) {
+            $barChartData = $analisis->groupBy('sesiAsesmen.id_mapel')->map(function ($group) {
+                return [
+                    'subject' => $group->first()->sesiAsesmen?->mataPelajaran?->nama_mapel ?? 'Umum',
+                    'A' => round($group->avg('skor_total'), 2),
+                    'fullMark' => 100,
+                ];
+            })->values();
+        }
+
         return response()->json([
             'profile' => [
                 'nama_lengkap' => $siswa->nama_lengkap,
@@ -190,10 +245,12 @@ class SiswaController extends Controller
             }),
             'highlight' => [
                 'latest_score' => $latestScore,
-                'badge' => Apresiasi::query()->where('id_siswa', $idSiswa)->with('guru')->latest('tanggal')->first(),
-                'notes' => CatatanPrivat::query()->where('id_siswa', $idSiswa)->with('guru')->latest('tanggal')->limit(3)->get(),
+                'badge' => $allBadges->first(),
+                'notes' => $allNotes->take(3),
             ],
-            'badges' => Apresiasi::query()->where('id_siswa', $idSiswa)->with('guru')->latest('tanggal')->get(),
+            'badges' => $allBadges,
+            'timeline' => $timeline,
+            'bar_chart' => $barChartData,
             'available_subjects' => $penugasan->map(fn (PenugasanPembelajaran $item): array => [
                 'id_penugasan_pembelajaran' => $item->id_penugasan_pembelajaran,
                 'id_mapel' => $item->id_mapel,

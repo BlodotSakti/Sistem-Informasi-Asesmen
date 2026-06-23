@@ -16,6 +16,8 @@ import SiswaCbtPage from './pages/SiswaCbtPage';
 import SiswaCbtHistoryPage from './pages/SiswaCbtHistoryPage';
 import GuruSiswaPage from './pages/GuruSiswaPage';
 import GuruProfilePage from './pages/GuruProfilePage';
+import GuruLaporanDiagnostikPage from './pages/GuruLaporanDiagnostikPage';
+import GuruArsipDiagnostikPage from './pages/GuruArsipDiagnostikPage';
 
 const STORAGE_KEY = 'sia-session';
 
@@ -66,6 +68,7 @@ function App() {
             '/guru/berita-acara',
             '/guru/siswa',
             '/guru/profil',
+            '/guru/arsip-diagnostik',
             '/siswa/dashboard',
             '/siswa/profil',
             '/siswa/sesi-aktif',
@@ -93,6 +96,11 @@ function App() {
 
         // Specific check for CBT path because it has an ID
         if (pathname.startsWith('/siswa/cbt/') && !session?.token) {
+            window.location.replace('/login');
+            return;
+        }
+
+        if (pathname.startsWith('/guru/laporan-diagnostik/') && !session?.token) {
             window.location.replace('/login');
             return;
         }
@@ -185,6 +193,15 @@ function App() {
 
         if (pathname === '/guru/profil') {
             return <GuruProfilePage session={session} onLogout={onLogout} />;
+        }
+
+        if (pathname === '/guru/arsip-diagnostik') {
+            return <GuruArsipDiagnostikPage session={session} onLogout={onLogout} />;
+        }
+
+        if (pathname.startsWith('/guru/laporan-diagnostik/')) {
+            const idAnalisis = pathname.split('/')[3];
+            return <GuruLaporanDiagnostikPage session={session} onLogout={onLogout} idAnalisis={idAnalisis} />;
         }
 
         if (pathname === '/siswa/dashboard') return <SiswaDashboard session={session} onLogout={onLogout} />;
