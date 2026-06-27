@@ -323,21 +323,58 @@ class GuruController extends Controller
         $penggunaId = $request->user()->id_pengguna;
 
         $created = [];
-        foreach ($data['soal'] as $soal) {
+        $errors = [];
+        
+        foreach ($data['soal'] as $index => $soal) {
             $soal['created_by'] = $penggunaId;
             $soal['id_mapel'] = $data['id_mapel'];
             
             if ($soal['jenis_soal'] === 'esai') {
                 $soal['opsi_jawaban'] = [];
-            }
-            if ($soal['jenis_soal'] === 'pilihan_ganda_kompleks' && is_string($soal['kunci_jawaban'])) {
-                $soal['kunci_jawaban'] = json_encode(array_values(array_filter(array_map('trim', explode(',', $soal['kunci_jawaban'])))));
+            } else {
+                $opsiJawaban = collect($soal['opsi_jawaban'] ?? [])->map(fn($val) => trim((string)$val));
+                
+                if ($soal['jenis_soal'] === 'pilihan_ganda_kompleks') {
+                    $kunciArr = is_string($soal['kunci_jawaban']) 
+                        ? array_values(array_filter(array_map('trim', explode(',', $soal['kunci_jawaban']))))
+                        : (array) $soal['kunci_jawaban'];
+                    
+                    // Validate each kunci exists in opsi
+                    foreach ($kunciArr as $k) {
+                        if (!$opsiJawaban->contains(trim((string)$k))) {
+                            $errors[] = "Baris " . ($index + 2) . ": Kunci '" . $k . "' tak ada di opsi.";
+                        }
+                    }
+                    $soal['kunci_jawaban'] = json_encode($kunciArr);
+                } else {
+                    $kunci = trim((string) $soal['kunci_jawaban']);
+                    if (!$opsiJawaban->contains($kunci)) {
+                        $errors[] = "Baris " . ($index + 2) . ": Kunci '" . $kunci . "' tak ada di opsi.";
+                    }
+                    $soal['kunci_jawaban'] = $kunci;
+                }
             }
             
-            $created[] = BankSoal::create($soal);
+            $created[] = $soal;
         }
 
-        return response()->json(['message' => count($created) . ' soal berhasil diimport.', 'data' => $created], 201);
+        if (!empty($errors)) {
+            $errorMsg = "Gagal Import! Kunci jawaban tidak cocok dengan opsi:\n" . implode("\n", array_slice($errors, 0, 5));
+            if (count($errors) > 5) {
+                $errorMsg .= "\n... dan " . (count($errors) - 5) . " baris lainnya.";
+            }
+            return response()->json([
+                'message' => $errorMsg,
+                'errors' => $errors
+            ], 422);
+        }
+
+        $inserted = [];
+        foreach ($created as $soal) {
+            $inserted[] = BankSoal::create($soal);
+        }
+
+        return response()->json(['message' => count($inserted) . ' soal berhasil diimport.', 'data' => $inserted], 201);
     }
 
     public function sesiAsesmenDetail(Request $request, int $id_sesi): JsonResponse

@@ -61,6 +61,8 @@ export default function GuruDashboard({ session, onLogout, mode = 'dashboard' })
     const [bankFilterMapel, setBankFilterMapel] = useState('');
     const [bankFilterJenis, setBankFilterJenis] = useState('');
     const [bankFilterLevel, setBankFilterLevel] = useState('');
+    const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+    const [importTargetMapel, setImportTargetMapel] = useState('');
     const [editingBankSoalId, setEditingBankSoalId] = useState(null);
     const [sesiAsesmenHistory, setSesiAsesmenHistory] = useState([]);
 
@@ -102,41 +104,43 @@ export default function GuruDashboard({ session, onLogout, mode = 'dashboard' })
                     return;
                 }
 
-                // Map data from excel
-                const mapelGroup = data.reduce((acc, row) => {
-                    const idMapel = row.id_mapel;
-                    if (!idMapel) return acc;
-                    if (!acc[idMapel]) acc[idMapel] = [];
-                    
-                    let opsi = [];
-                    if (row.opsi_a) opsi.push(row.opsi_a);
-                    if (row.opsi_b) opsi.push(row.opsi_b);
-                    if (row.opsi_c) opsi.push(row.opsi_c);
-                    if (row.opsi_d) opsi.push(row.opsi_d);
-                    if (row.opsi_e) opsi.push(row.opsi_e);
+                if (!importTargetMapel) {
+                    alert('Silakan pilih mata pelajaran terlebih dahulu.');
+                    return;
+                }
 
-                    acc[idMapel].push({
-                        isi_soal: row.isi_soal,
+                // Map data from excel using importTargetMapel
+                const soalArray = data.map(row => {
+                    let opsi = [];
+                    const opsiKeys = Object.keys(row).filter(key => key.startsWith('opsi_')).sort();
+                    opsiKeys.forEach(key => {
+                        if (row[key] !== undefined && row[key] !== null && String(row[key]).trim() !== '') {
+                            opsi.push(String(row[key]));
+                        }
+                    });
+
+                    return {
+                        isi_soal: String(row.isi_soal || ''),
                         jenis_soal: row.jenis_soal || 'pilihan_ganda',
-                        kunci_jawaban: row.kunci_jawaban,
+                        kunci_jawaban: String(row.kunci_jawaban || ''),
                         topik_materi: row.topik_materi || 'Umum',
                         level_kognitif: row.level_kognitif || 'C1',
                         opsi_jawaban: opsi
-                    });
-                    return acc;
-                }, {});
+                    };
+                });
 
-                for (const [idMapel, soalArray] of Object.entries(mapelGroup)) {
-                    await apiFetch('/api/guru/bank-soal/bulk', session, {
-                        method: 'POST',
-                        body: JSON.stringify({
-                            id_mapel: parseInt(idMapel),
-                            soal: soalArray
-                        })
-                    });
-                }
+                await apiFetch('/api/guru/bank-soal/bulk', session, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        id_mapel: parseInt(importTargetMapel),
+                        soal: soalArray
+                    })
+                });
                 
                 alert('Berhasil mengimpor soal dari Excel!');
+                setIsImportModalOpen(false);
+                setImportTargetMapel('');
                 
                 // Reload data
                 const response = await apiFetch('/api/guru/workspace-data', session);
@@ -148,6 +152,81 @@ export default function GuruDashboard({ session, onLogout, mode = 'dashboard' })
         };
         reader.readAsBinaryString(file);
         if (fileInputRef.current) fileInputRef.current.value = '';
+    };
+
+    const downloadTemplateExcel = () => {
+        const headers = [
+            "isi_soal", 
+            "opsi_a", 
+            "opsi_b", 
+            "opsi_c", 
+            "opsi_d", 
+            "opsi_e", 
+            "kunci_jawaban", 
+            "jenis_soal", 
+            "topik_materi", 
+            "level_kognitif"
+        ];
+        
+        const exampleData = [
+            {
+                "isi_soal": "Siapakah penemu bola lampu?",
+                "opsi_a": "Albert Einstein",
+                "opsi_b": "Thomas Edison",
+                "opsi_c": "Nikola Tesla",
+                "opsi_d": "Isaac Newton",
+                "opsi_e": "Galileo Galilei",
+                "kunci_jawaban": "Thomas Edison",
+                "jenis_soal": "pilihan_ganda",
+                "topik_materi": "Sejarah Penemuan",
+                "level_kognitif": "C1"
+            },
+            {
+                "isi_soal": "1 + 1 = ?",
+                "opsi_a": "1",
+                "opsi_b": "2",
+                "opsi_c": "3",
+                "opsi_d": "4",
+                "opsi_e": "5",
+                "kunci_jawaban": "2",
+                "jenis_soal": "pilihan_ganda",
+                "topik_materi": "Matematika Dasar",
+                "level_kognitif": "C2"
+            },
+            {
+                "isi_soal": "Manakah dari berikut ini yang merupakan bahasa pemrograman?",
+                "opsi_a": "Python",
+                "opsi_b": "Kobra",
+                "opsi_c": "JavaScript",
+                "opsi_d": "HTML",
+                "opsi_e": "C++",
+                "kunci_jawaban": "Python, JavaScript, C++",
+                "jenis_soal": "pilihan_ganda_kompleks",
+                "topik_materi": "Informatika",
+                "level_kognitif": "C2"
+            }
+        ];
+
+        const worksheet = XLSX.utils.json_to_sheet(exampleData, { header: headers });
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Template Soal");
+
+        // Set column widths for better readability
+        const wscols = [
+            {wch: 40}, // isi_soal
+            {wch: 20}, // opsi_a
+            {wch: 20}, // opsi_b
+            {wch: 20}, // opsi_c
+            {wch: 20}, // opsi_d
+            {wch: 20}, // opsi_e
+            {wch: 20}, // kunci_jawaban
+            {wch: 15}, // jenis_soal
+            {wch: 20}, // topik_materi
+            {wch: 15}, // level_kognitif
+        ];
+        worksheet['!cols'] = wscols;
+
+        XLSX.writeFile(workbook, "Template_Import_Soal_SMAN.xlsx");
     };
 
     const [beritaForm, setBeritaForm] = useState({
@@ -1041,9 +1120,12 @@ export default function GuruDashboard({ session, onLogout, mode = 'dashboard' })
                         <h4 className="text-lg font-semibold text-slate-900">Data Bank Soal</h4>
                         <p className="text-sm text-slate-500">Pastikan topik dan level Bloom terisi untuk semua soal.</p>
                     </div>
-                    <div className="flex items-center gap-3">
-                        <input type="file" accept=".xlsx, .xls" className="hidden" ref={fileInputRef} onChange={handleFileUpload} />
-                        <button type="button" onClick={() => fileInputRef.current?.click()} className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-sm font-semibold transition shadow-sm">
+                    <div className="flex flex-wrap gap-3">
+                        <button type="button" onClick={downloadTemplateExcel} className="px-4 py-2 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-xl text-sm font-semibold transition shadow-sm flex items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                            Unduh Template
+                        </button>
+                        <button type="button" onClick={() => setIsImportModalOpen(true)} className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-sm font-semibold transition shadow-sm">
                             Import Excel
                         </button>
                     </div>
@@ -1859,6 +1941,54 @@ export default function GuruDashboard({ session, onLogout, mode = 'dashboard' })
 
                 {/* Section Analisis Diagnostik dihapus dari bawah karena sudah diintegrasikan ke renderDashboard */}
             </div>
+            {/* Modal Import Excel */}
+            {isImportModalOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
+                    <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl">
+                        <div className="flex items-center justify-between mb-6">
+                            <h3 className="text-xl font-bold text-slate-900">Import Soal Excel</h3>
+                            <button onClick={() => { setIsImportModalOpen(false); setImportTargetMapel(''); }} className="text-slate-400 hover:text-slate-600">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                            </button>
+                        </div>
+                        
+                        <div className="space-y-5">
+                            <div>
+                                <label className="block text-sm font-semibold text-slate-700 mb-1">Mata Pelajaran Tujuan <span className="text-rose-500">*</span></label>
+                                <select 
+                                    value={importTargetMapel} 
+                                    onChange={(e) => setImportTargetMapel(e.target.value)}
+                                    className="w-full rounded-xl border border-slate-200 px-4 py-2 text-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                >
+                                    <option value="">-- Pilih Mata Pelajaran --</option>
+                                    {(workspace.mapel_options || []).map(m => (
+                                        <option key={m.id_mapel} value={m.id_mapel}>{m.nama_lengkap || m.nama_mapel}</option>
+                                    ))}
+                                </select>
+                                <p className="text-xs text-slate-500 mt-1">Soal dari Excel akan dimasukkan ke mapel ini.</p>
+                            </div>
+                            
+                            <div>
+                                <label className="block text-sm font-semibold text-slate-700 mb-1">File Excel (.xlsx)</label>
+                                <input type="file" accept=".xlsx, .xls" className="hidden" ref={fileInputRef} onChange={handleFileUpload} />
+                                <div 
+                                    onClick={() => {
+                                        if (!importTargetMapel) {
+                                            alert("Pilih mata pelajaran terlebih dahulu sebelum memilih file!");
+                                            return;
+                                        }
+                                        fileInputRef.current?.click();
+                                    }}
+                                    className={`w-full border-2 border-dashed rounded-xl p-6 flex flex-col items-center justify-center cursor-pointer transition ${importTargetMapel ? 'border-emerald-300 bg-emerald-50 hover:bg-emerald-100' : 'border-slate-300 bg-slate-50 opacity-60 cursor-not-allowed'}`}
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" className={`h-8 w-8 mb-2 ${importTargetMapel ? 'text-emerald-500' : 'text-slate-400'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /></svg>
+                                    <span className="text-sm font-medium text-slate-600">Klik untuk memilih file</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </DashboardLayout>
     );
 }
