@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\SiswaController;
 use App\Http\Controllers\Api\AcademicMappingController;
 use App\Http\Controllers\Api\AdminDashboardController;
 use App\Http\Controllers\Api\NotificationController;
+use App\Http\Controllers\Api\BackupController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('/auth/login', [AuthController::class, 'login']);
@@ -33,6 +34,12 @@ Route::middleware('auth:sanctum')->group(function (): void {
 			Route::patch('/pengguna/{pengguna}/aktifkan', [AdminController::class, 'penggunaRestore'])->name('pengguna.restore');
 			Route::delete('/pengguna/{pengguna}', [AdminController::class, 'penggunaDestroy'])->name('pengguna.destroy');
 			Route::post('/pengguna/bulk-import', [AdminController::class, 'bulkImportPengguna'])->name('pengguna.bulk-import');
+
+			Route::get('/backup', [BackupController::class, 'index'])->name('backup.index');
+			Route::post('/backup/run', [BackupController::class, 'create'])->name('backup.run');
+			Route::post('/backup/run-full', [BackupController::class, 'createFull'])->name('backup.run-full');
+			Route::get('/backup/download/{file}', [BackupController::class, 'download'])->name('backup.download');
+			Route::delete('/backup/{file}', [BackupController::class, 'destroy'])->name('backup.destroy');
 
 			Route::get('/tahun-ajaran', [AdminController::class, 'tahunAjaranIndex'])->name('tahun-ajaran.index');
 			Route::post('/tahun-ajaran', [AdminController::class, 'tahunAjaranStore'])->name('tahun-ajaran.store');

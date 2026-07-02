@@ -6,6 +6,7 @@ import AdminWorkspacePage from './pages/AdminWorkspacePage';
 import AdminAcademicMappingPage from './pages/AdminAcademicMappingPage';
 import AdminDashboard from './pages/AdminDashboard';
 import AdminBankSoalPage from './pages/AdminBankSoalPage';
+import AdminBackupPage from './pages/AdminBackupPage';
 import GuruDashboard from './pages/GuruDashboard';
 import SiswaDashboard from './pages/SiswaDashboard';
 import SiswaProfilePage from './pages/SiswaProfilePage';
@@ -176,6 +177,10 @@ function App() {
 
         if (pathname === '/admin/bank-soal') {
             return <AdminBankSoalPage session={session} onLogout={onLogout} />;
+        }
+
+        if (pathname === '/admin/backup') {
+            return <AdminBackupPage session={session} onLogout={onLogout} />;
         }
 
         const guruRouteMap = {

@@ -33,6 +33,7 @@ export default function LoginPage({ session, onLogin }) {
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
+    const [isForgotPasswordModalOpen, setIsForgotPasswordModalOpen] = useState(false);
 
     useEffect(() => {
         if (session?.role) {
@@ -55,6 +56,7 @@ export default function LoginPage({ session, onLogin }) {
     };
 
     return (
+        <>
         <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(15,23,42,0.95),_rgba(148,163,184,0.12)_45%,_rgba(241,245,249,1)_70%)] px-4 py-10 text-slate-900 sm:px-6 lg:px-8">
             <div className="mx-auto flex min-h-[calc(100vh-5rem)] w-full max-w-6xl items-center justify-center">
                 <div className="grid w-full overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-[0_30px_80px_rgba(15,23,42,0.18)] lg:grid-cols-[1.1fr_0.9fr]">
@@ -183,6 +185,16 @@ export default function LoginPage({ session, onLogin }) {
                                             </button>
                                         </div>
                                     </label>
+                                    
+                                    <div className="flex justify-end">
+                                        <button
+                                            type="button"
+                                            onClick={() => setIsForgotPasswordModalOpen(true)}
+                                            className="text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors"
+                                        >
+                                            Lupa password?
+                                        </button>
+                                    </div>
 
                                     {error ? (
                                         <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
@@ -208,5 +220,45 @@ export default function LoginPage({ session, onLogin }) {
                 </div>
             </div>
         </div>
+        
+        {/* Forgot Password Modal */}
+        {isForgotPasswordModalOpen && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+                <div className="w-full max-w-md rounded-3xl bg-white p-8 shadow-xl ring-1 ring-slate-200">
+                    <div className="flex items-center justify-between mb-6">
+                        <h2 className="text-xl font-bold text-slate-900">Lupa Password</h2>
+                        <button 
+                            onClick={() => setIsForgotPasswordModalOpen(false)}
+                            className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-900 transition"
+                        >
+                            <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
+                                <path d="M18 6L6 18M6 6l12 12" />
+                            </svg>
+                        </button>
+                    </div>
+                    <div className="space-y-4 text-slate-600 text-sm leading-relaxed">
+                        <p>
+                            Untuk alasan keamanan, fitur penggantian password mandiri tidak tersedia pada sistem ini.
+                        </p>
+                        <div className="rounded-2xl bg-amber-50 border border-amber-100 p-4">
+                            <p className="font-semibold text-amber-900 mb-1">Cara Reset Password:</p>
+                            <ul className="list-disc list-inside space-y-1 text-amber-800">
+                                <li><strong>Siswa:</strong> Silakan hubungi Wali Kelas Anda.</li>
+                                <li><strong>Guru:</strong> Silakan hubungi Administrator Sekolah.</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div className="mt-8 flex justify-end">
+                        <button 
+                            onClick={() => setIsForgotPasswordModalOpen(false)}
+                            className="rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800"
+                        >
+                            Saya Mengerti
+                        </button>
+                    </div>
+                </div>
+            </div>
+        )}
+    </>
     );
 }

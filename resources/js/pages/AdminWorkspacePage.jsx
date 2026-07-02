@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import DashboardLayout from '../components/layout/DashboardLayout';
 import StatCard from '../components/ui/StatCard';
 import { apiFetch } from '../lib/api';
+import { adminNavigation } from './adminNavigation';
 
 const MENU_META = {
     dashboard: {
@@ -272,18 +273,7 @@ export default function AdminWorkspacePage({ session, onLogout, mode = 'dashboar
         }
     }, []);
 
-    const navigation = useMemo(() => ([
-        { label: 'Dashboard', href: '/admin/dashboard', badge: 'Home' },
-        { label: 'Akun Pengguna', href: '/admin/pengguna', badge: 'CRUD' },
-        { label: 'Tahun Ajaran', href: '/admin/tahun-ajaran', badge: 'Master' },
-        { label: 'Kelas', href: '/admin/kelas', badge: 'CRUD' },
-        { label: 'Mata Pelajaran', href: '/admin/mata-pelajaran', badge: 'CRUD' },
-        { label: 'Penempatan Siswa', href: '/admin/kelas-siswa', badge: 'Relasi' },
-        { label: 'Penugasan Guru', href: '/admin/penugasan-pembelajaran', badge: 'Relasi' },
-        { label: 'Pemetaan Akademik', href: '/admin/pemetaan-akademik', badge: 'Lihat' },
-        { label: 'Bank Soal', href: '/admin/bank-soal', badge: 'Pool' },
-        { label: 'Import Akun', href: '/admin/import-akun', badge: 'Excel' },
-    ]), []);
+    const navigation = adminNavigation;
 
     const buildUserQuery = (filters) => {
         const params = new URLSearchParams();

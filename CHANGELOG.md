@@ -8,6 +8,12 @@
   - Saat Guru membuat Jadwal CBT, daftar "Pilih Soal" kini mengambil data dari seluruh *Shared Pool* berdasarkan Mata Pelajaran (termasuk soal buatan Admin atau Guru lain), lengkap dengan label penanda "Soal Anda" atau "Soal Admin".
   - Penambahan pustaka eksternal `xlsx` pada Frontend untuk fungsi Bulk Import tanpa memberatkan server.
 ### Added
+- **Sistem Backup & Restore**: Penambahan fitur manajemen pencadangan data otomatis dan manual menggunakan paket `spatie/laravel-backup`.
+  - **Otomatisasi**: *Cron-job* terjadwal mengeksekusi `backup:clean` (01:30) dan `backup:run` (02:00) setiap hari.
+  - **Halaman Admin**: UI baru di Dashboard Admin (`/admin/backup`) untuk mengelola cadangan data, terhubung via `AdminBackupPage.jsx`.
+  - **Fungsi Interaktif**: Admin dapat membuat backup Database, Full Backup, melihat riwayat *file* ZIP, mengunduh file, dan menghapus *file backup*.
+  - **Lokalisasi Waktu**: Format waktu pada UI telah menggunakan zona waktu Asia/Jakarta (WIB).
+  - Termasuk unit test API baru di `AdminBackupTest.php`.
 - **UI Admin Bank Soal**: Penambahan Halaman Manajemen Bank Soal di sisi Admin untuk melihat, memfilter, dan menghapus soal, serta unggah masal via *Excel*.
 - **Bulk Import Excel**: Guru dan Admin kini dapat melakukan unggah soal masal menggunakan format `.xlsx`.
 - **Panel Notifikasi Terpadu (Siswa)**: Penambahan fitur lonceng notifikasi *real-time* di Dashboard Siswa.

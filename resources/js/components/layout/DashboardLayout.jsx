@@ -84,7 +84,10 @@ export default function DashboardLayout({ title, user, navigation, onLogout, pro
                                 href={item.href}
                                 className={`flex items-center justify-between rounded-2xl px-4 py-3 text-sm font-medium transition ${currentPath === item.href ? 'bg-white/15 text-white ring-1 ring-white/10' : 'text-slate-200 hover:bg-white/10 hover:text-white'}`}
                             >
-                                <span>{item.label}</span>
+                                <div className="flex items-center gap-3">
+                                    {item.icon && <span className="flex-shrink-0">{item.icon}</span>}
+                                    <span>{item.label}</span>
+                                </div>
                                 <span className="text-xs text-slate-500">{item.badge}</span>
                             </a>
                         ))}
