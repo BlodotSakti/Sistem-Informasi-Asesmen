@@ -87,23 +87,23 @@ export default function SiswaLearningHistoryPage({ session, onLogout }) {
     return (
         <DashboardLayout title="Riwayat Pembelajaran" user={session?.user} navigation={siswaNavigation} onLogout={onLogout} profileHref="/siswa/profil">
             <div className="space-y-6">
-                <section className="overflow-hidden rounded-[2rem] border border-slate-200 bg-gradient-to-br from-slate-900 via-blue-900 to-cyan-800 px-6 py-8 text-white shadow-2xl shadow-slate-950/20 lg:px-8">
-                    <p className="text-sm font-medium uppercase tracking-[0.3em] text-indigo-300">Riwayat BAP</p>
-                    <h3 className="mt-2 text-2xl font-semibold text-slate-100">Jejak setiap pertemuan dan mata pelajaran</h3>
-                    <p className="mt-2 text-sm text-slate-300">Halaman ini menampilkan topik yang dipelajari, status kehadiran Anda, dan ringkasan per mata pelajaran.</p>
+                <section className="overflow-hidden rounded-[2.5rem] border border-[#8A2332]/30 bg-gradient-to-br from-[#8A2332] via-primary to-secondary px-8 py-10 shadow-lg backdrop-blur-xl relative">
+                    <p className="text-xs uppercase tracking-[0.4em] text-accent font-bold">Riwayat BAP</p>
+                    <h3 className="mt-2 text-3xl font-semibold text-[#EEDCC8]">Jejak setiap pertemuan dan mata pelajaran</h3>
+                    <p className="mt-2 text-sm text-accent">Halaman ini menampilkan topik yang dipelajari, status kehadiran Anda, dan ringkasan per mata pelajaran.</p>
 
                     <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-                        <StatCard label="Total Pertemuan" value={loading ? '...' : history?.total_pertemuan ?? 0} description="Seluruh BAP yang relevan" tone="blue" />
-                        <StatCard label="Hadir" value={loading ? '...' : history?.summary_kehadiran?.hadir ?? 0} description="Pertemuan yang dihadiri" tone="emerald" />
-                        <StatCard label="Izin/Sakit" value={loading ? '...' : (history?.summary_kehadiran?.izin ?? 0) + (history?.summary_kehadiran?.sakit ?? 0)} description="Absensi yang tercatat" tone="amber" />
-                        <StatCard label="Alpa" value={loading ? '...' : history?.summary_kehadiran?.alpa ?? 0} description="Ketidakhadiran" tone="rose" />
+                        <StatCard label="Total Pertemuan" value={loading ? '...' : history?.total_pertemuan ?? 0} description="Seluruh BAP yang relevan" tone="blue" className="!bg-[#EEDCC8] !border-transparent" />
+                        <StatCard label="Hadir" value={loading ? '...' : history?.summary_kehadiran?.hadir ?? 0} description="Pertemuan yang dihadiri" tone="emerald" className="!bg-[#EEDCC8] !border-transparent" />
+                        <StatCard label="Izin/Sakit" value={loading ? '...' : (history?.summary_kehadiran?.izin ?? 0) + (history?.summary_kehadiran?.sakit ?? 0)} description="Absensi yang tercatat" tone="amber" className="!bg-[#EEDCC8] !border-transparent" />
+                        <StatCard label="Alpa" value={loading ? '...' : history?.summary_kehadiran?.alpa ?? 0} description="Ketidakhadiran" tone="rose" className="!bg-[#EEDCC8] !border-transparent" />
                     </div>
                 </section>
 
                 {error ? <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div> : null}
 
                 <section className="space-y-6">
-                    <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+                    <div className="rounded-3xl border border-border bg-white p-6 shadow-sm">
                         <p className="text-sm font-medium uppercase tracking-[0.3em] text-slate-500">Filter Mapel</p>
                         <h3 className="mt-2 text-xl font-semibold text-slate-900">Saring riwayat per mata pelajaran</h3>
 
@@ -125,13 +125,13 @@ export default function SiswaLearningHistoryPage({ session, onLogout }) {
                         </div>
                     </div>
 
-                    <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+                    <div className="rounded-3xl border border-border bg-white p-6 shadow-sm">
                         <p className="text-sm font-medium uppercase tracking-[0.3em] text-slate-500">Ringkasan Mapel</p>
                         <h3 className="mt-2 text-xl font-semibold text-slate-900">Topik terakhir dan jumlah pertemuan</h3>
 
-                        <div className="mt-6 overflow-hidden rounded-3xl border border-slate-200">
+                        <div className="mt-6 overflow-hidden rounded-3xl border border-border">
                             <table className="min-w-full divide-y divide-slate-200 text-left text-sm">
-                                <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase tracking-[0.2em] text-slate-500">
+                                <thead className="border-b border-border bg-slate-50 text-xs uppercase tracking-[0.2em] text-slate-500">
                                     <tr>
                                         <th className="px-4 py-3 font-semibold">Mapel</th>
                                         <th className="px-4 py-3 font-semibold">Pertemuan</th>
@@ -161,13 +161,13 @@ export default function SiswaLearningHistoryPage({ session, onLogout }) {
                         </div>
                     </div>
 
-                    <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+                    <div className="rounded-3xl border border-border bg-white p-6 shadow-sm">
                         <p className="text-sm font-medium uppercase tracking-[0.3em] text-slate-500">Daftar Pertemuan</p>
                         <h3 className="mt-2 text-xl font-semibold text-slate-900">Topik, kehadiran, dan catatan per BAP</h3>
 
-                        <div className="mt-6 overflow-x-auto rounded-3xl border border-slate-200">
+                        <div className="mt-6 overflow-x-auto rounded-3xl border border-border">
                             <table className="min-w-full divide-y divide-slate-200 text-left text-sm">
-                                <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase tracking-[0.2em] text-slate-500">
+                                <thead className="border-b border-border bg-slate-50 text-xs uppercase tracking-[0.2em] text-slate-500">
                                     <tr>
                                         <th className="px-4 py-3 font-semibold">Tanggal</th>
                                         <th className="px-4 py-3 font-semibold">Kelas</th>

@@ -239,7 +239,7 @@ export default function SiswaCbtPage({ session, onLogout, idSesi }) {
             <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 font-sans text-slate-900">
                 <div className="mx-auto max-w-4xl px-6 py-12">
                     {/* Score Hero */}
-                    <div className="mb-10 rounded-3xl border border-slate-200 bg-white p-10 text-center shadow-lg">
+                    <div className="mb-10 rounded-3xl border border-border bg-white p-10 text-center shadow-lg">
                         <div className="mx-auto mb-4 flex h-40 w-40 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 shadow-xl">
                             <span className="text-4xl font-black text-white">{persen}%</span>
                         </div>
@@ -247,9 +247,9 @@ export default function SiswaCbtPage({ session, onLogout, idSesi }) {
                         <p className="mt-2 text-lg text-slate-500">{resultData.mata_pelajaran} — <span className="capitalize">{resultData.jenis_asesmen}</span></p>
 
                         <div className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-4">
-                            <div className="rounded-2xl bg-blue-50 px-4 py-5">
-                                <p className="text-2xl font-bold text-blue-700">{Number(resultData.total_skor).toFixed(2)}</p>
-                                <p className="mt-1 text-xs font-medium text-blue-500">Skor / {resultData.total_bobot}</p>
+                            <div className="rounded-2xl bg-primary/5 px-4 py-5">
+                                <p className="text-2xl font-bold text-primary">{Number(resultData.total_skor).toFixed(2)}</p>
+                                <p className="mt-1 text-xs font-medium text-primary">Skor / {resultData.total_bobot}</p>
                             </div>
                             <div className="rounded-2xl bg-emerald-50 px-4 py-5">
                                 <p className="text-2xl font-bold text-emerald-700">{resultData.jumlah_benar}</p>
@@ -257,11 +257,11 @@ export default function SiswaCbtPage({ session, onLogout, idSesi }) {
                             </div>
                             <div className="rounded-2xl bg-rose-50 px-4 py-5">
                                 <p className="text-2xl font-bold text-rose-700">{resultData.jumlah_salah}</p>
-                                <p className="mt-1 text-xs font-medium text-rose-500">Salah</p>
+                                <p className="mt-1 text-xs font-medium text-error">Salah</p>
                             </div>
                             <div className="rounded-2xl bg-amber-50 px-4 py-5">
                                 <p className="text-2xl font-bold text-amber-700">{resultData.jumlah_soal}</p>
-                                <p className="mt-1 text-xs font-medium text-amber-500">Total Soal</p>
+                                <p className="mt-1 text-xs font-medium text-accent">Total Soal</p>
                             </div>
                         </div>
                     </div>
@@ -280,7 +280,7 @@ export default function SiswaCbtPage({ session, onLogout, idSesi }) {
                                 <p className="mt-2 text-sm text-slate-600 whitespace-pre-wrap">{item.isi_soal}</p>
                                 {item.gambar_soal && (
                                     <div className="mt-3">
-                                        <img src={`/storage/${item.gambar_soal}`} alt="Gambar Soal" className="max-h-48 rounded-lg border border-slate-200 object-contain shadow-sm" />
+                                        <img src={`/storage/${item.gambar_soal}`} alt="Gambar Soal" className="max-h-48 rounded-lg border border-border object-contain shadow-sm" />
                                     </div>
                                 )}
                                 {item.opsi_jawaban && item.opsi_jawaban.length > 0 && (
@@ -294,7 +294,7 @@ export default function SiswaCbtPage({ session, onLogout, idSesi }) {
                                             const isCorrectOption = kunciArr.includes(opsi);
                                             const isChosenOption = jawabanArr.includes(opsi);
 
-                                            let style = 'border-slate-200 bg-white text-slate-600';
+                                            let style = 'border-border bg-white text-slate-600';
                                             let label = '';
                                             let icon = '○';
 
@@ -329,11 +329,11 @@ export default function SiswaCbtPage({ session, onLogout, idSesi }) {
 
                                 {(!item.opsi_jawaban || item.opsi_jawaban.length === 0) && (
                                     <div className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
-                                        <div className="rounded-xl bg-white/80 px-4 py-2 border border-slate-200">
+                                        <div className="rounded-xl bg-white/80 px-4 py-2 border border-border">
                                             <span className="font-medium text-slate-500">Jawaban Anda:</span>
                                             <p className="mt-1 text-slate-800">{formatJawaban(item.jawaban_siswa, item.jenis_soal) || <em className="text-slate-400">Tidak dijawab</em>}</p>
                                         </div>
-                                        <div className="rounded-xl bg-white/80 px-4 py-2 border border-slate-200">
+                                        <div className="rounded-xl bg-white/80 px-4 py-2 border border-border">
                                             <span className="font-medium text-slate-500">Kunci Jawaban:</span>
                                             <p className="mt-1 text-slate-800">{formatJawaban(item.kunci_jawaban, item.jenis_soal)}</p>
                                         </div>
@@ -347,10 +347,10 @@ export default function SiswaCbtPage({ session, onLogout, idSesi }) {
                     <AnalisisDiagnostikCard analisis={resultData.analisis_diagnostik} />
 
                     <div className="mt-10 text-center">
-                        <a href="/siswa/riwayat-cbt" className="mr-4 rounded-xl border border-slate-200 bg-white px-6 py-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50">
+                        <a href="/siswa/riwayat-cbt" className="mr-4 rounded-xl border border-border bg-white px-6 py-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50">
                             Lihat Riwayat CBT
                         </a>
-                        <a href="/siswa/dashboard" className="rounded-xl bg-blue-600 px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700">
+                        <a href="/siswa/dashboard" className="rounded-xl bg-primary px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-primary/85">
                             Kembali ke Dashboard
                         </a>
                     </div>
@@ -364,7 +364,7 @@ export default function SiswaCbtPage({ session, onLogout, idSesi }) {
         return (
             <div className="flex min-h-screen items-center justify-center bg-slate-50">
                 <div className="text-center">
-                    <div className="mx-auto h-12 w-12 animate-spin rounded-full border-b-2 border-t-2 border-blue-600"></div>
+                    <div className="mx-auto h-12 w-12 animate-spin rounded-full border-b-2 border-t-2 border-primary"></div>
                     <p className="mt-4 text-slate-500 font-medium">Memuat Soal Ujian...</p>
                 </div>
             </div>
@@ -405,33 +405,33 @@ export default function SiswaCbtPage({ session, onLogout, idSesi }) {
 
     // --- EXAM SCREEN ---
     return (
-        <div className="min-h-screen bg-slate-100 font-sans text-slate-900 flex flex-col selection:bg-blue-100">
+        <div className="min-h-screen bg-slate-100 font-sans text-slate-900 flex flex-col selection:bg-primary/10">
             {/* Header */}
-            <header className="sticky top-0 z-10 flex h-16 items-center justify-between border-b border-slate-200 bg-white/80 px-6 backdrop-blur-md shadow-sm">
+            <header className="sticky top-0 z-10 flex h-16 items-center justify-between border-b border-border bg-secondary px-6 backdrop-blur-md shadow-sm">
                 <div className="flex items-center space-x-4">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600 text-white font-bold">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-accent font-bold">
                         CBT
                     </div>
                     <div>
-                        <h1 className="font-semibold leading-tight text-slate-800">{sesiData?.mata_pelajaran || 'Ujian'}</h1>
-                        <p className="text-xs font-medium text-slate-500 uppercase tracking-widest">{sesiData?.jenis_asesmen}</p>
+                        <h1 className="font-semibold leading-tight text-accent">{sesiData?.mata_pelajaran || 'Ujian'}</h1>
+                        <p className="text-xs font-medium text-accent uppercase tracking-widest">{sesiData?.jenis_asesmen}</p>
                     </div>
                 </div>
 
                 <div className="flex items-center space-x-6">
-                    <div className="flex items-center space-x-3 rounded-xl bg-slate-50 px-4 py-2 border border-slate-200 shadow-inner">
+                    <div className="flex items-center space-x-3 rounded-xl bg-primary px-4 py-2 border border-border shadow-inner">
                         <span className="relative flex h-3 w-3">
-                            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-rose-400 opacity-75"></span>
-                            <span className="relative inline-flex h-3 w-3 rounded-full bg-rose-500"></span>
+                            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-secondary/70 opacity-75"></span>
+                            <span className="relative inline-flex h-3 w-3 rounded-full bg-secondary"></span>
                         </span>
-                        <span className={`font-mono text-lg font-bold tracking-wider ${timeLeft < 300 ? 'text-rose-600' : 'text-slate-700'}`}>
+                        <span className={`font-mono text-lg font-bold tracking-wider ${timeLeft < 300 ? 'text-rose-600' : 'text-accent'}`}>
                             {formatTime(timeLeft)}
                         </span>
                     </div>
                     <button
                         onClick={() => setShowSummary(true)}
                         disabled={submitting}
-                        className="rounded-xl bg-blue-600 px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 disabled:opacity-50"
+                        className="rounded-xl bg-primary px-5 py-2 text-sm font-semibold text-accent shadow-sm transition hover:bg-primary/85 disabled:opacity-50"
                     >
                         Kumpulkan Jawaban
                     </button>
@@ -440,7 +440,7 @@ export default function SiswaCbtPage({ session, onLogout, idSesi }) {
 
             <main className="mx-auto flex w-full max-w-7xl flex-1 items-start gap-8 p-6">
                 {/* Question Area */}
-                <div className="flex-1 rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
+                <div className="flex-1 rounded-3xl border border-border bg-white p-8 shadow-sm">
                     {showSummary ? (
                         <div className="animate-in fade-in zoom-in-95 duration-300">
                             <h2 className="mb-6 text-2xl font-bold text-slate-800 text-center">Konfirmasi Pengumpulan Jawaban</h2>
@@ -465,7 +465,7 @@ export default function SiswaCbtPage({ session, onLogout, idSesi }) {
                             <div className="flex items-center justify-center space-x-4 border-t border-slate-100 pt-8">
                                 <button
                                     onClick={() => setShowSummary(false)}
-                                    className="rounded-xl border border-slate-200 bg-white px-6 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                                    className="rounded-xl border border-border bg-white px-6 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
                                 >
                                     Kembali ke Soal
                                 </button>
@@ -476,7 +476,7 @@ export default function SiswaCbtPage({ session, onLogout, idSesi }) {
                                         }
                                     }}
                                     disabled={submitting}
-                                    className="rounded-xl bg-blue-600 px-8 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 disabled:opacity-50 flex items-center"
+                                    className="rounded-xl bg-primary px-8 py-3 text-sm font-semibold text-accent shadow-sm transition hover:bg-primary/85 disabled:opacity-50 flex items-center"
                                 >
                                     {submitting ? 'Menyimpan...' : 'Selesai Ujian'}
                                 </button>
@@ -497,7 +497,7 @@ export default function SiswaCbtPage({ session, onLogout, idSesi }) {
                                 {activeSoal.isi_soal}
                                 {activeSoal.gambar_soal && (
                                     <div className="mt-4">
-                                        <img src={`/storage/${activeSoal.gambar_soal}`} alt="Ilustrasi Soal" className="max-h-64 max-w-full rounded-xl border border-slate-200 shadow-sm" />
+                                        <img src={`/storage/${activeSoal.gambar_soal}`} alt="Ilustrasi Soal" className="max-h-64 max-w-full rounded-xl border border-border shadow-sm" />
                                     </div>
                                 )}
                             </div>
@@ -522,8 +522,8 @@ export default function SiswaCbtPage({ session, onLogout, idSesi }) {
                                                     key={idx}
                                                     className={`group relative flex cursor-pointer items-start space-x-4 rounded-2xl border p-4 transition-all hover:bg-slate-50 ${
                                                         isChecked
-                                                            ? 'border-blue-600 bg-blue-50/50 shadow-sm'
-                                                            : 'border-slate-200 hover:border-blue-300'
+                                                            ? 'border-primary bg-primary/5/50 shadow-sm'
+                                                            : 'border-border hover:border-primary/30'
                                                     }`}
                                                 >
                                                     <div className="flex h-6 items-center">
@@ -539,7 +539,7 @@ export default function SiswaCbtPage({ session, onLogout, idSesi }) {
                                                                     handleAnswerChange(activeSoal.id_detail, e.target.value);
                                                                 }
                                                             }}
-                                                            className={`h-5 w-5 border-slate-300 text-blue-600 focus:ring-blue-600 ${isKompleks ? 'rounded' : 'rounded-full'}`}
+                                                            className={`h-5 w-5 border-slate-300 text-primary focus:ring-primary ${isKompleks ? 'rounded' : 'rounded-full'}`}
                                                         />
                                                     </div>
                                                     <div className="flex-1 text-slate-700 font-medium">
@@ -554,7 +554,7 @@ export default function SiswaCbtPage({ session, onLogout, idSesi }) {
                                         value={jawaban[activeSoal.id_detail] || ''}
                                         onChange={(e) => handleAnswerChange(activeSoal.id_detail, e.target.value)}
                                         rows={6}
-                                        className="w-full rounded-2xl border border-slate-300 p-4 text-slate-700 shadow-sm outline-none transition focus:border-blue-600 focus:ring-1 focus:ring-blue-600"
+                                        className="w-full rounded-2xl border border-slate-300 p-4 text-slate-700 shadow-sm outline-none transition focus:border-primary focus:ring-1 focus:ring-primary"
                                         placeholder="Ketikkan jawaban essay Anda di sini..."
                                     />
                                 )}
@@ -565,21 +565,21 @@ export default function SiswaCbtPage({ session, onLogout, idSesi }) {
                                 <button
                                     onClick={() => setCurrentIndex((p) => Math.max(0, p - 1))}
                                     disabled={currentIndex === 0}
-                                    className="rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:opacity-40"
+                                    className="rounded-xl border border-border bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:opacity-40"
                                 >
                                     &larr; Sebelumnya
                                 </button>
                                 {currentIndex === soalData.length - 1 ? (
                                     <button
                                         onClick={() => setShowSummary(true)}
-                                        className="rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700"
+                                        className="rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-accent shadow-sm transition hover:bg-primary/85"
                                     >
                                         Kumpulkan Jawaban
                                     </button>
                                 ) : (
                                     <button
                                         onClick={() => setCurrentIndex((p) => Math.min(soalData.length - 1, p + 1))}
-                                        className="rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:opacity-40"
+                                        className="rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-semibold text-accent transition hover:bg-primary/85 disabled:opacity-40"
                                     >
                                         Selanjutnya &rarr;
                                     </button>
@@ -593,8 +593,8 @@ export default function SiswaCbtPage({ session, onLogout, idSesi }) {
 
                 {/* Question Palette Sidebar */}
                 <aside className="w-80 shrink-0 space-y-6">
-                    <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sticky top-24">
-                        <h3 className="mb-4 text-sm font-bold uppercase tracking-widest text-slate-500">Navigasi Soal</h3>
+                    <div className="rounded-3xl border border-border bg-secondary p-6 shadow-sm sticky top-24">
+                        <h3 className="mb-4 text-sm font-bold uppercase tracking-widest text-accent">Navigasi Soal</h3>
 
                         <div className="grid grid-cols-5 gap-2">
                             {soalData.map((soal, idx) => {
@@ -607,7 +607,7 @@ export default function SiswaCbtPage({ session, onLogout, idSesi }) {
                                         onClick={() => setCurrentIndex(idx)}
                                         className={`flex h-12 w-full items-center justify-center rounded-xl font-semibold transition-all ${
                                             isActive
-                                                ? 'bg-blue-600 text-white shadow-md ring-2 ring-blue-600 ring-offset-2'
+                                                ? 'bg-primary text-white shadow-md ring-2 ring-primary ring-offset-2'
                                                 : hasAnswered
                                                 ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200'
                                                 : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
@@ -622,19 +622,19 @@ export default function SiswaCbtPage({ session, onLogout, idSesi }) {
                         <div className="mt-8 space-y-3 border-t border-slate-100 pt-6">
                             <div className="flex items-center text-sm">
                                 <span className="mr-3 block h-4 w-4 rounded-md bg-emerald-100"></span>
-                                <span className="text-slate-600">Sudah Dijawab</span>
+                                <span className="text-accent">Sudah Dijawab</span>
                             </div>
                             <div className="flex items-center text-sm">
                                 <span className="mr-3 block h-4 w-4 rounded-md bg-slate-100"></span>
-                                <span className="text-slate-600">Belum Dijawab</span>
+                                <span className="text-accent">Belum Dijawab</span>
                             </div>
                             <div className="flex items-center text-sm">
-                                <span className="mr-3 block h-4 w-4 rounded-md bg-blue-600"></span>
-                                <span className="text-slate-600">Sedang Dibuka</span>
+                                <span className="mr-3 block h-4 w-4 rounded-md bg-primary"></span>
+                                <span className="text-accent">Sedang Dibuka</span>
                             </div>
                         </div>
 
-                        <div className="mt-6 border-t border-slate-100 pt-4 text-center text-xs text-slate-400">
+                        <div className="mt-6 border-t border-slate-100 pt-4 text-center text-xs text-accent">
                             Jawaban tersimpan otomatis
                         </div>
                     </div>

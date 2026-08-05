@@ -11,33 +11,33 @@ export default function GuruProfilePage({ session, onLogout }) {
     return (
         <DashboardLayout title="Profil Guru" user={session?.user} navigation={guruNavigation} onLogout={onLogout} profileHref="/guru/dashboard">
             <div className="space-y-6">
-                <section className="rounded-3xl border border-slate-200 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800 p-6 text-white shadow-sm">
-                    <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
+                <section className="relative overflow-hidden rounded-[2.5rem] border border-[#8A2332]/30 bg-gradient-to-br from-[#8A2332] via-primary to-secondary p-8 shadow-lg backdrop-blur-xl">
+                    <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between relative z-10">
                         <div className="flex items-center gap-4">
-                            <div className="flex h-20 w-20 items-center justify-center rounded-full border border-white/15 bg-slate-700 text-2xl font-semibold uppercase text-amber-300">
+                            <div className="flex h-20 w-20 items-center justify-center rounded-full border-2 border-[#EEDCC8]/20 bg-white/10 text-2xl font-semibold uppercase text-[#EEDCC8] shadow-inner backdrop-blur-sm">
                                 {(profile.nama_lengkap || session?.user?.nama_lengkap || 'GU').slice(0, 2)}
                             </div>
                             <div>
-                                <p className="text-xs uppercase tracking-[0.35em] text-slate-400">Profil Guru</p>
-                                <h3 className="mt-2 text-3xl font-semibold">{profile.nama_lengkap || session?.user?.nama_lengkap || '-'}</h3>
-                                <p className="mt-2 text-sm text-slate-300">NIP: {profile.nip || '-'}</p>
+                                <p className="text-xs uppercase tracking-[0.4em] text-accent font-bold">Profil Guru</p>
+                                <h3 className="mt-2 text-3xl font-extrabold tracking-tight text-[#EEDCC8]">{profile.nama_lengkap || session?.user?.nama_lengkap || '-'}</h3>
+                                <p className="mt-2 text-sm text-accent">NIP: {profile.nip || '-'}</p>
                             </div>
                         </div>
 
-                        <a href="/guru/dashboard" className="inline-flex items-center justify-center rounded-full border border-white/15 bg-white/5 px-5 py-3 text-sm font-semibold text-white transition hover:bg-white/10">
+                        {/*<a href="/guru/dashboard" className="inline-flex items-center justify-center rounded-full border border-white/15 bg-white/5 px-5 py-3 text-sm font-semibold text-white transition hover:bg-white/10">
                             Kembali ke Dashboard
-                        </a>
+                        </a>*/}
                     </div>
                 </section>
 
                 <section className="grid gap-4 md:grid-cols-2">
-                    <StatCard label="Penugasan Kelas" value={assignments.length} description="Kelas yang diampu saat ini" tone="blue" />
-                    <StatCard label="Role Sistem" value="Guru" description="Hak akses aplikasi" tone="slate" />
+                    <StatCard label="Penugasan Kelas" value={assignments.length} description="Kelas yang diampu saat ini" tone="blue" className="border-border bg-white p-6 shadow-sm !border-transparent" />
+                    <StatCard label="Role Sistem" value="Guru" description="Hak akses aplikasi" tone="slate" className="border-border bg-white p-6 shadow-sm !border-transparent" />
                 </section>
 
                 <section className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
                     <div className="space-y-6">
-                        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+                        <div className="rounded-3xl border border-border bg-white p-6 shadow-sm">
                             <p className="text-sm font-medium uppercase tracking-[0.3em] text-slate-500">Identitas Pribadi</p>
                             <h3 className="mt-2 text-xl font-semibold text-slate-900">Ringkasan data utama</h3>
 
@@ -61,13 +61,13 @@ export default function GuruProfilePage({ session, onLogout }) {
                     </div>
 
                     <div className="space-y-6">
-                        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+                        <div className="rounded-3xl border border-border bg-white p-6 shadow-sm">
                             <p className="text-sm font-medium uppercase tracking-[0.3em] text-slate-500">Daftar Penugasan</p>
                             <h3 className="mt-2 text-xl font-semibold text-slate-900">Kelas & Mata Pelajaran Diampu</h3>
 
-                            <div className="mt-6 overflow-x-auto rounded-3xl border border-slate-200">
+                            <div className="mt-6 overflow-x-auto rounded-3xl border border-border">
                                 <table className="min-w-full divide-y divide-slate-200 text-left text-sm">
-                                    <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase tracking-[0.2em] text-slate-500">
+                                    <thead className="border-b border-border bg-slate-50 text-xs uppercase tracking-[0.2em] text-slate-500">
                                         <tr>
                                             <th className="px-4 py-3 font-semibold">Kelas</th>
                                             <th className="px-4 py-3 font-semibold">Mata Pelajaran</th>

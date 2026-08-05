@@ -71,7 +71,7 @@ export default function GuruArsipDiagnostikPage({ session, onLogout }) {
                             placeholder="Cari nama siswa..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full pl-10 pr-4 py-3 rounded-2xl border border-slate-300 bg-white text-sm outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all shadow-sm"
+                            className="w-full pl-10 pr-4 py-3 rounded-2xl border border-slate-300 bg-white text-sm outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all shadow-sm"
                         />
                     </div>
                 </div>
@@ -82,7 +82,7 @@ export default function GuruArsipDiagnostikPage({ session, onLogout }) {
                     </div>
                 )}
 
-                <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+                <div className="overflow-hidden rounded-3xl border border-border bg-white shadow-sm">
                     <div className="overflow-x-auto">
                         <table className="min-w-full divide-y divide-slate-200 text-left text-sm">
                             <thead className="bg-slate-50/50">
@@ -100,7 +100,7 @@ export default function GuruArsipDiagnostikPage({ session, onLogout }) {
                                     <tr>
                                         <td colSpan="6" className="px-6 py-12 text-center text-slate-500">
                                             <div className="flex justify-center mb-4">
-                                                <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-indigo-600"></div>
+                                                <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
                                             </div>
                                             Memuat arsip laporan...
                                         </td>
@@ -135,7 +135,7 @@ export default function GuruArsipDiagnostikPage({ session, onLogout }) {
                                             <td className="px-6 py-4 text-right">
                                                 <button 
                                                     onClick={() => window.location.href = `/guru/laporan-diagnostik/${item.id_analisis}`}
-                                                    className="inline-flex items-center gap-1.5 rounded-xl bg-indigo-50 px-3 py-2 text-xs font-bold text-indigo-600 transition-colors hover:bg-indigo-100"
+                                                    className="inline-flex items-center gap-1.5 rounded-xl bg-primary/5 px-3 py-2 text-xs font-bold text-primary transition-colors hover:bg-primary/10"
                                                 >
                                                     Lihat
                                                     <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
@@ -150,7 +150,7 @@ export default function GuruArsipDiagnostikPage({ session, onLogout }) {
 
                     {/* Pagination Footer */}
                     {diagnostics.last_page > 1 && (
-                        <div className="flex items-center justify-between border-t border-slate-200 bg-slate-50 px-6 py-4">
+                        <div className="flex items-center justify-between border-t border-border bg-slate-50 px-6 py-4">
                             <p className="text-sm text-slate-600">
                                 Menampilkan <span className="font-semibold text-slate-900">{((diagnostics.current_page - 1) * 15) + (diagnostics.data.length > 0 ? 1 : 0)}</span> - <span className="font-semibold text-slate-900">{((diagnostics.current_page - 1) * 15) + diagnostics.data.length}</span> dari <span className="font-semibold text-slate-900">{diagnostics.total}</span> arsip
                             </p>
@@ -158,7 +158,7 @@ export default function GuruArsipDiagnostikPage({ session, onLogout }) {
                                 <button
                                     onClick={() => handlePageChange(diagnostics.current_page - 1)}
                                     disabled={diagnostics.current_page === 1}
-                                    className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-white border border-slate-200 text-slate-500 shadow-sm transition hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-white border border-border text-slate-500 shadow-sm transition hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                     <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                                         <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
@@ -170,7 +170,7 @@ export default function GuruArsipDiagnostikPage({ session, onLogout }) {
                                 <button
                                     onClick={() => handlePageChange(diagnostics.current_page + 1)}
                                     disabled={diagnostics.current_page === diagnostics.last_page}
-                                    className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-white border border-slate-200 text-slate-500 shadow-sm transition hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-white border border-border text-slate-500 shadow-sm transition hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                     <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                                         <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />

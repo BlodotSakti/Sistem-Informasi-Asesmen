@@ -275,26 +275,27 @@ export default function AdminBankSoalPage({ session, onLogout }) {
     return (
         <DashboardLayout user={session?.user} title="Bank Soal (Shared Pool)" navigation={navigation} onLogout={onLogout}>
             <div className="space-y-6">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
+                <section className="overflow-hidden rounded-[2.5rem] border border-[#8A2332]/30 bg-gradient-to-br from-[#8A2332] via-primary to-secondary px-8 py-10 shadow-lg backdrop-blur-xl flex flex-col sm:flex-row sm:items-center justify-between gap-8">
                     <div>
-                        <h2 className="text-xl font-bold text-slate-900">Manajemen Bank Soal</h2>
-                        <p className="text-sm text-slate-500 mt-1">Kolam soal bersama antar Admin dan Guru</p>
+                        <p className="text-xs uppercase tracking-[0.45em] text-accent">Bank Soal</p>
+                        <h3 className="mt-4 max-w-2xl text-3xl font-semibold leading-tight text-[#EEDCC8] md:text-4xl">Manajemen Bank Soal</h3>
+                        <p className="mt-4 max-w-2xl text-sm leading-7 text-accent md:text-base">Kolam soal bersama antar Admin dan Guru</p>
                     </div>
-                    <div className="flex items-center gap-3">
+                    <div className="flex flex-wrap items-center gap-3">
                         <input type="file" accept=".xlsx, .xls" className="hidden" ref={fileInputRef} onChange={handleFileUpload} />
                         <button onClick={() => {
                             if (!isFormOpen) {
                                 setBankForm(curr => ({ ...curr, id_mapel: masterMapel[0]?.id_mapel || '' }));
                             }
                             setIsFormOpen(!isFormOpen);
-                        }} className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-sm font-semibold transition">
+                        }} className="px-6 py-3 bg-accent hover:scale-105 text-[#EEDCC8] rounded-full text-sm font-semibold transition-all shadow-md">
                             {isFormOpen ? 'Tutup Form' : '+ Tambah Manual'}
                         </button>
-                        <button onClick={() => fileInputRef.current?.click()} className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-sm font-semibold transition">
+                        <button onClick={() => fileInputRef.current?.click()} className="px-6 py-3 bg-[#EEDCC8] hover:scale-105 text-primary rounded-full text-sm font-semibold transition-all shadow-md">
                             Import Excel
                         </button>
                     </div>
-                </div>
+                </section>
 
                 {error && <div className="p-4 bg-red-50 text-red-600 rounded-2xl text-sm">{error}</div>}
 
@@ -309,9 +310,9 @@ export default function AdminBankSoalPage({ session, onLogout }) {
                     />
                 )}
 
-                <div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
+                <div className="bg-white rounded-3xl shadow-sm border border-border overflow-hidden">
                     <div className="p-6 border-b border-slate-100 flex items-center justify-between">
-                        <select value={selectedMapel} onChange={(e) => setSelectedMapel(e.target.value)} className="bg-slate-50 border border-slate-200 text-slate-700 text-sm rounded-xl px-4 py-2 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition">
+                        <select value={selectedMapel} onChange={(e) => setSelectedMapel(e.target.value)} className="bg-slate-50 border border-border text-slate-700 text-sm rounded-xl px-4 py-2 outline-none focus:border-primary focus:ring-1 focus:ring-primary transition">
                             <option value="all">Semua Mata Pelajaran</option>
                             {mapelOptions.map(([id, label]) => (
                                 <option key={id} value={id}>{label}</option>
@@ -342,7 +343,7 @@ export default function AdminBankSoalPage({ session, onLogout }) {
                                     Object.entries(groupedBankSoal).map(([id_mapel, group]) => (
                                         <React.Fragment key={id_mapel}>
                                             <tr 
-                                                className="cursor-pointer bg-blue-50/50 hover:bg-blue-50 transition-colors"
+                                                className="cursor-pointer bg-primary/5/50 hover:bg-primary/5 transition-colors"
                                                 onClick={() => toggleBankFolder(id_mapel)}
                                             >
                                                 <td colSpan="7" className="px-5 py-4">
@@ -354,7 +355,7 @@ export default function AdminBankSoalPage({ session, onLogout }) {
                                                             <span className="font-bold text-slate-900">
                                                                 📁 {group.mapel?.nama_mapel} (Kelas {group.mapel?.tingkat})
                                                             </span>
-                                                            <span className="text-sm font-medium text-slate-500 bg-white px-2 py-1 rounded-md shadow-sm border border-slate-200">
+                                                            <span className="text-sm font-medium text-slate-500 bg-white px-2 py-1 rounded-md shadow-sm border border-border">
                                                                 {group.soals.length} Soal
                                                             </span>
                                                         </div>
@@ -362,12 +363,12 @@ export default function AdminBankSoalPage({ session, onLogout }) {
                                                 </td>
                                             </tr>
                                             {expandedBankFolders[id_mapel] && group.soals.map((soal, index) => (
-                                                <tr key={soal.id_soal} className="align-top hover:bg-slate-50/70 border-l-4 border-blue-500">
+                                                <tr key={soal.id_soal} className="align-top hover:bg-slate-50/70 border-l-4 border-primary">
                                                     <td className="px-5 py-4 font-medium text-slate-500 pl-6">
                                                         {index + 1}
                                                     </td>
                                                     <td className="px-6 py-4">
-                                                        <span className={`inline-flex px-2 py-1 rounded-md text-xs font-semibold ${soal.pembuat?.role === 'admin' ? 'bg-indigo-100 text-indigo-700' : 'bg-amber-100 text-amber-700'}`}>
+                                                        <span className={`inline-flex px-2 py-1 rounded-md text-xs font-semibold ${soal.pembuat?.role === 'admin' ? 'bg-primary/10 text-primary' : 'bg-amber-100 text-amber-700'}`}>
                                                             {soal.pembuat?.role === 'admin' 
                                                                 ? (soal.pembuat?.id_pengguna === session?.user?.id_pengguna ? 'Admin (Anda)' : `Admin (${soal.pembuat?.admin?.nama_lengkap || 'Unknown'})`) 
                                                                 : `Guru (${soal.pembuat?.guru?.nama_lengkap || 'Unknown'})`}
@@ -384,7 +385,7 @@ export default function AdminBankSoalPage({ session, onLogout }) {
                                                         {soal.isi_soal}
                                                     </td>
                                                     <td className="px-6 py-4 text-right space-x-2">
-                                                        <button onClick={() => handleEditSoal(soal)} className="text-blue-500 hover:text-blue-700 font-medium">Edit</button>
+                                                        <button onClick={() => handleEditSoal(soal)} className="text-primary hover:text-primary font-medium">Edit</button>
                                                         <button onClick={() => handleDelete(soal.id_soal)} className="text-red-500 hover:text-red-700 font-medium">Hapus</button>
                                                     </td>
                                                 </tr>

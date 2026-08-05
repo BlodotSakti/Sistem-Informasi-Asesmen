@@ -5,9 +5,9 @@
 export default function AnalisisDiagnostikCard({ analisis, loading = false }) {
     if (loading) {
         return (
-            <div className="mt-8 rounded-3xl border border-indigo-200 bg-gradient-to-br from-indigo-50 to-white p-6 shadow-sm">
+            <div className="mt-8 rounded-3xl border border-primary/20 bg-gradient-to-br from-indigo-50 to-white p-6 shadow-sm">
                 <div className="flex items-center gap-3 mb-4">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-indigo-100">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-primary/10">
                         <span className="text-lg">🤖</span>
                     </div>
                     <div>
@@ -17,7 +17,7 @@ export default function AnalisisDiagnostikCard({ analisis, loading = false }) {
                 </div>
                 <div className="flex items-center justify-center py-10">
                     <div className="text-center">
-                        <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-indigo-200 border-t-indigo-600"></div>
+                        <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-primary/20 border-t-indigo-600"></div>
                         <p className="mt-3 text-sm text-slate-500">Menganalisis jawaban Anda dengan AI...</p>
                     </div>
                 </div>
@@ -39,10 +39,10 @@ export default function AnalisisDiagnostikCard({ analisis, loading = false }) {
     const rekapKognitif = analisis.rekap_kognitif || {};
 
     return (
-        <div className="mt-8 rounded-3xl border border-indigo-200 bg-gradient-to-br from-indigo-50 to-white p-6 shadow-sm">
+        <div className="mt-8 rounded-3xl border border-primary/20 bg-gradient-to-br from-indigo-50 to-white p-6 shadow-sm">
             {/* Header */}
             <div className="flex items-center gap-3 mb-6">
-                <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-indigo-100">
+                <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-primary/10">
                     <span className="text-lg">🤖</span>
                 </div>
                 <div>
@@ -67,7 +67,7 @@ export default function AnalisisDiagnostikCard({ analisis, loading = false }) {
                         <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-amber-100 text-sm">📈</span>
                         <h4 className="font-bold text-amber-800">Area Peningkatan</h4>
                     </div>
-                    <p className="text-sm leading-relaxed text-amber-900/80">
+                    <p className="text-sm leading-relaxed text-amber-800/80">
                         {analisis.narasi_kelemahan || <em className="text-slate-500">Jadikan setiap tantangan sebagai batu loncatan. Teruslah berlatih, karena setiap usaha pasti akan membuahkan hasil yang manis.</em>}
                     </p>
                 </div>
@@ -80,11 +80,11 @@ export default function AnalisisDiagnostikCard({ analisis, loading = false }) {
                     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                         {Object.entries(rekapKognitif).map(([level, data]) => {
                             const persen = data?.persentase ?? 0;
-                            const barColor = persen >= 70 ? 'bg-emerald-500' : persen >= 40 ? 'bg-amber-500' : 'bg-rose-500';
+                            const barColor = persen >= 70 ? 'bg-emerald-500' : persen >= 40 ? 'bg-accent' : 'bg-secondary';
                             const badgeColor = persen >= 70 ? 'text-emerald-700 bg-emerald-100' : persen >= 40 ? 'text-amber-700 bg-amber-100' : 'text-rose-700 bg-rose-100';
 
                             return (
-                                <div key={level} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                                <div key={level} className="rounded-xl border border-border bg-white p-4 shadow-sm">
                                     <div className="flex items-center justify-between mb-2">
                                         <div>
                                             <span className="text-sm font-bold text-slate-800">{level}</span>

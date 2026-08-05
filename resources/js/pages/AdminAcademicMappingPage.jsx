@@ -3,6 +3,7 @@ import DashboardLayout from '../components/layout/DashboardLayout';
 import { apiFetch } from '../lib/api';
 import { adminNavigation } from './adminNavigation';
 import StudentListModal from '../components/admin/StudentListModal';
+import { Network } from 'lucide-react';
 
 export default function AdminAcademicMappingPage({ session, onLogout }) {
     const [data, setData] = useState([]);
@@ -51,12 +52,21 @@ export default function AdminAcademicMappingPage({ session, onLogout }) {
     return (
         <DashboardLayout title="Pemetaan Akademik" user={session?.user} navigation={navigation} onLogout={onLogout}>
             <div className="space-y-8">
-                <section className="overflow-hidden rounded-[2rem] border border-slate-200 bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-900 px-6 py-8 text-white shadow-2xl shadow-slate-950/20 lg:px-8">
+                <section className="overflow-hidden rounded-[2.5rem] border border-[#8A2332]/30 bg-gradient-to-br from-[#8A2332] via-primary to-secondary px-8 py-10 shadow-lg backdrop-blur-xl">
                     <div className="grid gap-8 lg:grid-cols-[1.2fr_0.8fr] lg:items-center">
                         <div>
-                            <p className="text-xs uppercase tracking-[0.45em] text-indigo-200/80">Pemetaan Akademik</p>
-                            <h3 className="mt-4 max-w-2xl text-3xl font-semibold leading-tight text-white md:text-4xl">Sentralisasi Relasi Data</h3>
-                            <p className="mt-4 max-w-2xl text-sm leading-7 text-slate-200 md:text-base">Lihat pemetaan lengkap antara Kelas, Guru Wali, Guru Pengampu Mata Pelajaran, dan Populasi Siswa dalam satu tampilan terpadu.</p>
+                            <p className="text-xs uppercase tracking-[0.45em] text-accent">Pemetaan Akademik</p>
+                            <h3 className="mt-4 max-w-2xl text-3xl font-semibold leading-tight text-[#EEDCC8] md:text-4xl">Sentralisasi Relasi Data</h3>
+                            <p className="mt-4 max-w-2xl text-sm leading-7 text-accent md:text-base">Lihat pemetaan lengkap antara Kelas, Guru Wali, Guru Pengampu Mata Pelajaran, dan Populasi Siswa dalam satu tampilan terpadu.</p>
+                        </div>
+                        <div className="flex flex-col sm:flex-row gap-4 lg:justify-end">
+                            <div className="rounded-[1.5rem] bg-[#EEDCC8] p-5 backdrop-blur-xl border border-white shadow-sm transition hover:shadow-md flex-1 lg:flex-none lg:min-w-40">
+                                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary mb-3">
+                                    <Network className="w-6 h-6" />
+                                </div>
+                                <div className="text-3xl font-extrabold text-accent">{data?.length || 0}</div>
+                                <div className="text-sm font-medium text-accent mt-1">Total Kelas</div>
+                            </div>
                         </div>
                     </div>
                 </section>
@@ -89,12 +99,12 @@ export default function AdminAcademicMappingPage({ session, onLogout }) {
 
                 {loading ? (
                     <div className="flex items-center justify-center py-20">
-                        <div className="h-8 w-8 animate-spin rounded-full border-4 border-slate-200 border-t-slate-900"></div>
+                        <div className="h-8 w-8 animate-spin rounded-full border-4 border-border border-t-slate-900"></div>
                     </div>
                 ) : (
                     <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
                         {filteredData.map((kelas) => (
-                            <div key={kelas.id_kelas} className="flex flex-col rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+                            <div key={kelas.id_kelas} className="flex flex-col rounded-3xl border border-border bg-white p-6 shadow-sm">
                                 <div className="border-b border-slate-100 pb-4">
                                     <div className="flex items-center justify-between">
                                         <h4 className="text-xl font-bold text-slate-900">{kelas.nama_kelas}</h4>
@@ -131,7 +141,7 @@ export default function AdminAcademicMappingPage({ session, onLogout }) {
                                 <div className="border-t border-slate-100 pt-4">
                                     <div className="flex items-center justify-between">
                                         <div className="flex items-center gap-2">
-                                            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-indigo-50 text-indigo-600">
+                                            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/5 text-primary">
                                                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
                                                     <path d="M10 8a3 3 0 100-6 3 3 0 000 6zM3.465 14.493a1.23 1.23 0 00.41 1.412A9.957 9.957 0 0010 18c2.31 0 4.438-.784 6.131-2.1.43-.333.604-.903.408-1.41a7.002 7.002 0 00-13.074.003z" />
                                                 </svg>
@@ -143,7 +153,7 @@ export default function AdminAcademicMappingPage({ session, onLogout }) {
                                         </div>
                                         <button 
                                             onClick={() => setSelectedKelas(kelas)}
-                                            className="rounded-full bg-slate-900 px-4 py-2 text-xs font-semibold text-white transition hover:bg-slate-800"
+                                            className="rounded-full bg-slate-900 px-4 py-2 text-xs font-semibold text-white transition hover:bg-primary/85"
                                         >
                                             Lihat Siswa
                                         </button>

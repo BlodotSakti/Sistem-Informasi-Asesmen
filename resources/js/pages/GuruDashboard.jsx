@@ -799,37 +799,37 @@ export default function GuruDashboard({ session, onLogout, mode = 'dashboard' })
 
     const renderDashboard = () => (
         <div className="space-y-8">
-            <section className="rounded-[2.5rem] border border-slate-200/60 bg-gradient-to-br from-white via-slate-50 to-blue-50/30 p-8 shadow-sm backdrop-blur-xl">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <section className="overflow-hidden rounded-[2.5rem] border border-[#8A2332]/30 bg-gradient-to-br from-[#8A2332] via-primary to-secondary p-8 shadow-lg backdrop-blur-xl relative">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 relative z-10">
                     <div>
-                        <p className="text-xs font-semibold uppercase tracking-[0.3em] text-blue-600">Ringkasan Aktivitas Harian</p>
-                        <h3 className="mt-3 text-3xl font-extrabold tracking-tight text-slate-900">Halo, {session?.user?.nama_lengkap || 'Guru'}! 👋</h3>
-                        <p className="mt-2 max-w-2xl text-base text-slate-600">Fokus pada apa yang paling penting hari ini. Kelola penilaian, buat soal, atau persiapkan asesmen CBT selanjutnya.</p>
+                        <p className="text-xs font-bold uppercase tracking-[0.4em] text-accent">Ringkasan Aktivitas Harian</p>
+                        <h3 className="mt-3 text-3xl font-extrabold tracking-tight text-[#EEDCC8]">Halo, {session?.user?.nama_lengkap || 'Guru'}! 👋</h3>
+                        <p className="mt-2 max-w-2xl text-base text-accent">Fokus pada apa yang paling penting hari ini. Kelola penilaian, buat soal, atau persiapkan asesmen CBT selanjutnya.</p>
                     </div>
                     <div className="flex gap-3 mt-4 sm:mt-0">
-                        <button onClick={() => window.location.href='/guru/bank-soal'} className="rounded-full bg-blue-600 px-6 py-3 text-sm font-semibold text-white shadow-md transition-all hover:bg-blue-700 hover:scale-105 hover:shadow-blue-500/25">
+                        <button onClick={() => window.location.href='/guru/bank-soal'} className="rounded-full border border-[#EEDCC8]/20 bg-white/10 px-6 py-3 text-sm font-semibold text-[#EEDCC8] shadow-md transition-all hover:bg-white/20 hover:scale-105 backdrop-blur-md">
                             + Buat Soal
                         </button>
                     </div>
                 </div>
 
-                <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-                    <StatCard label="Kelas Diampu" value={loading ? '...' : summary?.cards?.total_kelas ?? 0} description="Total kelas aktif" tone="slate" />
-                    <StatCard label="Bank Soal" value={loading ? '...' : summary?.cards?.total_bank_soal ?? 0} description="Soal yang Anda buat" tone="blue" />
-                    <StatCard label="Penugasan" value={loading ? '...' : summary?.cards?.total_penugasan ?? 0} description="Relasi mapel & kelas" tone="emerald" />
-                    <StatCard label="Ujian Aktif" value={loading ? '...' : summary?.cards?.ujian_aktif ?? 0} description="Jadwal CBT aktif" tone="amber" />
+                <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4 relative z-10">
+                    <StatCard label="Kelas Diampu" value={loading ? '...' : summary?.cards?.total_kelas ?? 0} description="Total kelas aktif" tone="slate" className="!bg-[#EEDCC8] !border-transparent" />
+                    <StatCard label="Bank Soal" value={loading ? '...' : summary?.cards?.total_bank_soal ?? 0} description="Soal yang Anda buat" tone="blue" className="!bg-[#EEDCC8] !border-transparent" />
+                    <StatCard label="Penugasan" value={loading ? '...' : summary?.cards?.total_penugasan ?? 0} description="Relasi mapel & kelas" tone="emerald" className="!bg-[#EEDCC8] !border-transparent" />
+                    <StatCard label="Ujian Aktif" value={loading ? '...' : summary?.cards?.ujian_aktif ?? 0} description="Jadwal CBT aktif" tone="amber" className="!bg-[#EEDCC8] !border-transparent" />
                 </div>
             </section>
 
             <section className="grid gap-6 xl:grid-cols-[1fr_2fr]">
-                <div className="rounded-[2rem] border border-slate-200/60 bg-white/60 p-6 backdrop-blur-xl shadow-sm flex flex-col">
+                <div className="rounded-[2rem] border border-border bg-white/60 p-6 backdrop-blur-xl shadow-sm flex flex-col">
                     <p className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-500">To-Do Prioritas</p>
                     <h3 className="mt-2 text-xl font-bold text-slate-900">Jadwal Asesmen</h3>
                     <p className="mt-1 text-sm text-slate-500">Daftar agenda CBT terdekat yang butuh perhatian.</p>
                     <div className="mt-6 flex-grow space-y-4">
                         {(summary?.upcoming_schedules || []).map((item) => (
-                            <div key={item.title + item.meta} className="rounded-2xl border border-slate-200 bg-white p-5 transition-all hover:bg-slate-50 hover:shadow-md cursor-default shadow-sm group">
-                                <p className="font-semibold text-slate-900 group-hover:text-blue-600 transition-colors">{item.title}</p>
+                            <div key={item.title + item.meta} className="rounded-2xl border border-border bg-white p-5 transition-all hover:bg-slate-50 hover:shadow-md cursor-default shadow-sm group">
+                                <p className="font-semibold text-slate-900 group-hover:text-primary transition-colors">{item.title}</p>
                                 <p className="mt-1 text-sm text-slate-500 flex items-center gap-2">
                                     <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -850,7 +850,7 @@ export default function GuruDashboard({ session, onLogout, mode = 'dashboard' })
                     </div>
                 </div>
 
-                <div className="rounded-[2rem] border border-slate-800 bg-gradient-to-br from-slate-950 to-slate-900 p-8 text-white shadow-lg flex flex-col relative overflow-hidden">
+                <div className="rounded-[2rem] border border-[#8A2332]/30 bg-gradient-to-br from-[#8A2332] via-primary to-secondary p-8 text-white shadow-lg flex flex-col relative overflow-hidden">
                     <div className="absolute top-0 right-0 p-8 opacity-10">
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-32 w-32" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
@@ -858,18 +858,18 @@ export default function GuruDashboard({ session, onLogout, mode = 'dashboard' })
                     </div>
                     <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
                         <div>
-                            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-cyan-400">Dasbor Analitik</p>
-                            <h3 className="mt-1 text-2xl font-bold text-white tracking-tight">Insight Diagnostik & Area Peningkatan</h3>
+                            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-accent">Dashboard Analitik</p>
+                            <h3 className="mt-1 text-2xl font-bold text-[#EEDCC8] tracking-tight">Insight Diagnostik & Area Peningkatan</h3>
                         </div>
                         <button 
                             onClick={() => window.location.href = '/guru/arsip-diagnostik'}
-                            className="flex w-fit items-center gap-2 rounded-xl bg-white/10 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-white/20 border border-white/10"
+                            className="flex w-fit items-center gap-2 rounded-xl bg-white/10 px-4 py-2 text-sm font-semibold text-accent shadow-sm transition hover:bg-white/20 border border-white/10"
                         >
                             Lihat Semua Arsip
                             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
                         </button>
                     </div>
-                    <p className="relative z-10 mt-3 text-sm text-slate-400 max-w-lg">Deteksi tren penurunan nilai maupun kelemahan spesifik secara lebih dini untuk evaluasi pembelajaran yang dipersonalisasi.</p>
+                    <p className="relative z-10 mt-3 text-sm text-accent max-w-lg">Deteksi tren penurunan nilai maupun kelemahan spesifik secara lebih dini untuk evaluasi pembelajaran yang dipersonalisasi.</p>
                     
                     <div className="relative z-10 mt-8 grid gap-4 sm:grid-cols-2 flex-grow">
                         {(diagnostics?.data || []).slice(0, 4).map((item) => (
@@ -890,7 +890,7 @@ export default function GuruDashboard({ session, onLogout, mode = 'dashboard' })
                                 <div className="mt-4 pt-4 border-t border-white/10 flex justify-end">
                                     <button 
                                         onClick={() => window.location.href = `/guru/laporan-diagnostik/${item.id_analisis}`}
-                                        className="flex items-center gap-1.5 text-xs font-bold text-indigo-300 hover:text-indigo-200 transition bg-indigo-500/10 hover:bg-indigo-500/20 px-3 py-1.5 rounded-lg"
+                                        className="flex items-center gap-1.5 text-xs font-bold text-slate-300 hover:text-slate-400 transition bg-white/10 hover:bg-white/15 px-3 py-1.5 rounded-lg"
                                     >
                                         Lihat Laporan Lengkap
                                         <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
@@ -911,9 +911,24 @@ export default function GuruDashboard({ session, onLogout, mode = 'dashboard' })
 
     const renderBankSoal = () => (
         <section className="space-y-6">
-            <form onSubmit={submitBankSoal} className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-                <p className="text-sm font-medium uppercase tracking-[0.3em] text-slate-500">Bank Soal Guru</p>
-                <h3 className="mt-2 text-2xl font-semibold text-slate-900">Input soal digital terstruktur</h3>
+            <section className="overflow-hidden rounded-[2.5rem] border border-[#8A2332]/30 bg-gradient-to-br from-[#8A2332] via-primary to-secondary p-8 shadow-lg backdrop-blur-xl relative">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 relative z-10">
+                    <div>
+                        <p className="text-xs font-bold uppercase tracking-[0.4em] text-accent">Bank Soal Guru</p>
+                        <h3 className="mt-3 text-3xl font-extrabold tracking-tight text-[#EEDCC8]">Manajemen Bank Soal</h3>
+                        <p className="mt-2 max-w-2xl text-base text-accent">Buat, kelola, dan atur soal-soal Anda untuk persiapan asesmen siswa.</p>
+                    </div>
+                </div>
+
+                <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-3 relative z-10">
+                    <StatCard label="Total Bank Soal" value={loading ? '...' : summary?.cards?.total_bank_soal ?? 0} description="Kumpulan soal Anda" tone="blue" className="!bg-[#EEDCC8] !border-transparent" />
+                    <StatCard label="Total Penugasan" value={loading ? '...' : summary?.cards?.total_penugasan ?? 0} description="Relasi mapel & kelas" tone="emerald" className="!bg-[#EEDCC8] !border-transparent" />
+                    <StatCard label="Ujian Aktif" value={loading ? '...' : summary?.cards?.ujian_aktif ?? 0} description="Jadwal CBT aktif" tone="amber" className="!bg-[#EEDCC8] !border-transparent" />
+                </div>
+            </section>
+
+            <form onSubmit={submitBankSoal} className="rounded-3xl border border-border bg-white p-6 shadow-sm">
+                <h3 className="text-xl font-semibold text-slate-900 border-b border-border pb-4">Input soal digital terstruktur</h3>
 
                 <div className="mt-6 grid gap-4 md:grid-cols-2">
                     <label className="space-y-2 text-sm font-medium text-slate-700">
@@ -993,7 +1008,7 @@ export default function GuruDashboard({ session, onLogout, mode = 'dashboard' })
                             <div className="flex flex-col gap-3">
                                 {bankForm.gambar_soal_url && !bankForm.hapus_gambar && (
                                     <div className="relative w-max">
-                                        <img src={bankForm.gambar_soal_url} alt="Gambar Soal" className="max-h-40 rounded-xl border border-slate-200 object-cover shadow-sm" />
+                                        <img src={bankForm.gambar_soal_url} alt="Gambar Soal" className="max-h-40 rounded-xl border border-border object-cover shadow-sm" />
                                         <button 
                                             type="button" 
                                             onClick={() => setBankForm(curr => ({ ...curr, hapus_gambar: true, gambar_soal: null }))}
@@ -1014,7 +1029,7 @@ export default function GuruDashboard({ session, onLogout, mode = 'dashboard' })
                                             setBankForm(curr => ({ ...curr, gambar_soal: e.target.files[0], hapus_gambar: false }));
                                         }
                                     }}
-                                    className="block w-full text-sm text-slate-500 file:mr-4 file:rounded-full file:border-0 file:bg-blue-50 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-blue-700 hover:file:bg-blue-100"
+                                    className="block w-full text-sm text-slate-500 file:mr-4 file:rounded-full file:border-0 file:bg-primary/5 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-primary hover:file:bg-primary/10"
                                 />
                             </div>
                         </label>
@@ -1054,7 +1069,7 @@ export default function GuruDashboard({ session, onLogout, mode = 'dashboard' })
                             <button 
                                 type="button" 
                                 onClick={() => setBankForm(curr => ({ ...curr, opsi_jawaban: [...curr.opsi_jawaban, ''] }))}
-                                className="mt-2 text-sm text-blue-600 font-semibold hover:text-blue-800"
+                                className="mt-2 text-sm text-primary font-semibold hover:text-primary/85"
                             >
                                 + Tambah Opsi Jawaban
                             </button>
@@ -1103,7 +1118,7 @@ export default function GuruDashboard({ session, onLogout, mode = 'dashboard' })
                 </div>
 
                 <div className="mt-4 flex flex-wrap gap-3">
-                    <button type="submit" className="rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800">
+                    <button type="submit" className="rounded-full bg-primary px-5 py-3 text-sm font-semibold text-white transition hover:bg-primary/85">
                         {editingBankSoalId ? 'Simpan Perubahan' : 'Simpan Soal'}
                     </button>
                     {editingBankSoalId ? (
@@ -1114,8 +1129,8 @@ export default function GuruDashboard({ session, onLogout, mode = 'dashboard' })
                 </div>
             </form>
 
-            <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-200 px-5 py-4 gap-4">
+            <div className="overflow-hidden rounded-3xl border border-border bg-white">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-border px-5 py-4 gap-4">
                     <div>
                         <h4 className="text-lg font-semibold text-slate-900">Data Bank Soal</h4>
                         <p className="text-sm text-slate-500">Pastikan topik dan level Bloom terisi untuk semua soal.</p>
@@ -1130,7 +1145,7 @@ export default function GuruDashboard({ session, onLogout, mode = 'dashboard' })
                         </button>
                     </div>
                 </div>
-                <div className="border-b border-slate-200 px-5 py-4">
+                <div className="border-b border-border px-5 py-4">
                     <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4 lg:items-end">
                         <label className="space-y-2 text-sm font-medium text-slate-700">
                             <span>Filter Mapel</span>
@@ -1170,7 +1185,7 @@ export default function GuruDashboard({ session, onLogout, mode = 'dashboard' })
                 </div>
                 <div className="overflow-x-auto">
                     <table className="min-w-full divide-y divide-slate-200 text-left text-sm">
-                        <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase tracking-[0.2em] text-slate-500">
+                        <thead className="border-b border-border bg-slate-50 text-xs uppercase tracking-[0.2em] text-slate-500">
                             <tr>
                                 <th className="px-5 py-4 font-semibold">No</th>
                                 <th className="px-5 py-4 font-semibold">Mapel</th>
@@ -1185,7 +1200,7 @@ export default function GuruDashboard({ session, onLogout, mode = 'dashboard' })
                             {Object.entries(groupedBankSoal).map(([id_mapel, group]) => (
                                 <React.Fragment key={id_mapel}>
                                     <tr 
-                                        className="cursor-pointer bg-blue-50/50 hover:bg-blue-50 transition-colors"
+                                        className="cursor-pointer bg-primary/5/50 hover:bg-primary/5 transition-colors"
                                         onClick={() => toggleBankFolder(id_mapel)}
                                     >
                                         <td colSpan="7" className="px-5 py-4">
@@ -1198,7 +1213,7 @@ export default function GuruDashboard({ session, onLogout, mode = 'dashboard' })
                                                         📁 {group.mapel?.nama_lengkap || group.mapel?.nama_mapel || 'Mapel Tidak Diketahui'}
                                                     </span>
                                                 </div>
-                                                <span className="rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-semibold text-blue-800">
+                                                <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-semibold text-primary/90">
                                                     {group.soals.length} Soal
                                                 </span>
                                             </div>
@@ -1218,7 +1233,7 @@ export default function GuruDashboard({ session, onLogout, mode = 'dashboard' })
                                             </td>
                                             <td className="px-5 py-4 text-right">
                                                 <div className="flex items-center justify-end gap-3">
-                                                    <button onClick={() => openEditBankSoal(item)} className="text-blue-600 hover:text-blue-800 font-medium">Edit</button>
+                                                    <button onClick={() => openEditBankSoal(item)} className="text-primary hover:text-primary/85 font-medium">Edit</button>
                                                     <button onClick={() => handleDeleteBankSoal(item.id_soal)} className="text-rose-600 hover:text-rose-800 font-medium">Hapus</button>
                                                 </div>
                                             </td>
@@ -1239,19 +1254,40 @@ export default function GuruDashboard({ session, onLogout, mode = 'dashboard' })
 
     const renderJadwalCbt = () => (
         <section className="space-y-6">
-            <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-200 px-5 py-4 gap-4">
+            <section className="overflow-hidden rounded-[2.5rem] border border-[#8A2332]/30 bg-gradient-to-br from-[#8A2332] via-primary to-secondary p-8 shadow-lg backdrop-blur-xl relative">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 relative z-10">
                     <div>
-                        <h4 className="text-lg font-semibold text-slate-900">Riwayat Jadwal CBT</h4>
+                        <p className="text-xs font-bold uppercase tracking-[0.4em] text-accent">Manajemen Jadwal Ujian</p>
+                        <h3 className="mt-3 text-3xl font-extrabold tracking-tight text-[#EEDCC8]">Jadwal CBT</h3>
+                        <p className="mt-2 max-w-2xl text-base text-accent">Buat dan kelola sesi ujian (Computer Based Test) untuk siswa-siswi Anda di sini.</p>
+                    </div>
+                    <div className="flex gap-3 mt-4 sm:mt-0">
+                        <button onClick={() => setIsSesiModalOpen(true)} type="button" className="rounded-full border border-[#EEDCC8]/20 bg-white/10 px-6 py-3 text-sm font-semibold text-[#EEDCC8] shadow-md transition-all hover:bg-white/20 hover:scale-105 backdrop-blur-md whitespace-nowrap">
+                            + Buat Jadwal CBT
+                        </button>
+                    </div>
+                </div>
+
+                <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-3 relative z-10">
+                    <StatCard label="Total Jadwal" value={loading ? '...' : sesiAsesmenHistory.length} description="Semua sesi ujian yang pernah dibuat" tone="slate" className="!bg-[#EEDCC8] !border-transparent" />
+                    <StatCard label="Ujian Aktif" value={loading ? '...' : summary?.cards?.ujian_aktif ?? 0} description="Ujian yang sedang berlangsung atau akan datang" tone="amber" className="!bg-[#EEDCC8] !border-transparent" />
+                    <StatCard label="Total Penugasan" value={loading ? '...' : summary?.cards?.total_penugasan ?? 0} description="Relasi mengajar" tone="emerald" className="!bg-[#EEDCC8] !border-transparent" />
+                </div>
+            </section>
+
+            <div className="overflow-hidden rounded-3xl border border-border bg-white">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-border px-5 py-4 gap-4">
+                    <div>
+                        <h4 className="text-lg font-semibold text-slate-900">Daftar Jadwal CBT</h4>
                         <p className="text-sm text-slate-500">Daftar sesi asesmen yang telah dibuat.</p>
                     </div>
-                    <button onClick={() => setIsSesiModalOpen(true)} type="button" className="rounded-full bg-blue-600 px-5 py-2 text-sm font-semibold text-white transition hover:bg-blue-700 whitespace-nowrap">
+                    <button onClick={() => setIsSesiModalOpen(true)} type="button" className="rounded-full bg-primary px-5 py-2 text-sm font-semibold text-white transition hover:bg-primary/85 whitespace-nowrap">
                         + Buat Jadwal CBT
                     </button>
                 </div>
                 <div className="overflow-x-auto">
                     <table className="min-w-full divide-y divide-slate-200 text-left text-sm">
-                        <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase tracking-[0.2em] text-slate-500">
+                        <thead className="border-b border-border bg-slate-50 text-xs uppercase tracking-[0.2em] text-slate-500">
                             <tr>
                                 <th className="px-5 py-4 font-semibold">Tipe Soal</th>
                                 <th className="px-5 py-4 font-semibold">Kelas</th>
@@ -1277,15 +1313,15 @@ export default function GuruDashboard({ session, onLogout, mode = 'dashboard' })
                                     <td className="px-5 py-4 text-slate-600">{item.durasi_menit} mnt</td>
                                     <td className="px-5 py-4 text-center">
                                         {item.boleh_ulang ? (
-                                            <span className="inline-flex items-center rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-semibold text-blue-700">Boleh</span>
+                                            <span className="inline-flex items-center rounded-full bg-primary/5 px-2.5 py-0.5 text-xs font-semibold text-primary">Boleh</span>
                                         ) : (
                                             <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-semibold text-slate-500">Sekali</span>
                                         )}
                                     </td>
                                     <td className="px-5 py-4 text-right">
                                         <div className="flex items-center justify-end gap-3">
-                                            <button onClick={() => fetchSesiDetail(item.id_sesi)} className="text-indigo-600 hover:text-indigo-800 font-medium">Detail</button>
-                                            <button onClick={() => openEditSesiAsesmen(item)} className="text-blue-600 hover:text-blue-800 font-medium">Edit</button>
+                                            <button onClick={() => fetchSesiDetail(item.id_sesi)} className="text-primary hover:text-primary/85 font-medium">Detail</button>
+                                            <button onClick={() => openEditSesiAsesmen(item)} className="text-primary hover:text-primary/85 font-medium">Edit</button>
                                             <button onClick={() => handleDeleteSesiAsesmen(item.id_sesi)} className="text-rose-600 hover:text-rose-800 font-medium">Hapus</button>
                                         </div>
                                     </td>
@@ -1309,7 +1345,7 @@ export default function GuruDashboard({ session, onLogout, mode = 'dashboard' })
                             </div>
                         ) : sesiDetailData ? (
                             <>
-                                <div className="border-b border-slate-200 px-6 py-5 flex justify-between items-center">
+                                <div className="border-b border-border px-6 py-5 flex justify-between items-center">
                                     <div>
                                         <h3 className="text-xl font-bold text-slate-900">Detail: {sesiDetailData.sesi.mata_pelajaran}</h3>
                                         <p className="text-sm text-slate-500 capitalize">{sesiDetailData.sesi.jenis_asesmen} — {sesiDetailData.sesi.kelas}</p>
@@ -1319,9 +1355,9 @@ export default function GuruDashboard({ session, onLogout, mode = 'dashboard' })
                                 <div className="p-6 space-y-6">
                                     {/* Statistik */}
                                     <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
-                                        <div className="rounded-2xl bg-blue-50 px-4 py-4 text-center">
-                                            <p className="text-xl font-bold text-blue-700">{sesiDetailData.statistik.total_siswa}</p>
-                                            <p className="text-xs text-blue-500">Total Siswa</p>
+                                        <div className="rounded-2xl bg-primary/5 px-4 py-4 text-center">
+                                            <p className="text-xl font-bold text-primary">{sesiDetailData.statistik.total_siswa}</p>
+                                            <p className="text-xs text-primary/70">Total Siswa</p>
                                         </div>
                                         <div className="rounded-2xl bg-emerald-50 px-4 py-4 text-center">
                                             <p className="text-xl font-bold text-emerald-700">{sesiDetailData.statistik.sudah_mengerjakan}</p>
@@ -1335,9 +1371,9 @@ export default function GuruDashboard({ session, onLogout, mode = 'dashboard' })
                                             <p className="text-xl font-bold text-amber-700">{sesiDetailData.statistik.rata_rata_skor}</p>
                                             <p className="text-xs text-amber-500">Rata-Rata</p>
                                         </div>
-                                        <div className="rounded-2xl bg-indigo-50 px-4 py-4 text-center">
-                                            <p className="text-xl font-bold text-indigo-700">{sesiDetailData.statistik.skor_tertinggi}</p>
-                                            <p className="text-xs text-indigo-500">Tertinggi</p>
+                                        <div className="rounded-2xl bg-primary/5 px-4 py-4 text-center">
+                                            <p className="text-xl font-bold text-primary">{sesiDetailData.statistik.skor_tertinggi}</p>
+                                            <p className="text-xs text-primary/70">Tertinggi</p>
                                         </div>
                                         <div className="rounded-2xl bg-slate-100 px-4 py-4 text-center">
                                             <p className="text-xl font-bold text-slate-700">{sesiDetailData.statistik.skor_terendah}</p>
@@ -1346,12 +1382,12 @@ export default function GuruDashboard({ session, onLogout, mode = 'dashboard' })
                                     </div>
 
                                     {/* Daftar Soal */}
-                                    <details className="group rounded-2xl border border-slate-200">
+                                    <details className="group rounded-2xl border border-border">
                                         <summary className="cursor-pointer px-5 py-4 font-semibold text-slate-800 flex items-center justify-between">
                                             <span>📋 Daftar Soal ({sesiDetailData.soal.length} soal — Total Bobot: {sesiDetailData.total_bobot})</span>
                                             <span className="text-slate-400 group-open:rotate-180 transition">▼</span>
                                         </summary>
-                                        <div className="border-t border-slate-200 px-5 py-4 space-y-3">
+                                        <div className="border-t border-border px-5 py-4 space-y-3">
                                             {sesiDetailData.soal.map((s, idx) => (
                                                 <div key={s.id_detail} className="rounded-xl border border-slate-100 bg-slate-50/50 p-4">
                                                     <div className="flex items-center justify-between mb-1">
@@ -1368,7 +1404,7 @@ export default function GuruDashboard({ session, onLogout, mode = 'dashboard' })
                                     {/* Daftar Siswa */}
                                     <div>
                                         <h4 className="text-lg font-bold text-slate-800 mb-3">👥 Status Siswa</h4>
-                                        <div className="overflow-x-auto rounded-2xl border border-slate-200">
+                                        <div className="overflow-x-auto rounded-2xl border border-border">
                                             <table className="min-w-full divide-y divide-slate-200 text-left text-sm">
                                                 <thead className="bg-slate-50 text-xs uppercase tracking-[0.15em] text-slate-500">
                                                     <tr>
@@ -1395,7 +1431,7 @@ export default function GuruDashboard({ session, onLogout, mode = 'dashboard' })
                                                                 <td className="px-4 py-3 text-slate-600">{sw.status === 'sudah' ? `${sw.jumlah_benar}/${sesiDetailData.soal.length}` : '-'}</td>
                                                                 <td className="px-4 py-3 text-right">
                                                                     {sw.status === 'sudah' && (
-                                                                        <button onClick={() => setExpandedSiswaId(expandedSiswaId === sw.id_siswa ? null : sw.id_siswa)} className="text-indigo-600 hover:text-indigo-800 font-medium text-xs">
+                                                                        <button onClick={() => setExpandedSiswaId(expandedSiswaId === sw.id_siswa ? null : sw.id_siswa)} className="text-primary hover:text-primary/85 font-medium text-xs">
                                                                             {expandedSiswaId === sw.id_siswa ? 'Tutup' : 'Lihat Jawaban'}
                                                                         </button>
                                                                     )}
@@ -1428,10 +1464,10 @@ export default function GuruDashboard({ session, onLogout, mode = 'dashboard' })
 
                                                                         {/* Analisis Diagnostik AI per siswa */}
                                                                         {sw.analisis_diagnostik && (
-                                                                            <div className="mt-4 rounded-xl border border-indigo-200 bg-indigo-50/50 p-4">
+                                                                            <div className="mt-4 rounded-xl border border-primary/20 bg-primary/5 p-4">
                                                                                 <div className="flex items-center gap-2 mb-2">
                                                                                     <span className="text-sm">🤖</span>
-                                                                                    <span className="text-xs font-bold text-indigo-700">Analisis Diagnostik AI</span>
+                                                                                    <span className="text-xs font-bold text-primary">Analisis Diagnostik AI</span>
                                                                                 </div>
                                                                                 <div className="grid gap-3 sm:grid-cols-2">
                                                                                     <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3">
@@ -1455,8 +1491,8 @@ export default function GuruDashboard({ session, onLogout, mode = 'dashboard' })
                                         </div>
                                     </div>
                                 </div>
-                                <div className="border-t border-slate-200 px-6 py-4 text-right">
-                                    <button onClick={() => setSesiDetailData(null)} className="rounded-xl bg-slate-900 px-5 py-2 text-sm font-semibold text-white transition hover:bg-slate-800">Tutup</button>
+                                <div className="border-t border-border px-6 py-4 text-right">
+                                    <button onClick={() => setSesiDetailData(null)} className="rounded-xl bg-slate-900 px-5 py-2 text-sm font-semibold text-white transition hover:bg-primary/85">Tutup</button>
                                 </div>
                             </>
                         ) : null}
@@ -1467,7 +1503,7 @@ export default function GuruDashboard({ session, onLogout, mode = 'dashboard' })
             {isSesiModalOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
                     <form onSubmit={submitSesiAsesmen} className="w-full max-w-4xl overflow-hidden rounded-3xl bg-white shadow-xl">
-                        <div className="border-b border-slate-200 px-6 py-5 flex justify-between items-center">
+                        <div className="border-b border-border px-6 py-5 flex justify-between items-center">
                             <h3 className="text-xl font-semibold text-slate-900">Buat Jadwal Asesmen (CBT)</h3>
                             <button type="button" onClick={() => { setIsSesiModalOpen(false); setEditingSesiId(null); }} className="text-slate-400 hover:text-slate-600">&times;</button>
                         </div>
@@ -1513,7 +1549,7 @@ export default function GuruDashboard({ session, onLogout, mode = 'dashboard' })
                                 </label>
                             </div>
 
-                            <div className="mt-4 flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4">
+                            <div className="mt-4 flex items-center justify-between rounded-2xl border border-border bg-slate-50 px-5 py-4">
                                 <div>
                                     <p className="text-sm font-semibold text-slate-900">Boleh Dikerjakan Ulang</p>
                                     <p className="text-xs text-slate-500">Jika aktif, siswa dapat mengerjakan ujian ini lebih dari satu kali.</p>
@@ -1523,17 +1559,17 @@ export default function GuruDashboard({ session, onLogout, mode = 'dashboard' })
                                     role="switch"
                                     aria-checked={sesiForm.boleh_ulang}
                                     onClick={() => setSesiForm(c => ({...c, boleh_ulang: !c.boleh_ulang}))}
-                                    className={`relative inline-flex h-7 w-12 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${sesiForm.boleh_ulang ? 'bg-blue-600' : 'bg-slate-300'}`}
+                                    className={`relative inline-flex h-7 w-12 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${sesiForm.boleh_ulang ? 'bg-primary' : 'bg-slate-300'}`}
                                 >
                                     <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${sesiForm.boleh_ulang ? 'translate-x-5' : 'translate-x-0.5'}`} />
                                 </button>
                             </div>
 
-                            <div className="mt-6 pt-6 border-t border-slate-200">
+                            <div className="mt-6 pt-6 border-t border-border">
                                 <div className="flex items-center justify-between mb-4">
                                     <h4 className="text-base font-semibold text-slate-900">Pilih Soal dari Bank Soal ({Object.keys(selectedSoalMap).length} Terpilih)</h4>
                                 </div>
-                                <div className="max-h-64 overflow-y-auto border border-slate-200 rounded-xl">
+                                <div className="max-h-64 overflow-y-auto border border-border rounded-xl">
                                     <table className="min-w-full text-left text-sm divide-y divide-slate-200">
                                         <thead className="bg-slate-50 sticky top-0">
                                             <tr>
@@ -1564,7 +1600,7 @@ export default function GuruDashboard({ session, onLogout, mode = 'dashboard' })
                                                                     return next;
                                                                 });
                                                             }}
-                                                            className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-600"
+                                                            className="h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary"
                                                         />
                                                     </td>
                                                     <td className="px-4 py-3 truncate max-w-xs">{item.isi_soal.substring(0, 50)}...</td>
@@ -1572,7 +1608,7 @@ export default function GuruDashboard({ session, onLogout, mode = 'dashboard' })
                                                     <td className="px-4 py-3">
                                                         <div className="flex flex-col">
                                                             <span>{item.mata_pelajaran?.nama_lengkap || item.mata_pelajaran?.nama_mapel}</span>
-                                                            <span className={`mt-1 inline-flex w-max px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider ${item.created_by === session.user.id_pengguna ? 'bg-blue-100 text-blue-700' : 'bg-amber-100 text-amber-700'}`}>
+                                                            <span className={`mt-1 inline-flex w-max px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider ${item.created_by === session.user.id_pengguna ? 'bg-primary/10 text-primary' : 'bg-amber-100 text-amber-700'}`}>
                                                                 {item.created_by === session.user.id_pengguna ? 'Soal Anda' : (item.pembuat?.peran === 'admin' ? 'Soal Admin' : 'Soal Guru Lain')}
                                                             </span>
                                                         </div>
@@ -1601,9 +1637,9 @@ export default function GuruDashboard({ session, onLogout, mode = 'dashboard' })
                                 </div>
                             </div>
                         </div>
-                        <div className="border-t border-slate-200 bg-slate-50 px-6 py-4 flex justify-end gap-3">
+                        <div className="border-t border-border bg-slate-50 px-6 py-4 flex justify-end gap-3">
                             <button type="button" onClick={() => { setIsSesiModalOpen(false); setEditingSesiId(null); }} className="rounded-full px-5 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-200">Batal</button>
-                            <button type="submit" disabled={Object.keys(selectedSoalMap).length === 0} className="rounded-full bg-blue-600 px-5 py-2 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed">
+                            <button type="submit" disabled={Object.keys(selectedSoalMap).length === 0} className="rounded-full bg-primary px-5 py-2 text-sm font-semibold text-white transition hover:bg-primary/85 disabled:opacity-50 disabled:cursor-not-allowed">
                                 {editingSesiId ? 'Simpan Perubahan' : 'Simpan Jadwal & Aktifkan'}
                             </button>
                         </div>
@@ -1615,10 +1651,25 @@ export default function GuruDashboard({ session, onLogout, mode = 'dashboard' })
 
     const renderBeritaAcara = () => (
         <section className="space-y-6">
-            <form onSubmit={submitBeritaAcara} className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-                <p className="text-sm font-medium uppercase tracking-[0.3em] text-slate-500">Berita Acara Digital</p>
-                <h3 className="mt-2 text-2xl font-semibold text-slate-900">{editingBeritaId ? 'Ubah presensi dan evaluasi pertemuan kelas' : 'Presensi dan evaluasi pertemuan kelas'}</h3>
-                <p className="mt-2 text-sm text-slate-500">{editingBeritaId ? 'Mode edit aktif. Simpan perubahan untuk memperbarui BAP yang sudah ada.' : 'Isi data pertemuan, lalu tambahkan penguatan siswa jika diperlukan.'}</p>
+            <section className="overflow-hidden rounded-[2.5rem] border border-[#8A2332]/30 bg-gradient-to-br from-[#8A2332] via-primary to-secondary p-8 shadow-lg backdrop-blur-xl relative">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 relative z-10">
+                    <div>
+                        <p className="text-xs font-bold uppercase tracking-[0.4em] text-accent">Berita Acara Digital</p>
+                        <h3 className="mt-3 text-3xl font-extrabold tracking-tight text-[#EEDCC8]">Presensi & Evaluasi Kelas</h3>
+                        <p className="mt-2 max-w-2xl text-base text-accent">Kelola data pertemuan, kehadiran, dan berikan apresiasi kepada siswa secara langsung.</p>
+                    </div>
+                </div>
+
+                <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-3 relative z-10">
+                    <StatCard label="Total Kelas" value={loading ? '...' : summary?.cards?.total_kelas ?? 0} description="Kelas yang diampu" tone="slate" className="!bg-[#EEDCC8] !border-transparent" />
+                    <StatCard label="Total BAP" value={loading ? '...' : (workspace?.berita_acara || []).length} description="Semua Berita Acara" tone="blue" className="!bg-[#EEDCC8] !border-transparent" />
+                    <StatCard label="Apresiasi Diberikan" value={loading ? '...' : ((workspace?.berita_acara || []).reduce((acc, curr) => acc + (curr.jumlah_apresiasi || 0), 0))} description="Lencana yang telah dikirim" tone="amber" className="!bg-[#EEDCC8] !border-transparent" />
+                </div>
+            </section>
+
+            <form onSubmit={submitBeritaAcara} className="rounded-3xl border border-border bg-white p-6 shadow-sm">
+                <h3 className="text-xl font-semibold text-slate-900 border-b border-border pb-4">{editingBeritaId ? 'Ubah presensi dan evaluasi pertemuan kelas' : 'Input Presensi dan Evaluasi (BAP)'}</h3>
+                <p className="mt-4 text-sm text-slate-500">{editingBeritaId ? 'Mode edit aktif. Simpan perubahan untuk memperbarui BAP yang sudah ada.' : 'Isi data pertemuan, lalu tambahkan penguatan siswa jika diperlukan.'}</p>
 
                 <div className="mt-6 grid gap-4 md:grid-cols-2">
                     <label className="space-y-2 text-sm font-medium text-slate-700">
@@ -1722,12 +1773,12 @@ export default function GuruDashboard({ session, onLogout, mode = 'dashboard' })
                     </label>
                 </div>
 
-                <div className="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <div className="mt-6 rounded-2xl border border-border bg-slate-50 p-4">
                     <p className="text-sm font-semibold text-slate-900">Presensi Siswa</p>
                     <p className="mt-1 text-sm text-slate-500">Semua siswa aktif di kelas harus memiliki status kehadiran. Catatan pribadi dan lencana apresiasi bersifat opsional.</p>
                     <div className="mt-4 grid gap-3 md:grid-cols-2">
                         {siswaBySelectedClass.map((item) => (
-                            <div key={item.id_siswa} className="space-y-3 rounded-2xl border border-slate-200 bg-white p-3 text-sm font-medium text-slate-700">
+                            <div key={item.id_siswa} className="space-y-3 rounded-2xl border border-border bg-white p-3 text-sm font-medium text-slate-700">
                                 <div className="flex items-start justify-between gap-3">
                                     <span>
                                         {item.nama_lengkap} {item.nisn ? `(${item.nisn})` : ''}
@@ -1792,13 +1843,13 @@ export default function GuruDashboard({ session, onLogout, mode = 'dashboard' })
                             </div>
                         ))}
                         {siswaBySelectedClass.length === 0 ? (
-                            <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-500 md:col-span-2">Belum ada siswa aktif pada kelas ini.</div>
+                            <div className="rounded-2xl border border-border bg-white px-4 py-3 text-sm text-slate-500 md:col-span-2">Belum ada siswa aktif pada kelas ini.</div>
                         ) : null}
                     </div>
                 </div>
 
                 <div className="mt-4 flex flex-wrap gap-3">
-                    <button type="submit" className="rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800">
+                    <button type="submit" className="rounded-full bg-primary px-5 py-3 text-sm font-semibold text-white transition hover:bg-primary/85">
                         {editingBeritaId ? 'Simpan Perubahan' : 'Simpan Berita Acara'}
                     </button>
                     {editingBeritaId ? (
@@ -1809,12 +1860,12 @@ export default function GuruDashboard({ session, onLogout, mode = 'dashboard' })
                 </div>
             </form>
 
-            <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white">
-                <div className="border-b border-slate-200 px-5 py-4">
+            <div className="overflow-hidden rounded-3xl border border-border bg-white">
+                <div className="border-b border-border px-5 py-4">
                     <h4 className="text-lg font-semibold text-slate-900">Data Berita Acara</h4>
                     <p className="text-sm text-slate-500">Presensi harian dan evaluasi kelas yang sudah tersimpan.</p>
                 </div>
-                <div className="border-b border-slate-200 px-5 py-4">
+                <div className="border-b border-border px-5 py-4">
                     <div className="grid gap-3 lg:grid-cols-[0.8fr_1.2fr] lg:items-end">
                         <div className="rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-600">
                             <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Total Data</p>
@@ -1833,7 +1884,7 @@ export default function GuruDashboard({ session, onLogout, mode = 'dashboard' })
                 </div>
                 <div className="overflow-x-auto">
                     <table className="min-w-full divide-y divide-slate-200 text-left text-sm">
-                        <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase tracking-[0.2em] text-slate-500">
+                        <thead className="border-b border-border bg-slate-50 text-xs uppercase tracking-[0.2em] text-slate-500">
                             <tr>
                                 <th className="px-5 py-4 font-semibold">No</th>
                                 <th className="px-5 py-4 font-semibold">Tanggal</th>
@@ -1922,14 +1973,14 @@ export default function GuruDashboard({ session, onLogout, mode = 'dashboard' })
                 ) : null}
 
                 {successPopup ? (
-                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 px-4">
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-primary/40 px-4">
                         <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl">
                             <div className="rounded-2xl bg-emerald-50 px-4 py-3 text-emerald-800">
                                 <p className="text-sm font-semibold uppercase tracking-[0.2em]">{successPopup.title}</p>
                                 <p className="mt-2 text-sm">{successPopup.message}</p>
                             </div>
                             <div className="mt-4 flex justify-end">
-                                <button type="button" onClick={closeSuccessPopup} className="rounded-full bg-slate-950 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800">
+                                <button type="button" onClick={closeSuccessPopup} className="rounded-full bg-primary px-4 py-2 text-sm font-semibold text-white transition hover:bg-primary/85">
                                     Tutup
                                 </button>
                             </div>
@@ -1958,7 +2009,7 @@ export default function GuruDashboard({ session, onLogout, mode = 'dashboard' })
                                 <select 
                                     value={importTargetMapel} 
                                     onChange={(e) => setImportTargetMapel(e.target.value)}
-                                    className="w-full rounded-xl border border-slate-200 px-4 py-2 text-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                    className="w-full rounded-xl border border-border px-4 py-2 text-sm focus:border-primary focus:ring-primary"
                                 >
                                     <option value="">-- Pilih Mata Pelajaran --</option>
                                     {(workspace.mapel_options || []).map(m => (

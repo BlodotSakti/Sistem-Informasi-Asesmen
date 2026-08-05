@@ -66,7 +66,7 @@ export default function ProfileCredentialsForm({ session }) {
     };
 
     return (
-        <form onSubmit={handleSubmit} className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+        <form onSubmit={handleSubmit} className="rounded-3xl border border-border bg-white p-6 shadow-sm">
             <p className="text-sm font-medium uppercase tracking-[0.3em] text-slate-500">Pengaturan Akun</p>
             <h3 className="mt-2 text-xl font-semibold text-slate-900">Ubah Kredensial Login</h3>
 
@@ -164,7 +164,7 @@ export default function ProfileCredentialsForm({ session }) {
                 <button
                     type="submit"
                     disabled={loading}
-                    className="inline-flex items-center justify-center rounded-full bg-slate-900 px-6 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:opacity-50"
+                    className="inline-flex items-center justify-center rounded-full bg-slate-900 px-6 py-3 text-sm font-semibold text-white transition hover:bg-primary/85 disabled:opacity-50"
                 >
                     {loading ? 'Menyimpan...' : 'Simpan Perubahan'}
                 </button>

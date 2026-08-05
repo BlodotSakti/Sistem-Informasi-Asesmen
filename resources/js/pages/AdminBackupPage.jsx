@@ -100,19 +100,19 @@ export default function AdminBackupPage({ session, onLogout }) {
             <div className="space-y-6">
                 
                 {/* Header */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
+                <section className="overflow-hidden rounded-[2.5rem] border border-[#8A2332]/30 bg-gradient-to-br from-[#8A2332] via-primary to-secondary px-8 py-10 shadow-lg backdrop-blur-xl flex flex-col sm:flex-row sm:items-center justify-between gap-8">
                     <div>
-                        <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
-                            <HardDriveDownload className="w-6 h-6 text-indigo-600" />
-                            Backup & Restore
-                        </h2>
-                        <p className="text-sm text-slate-500 mt-1">Manajemen pencadangan data sistem dan database</p>
+                        <p className="text-xs uppercase tracking-[0.45em] text-accent flex items-center gap-2">
+                            <HardDriveDownload className="w-4 h-4" /> Data
+                        </p>
+                        <h3 className="mt-4 max-w-2xl text-3xl font-semibold leading-tight text-[#EEDCC8] md:text-4xl">Backup & Restore</h3>
+                        <p className="mt-4 max-w-2xl text-sm leading-7 text-accent md:text-base">Manajemen pencadangan data sistem dan database</p>
                     </div>
-                    <div className="flex items-center gap-3">
+                    <div className="flex flex-wrap items-center gap-3">
                         <button
                             onClick={() => handleCreateBackup('db')}
                             disabled={actionLoading}
-                            className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:opacity-50"
+                            className="inline-flex items-center gap-2 rounded-full bg-accent px-6 py-3 text-sm font-semibold text-[#EEDCC8] transition-all shadow-md hover:scale-105 disabled:opacity-50"
                         >
                             {actionLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Database className="w-4 h-4" />}
                             Backup Database
@@ -120,13 +120,13 @@ export default function AdminBackupPage({ session, onLogout }) {
                         <button
                             onClick={() => handleCreateBackup('full')}
                             disabled={actionLoading}
-                            className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-500 disabled:opacity-50"
+                            className="inline-flex items-center gap-2 rounded-full bg-[#EEDCC8] px-6 py-3 text-sm font-semibold text-primary transition-all shadow-md hover:scale-105 hover:bg-white disabled:opacity-50"
                         >
                             {actionLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
-                            Full Backup (DB + File)
+                            Backup Full (File & DB)
                         </button>
                     </div>
-                </div>
+                </section>
 
                 {error && (
                     <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 flex items-center gap-3 text-rose-700">
@@ -143,7 +143,7 @@ export default function AdminBackupPage({ session, onLogout }) {
                 )}
 
                 {/* List Backup */}
-                <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
+                <div className="bg-white rounded-3xl border border-border shadow-sm overflow-hidden">
                     <div className="p-6 border-b border-slate-100 flex items-center justify-between">
                         <h3 className="font-semibold text-slate-900">Riwayat Backup Tersedia</h3>
                         <div className="text-xs text-slate-500 bg-slate-100 px-3 py-1 rounded-full">
@@ -179,7 +179,7 @@ export default function AdminBackupPage({ session, onLogout }) {
                                     backups.map((backup, i) => (
                                         <tr key={i} className="hover:bg-slate-50/50 transition-colors">
                                             <td className="px-6 py-4 font-medium text-slate-900 flex items-center gap-3">
-                                                <div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg">
+                                                <div className="p-2 bg-primary/5 text-primary rounded-lg">
                                                     <Database className="w-4 h-4" />
                                                 </div>
                                                 {backup.file_name}
@@ -194,14 +194,14 @@ export default function AdminBackupPage({ session, onLogout }) {
                                                 <div className="flex items-center justify-end gap-2">
                                                     <button
                                                         onClick={() => handleDownloadBackup(backup.file_name)}
-                                                        className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-colors"
+                                                        className="p-2 text-slate-400 hover:text-primary hover:bg-primary/5 rounded-xl transition-colors"
                                                         title="Unduh Backup"
                                                     >
                                                         <Download className="w-4 h-4" />
                                                     </button>
                                                     <button
                                                         onClick={() => handleDeleteBackup(backup.file_name)}
-                                                        className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-colors"
+                                                        className="p-2 text-slate-400 hover:text-error hover:bg-rose-50 rounded-xl transition-colors"
                                                         title="Hapus Backup"
                                                     >
                                                         <Trash2 className="w-4 h-4" />

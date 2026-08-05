@@ -47,26 +47,26 @@ export default function AdminDashboard({ session, onLogout }) {
 
     const renderDashboard = () => (
         <div className="space-y-8">
-            <section className="overflow-hidden rounded-[2.5rem] border border-slate-200/60 bg-gradient-to-br from-white via-slate-50 to-indigo-50/30 px-8 py-10 shadow-sm backdrop-blur-xl">
+            <section className="overflow-hidden rounded-[2.5rem] border border-[#8A2332]/30 bg-gradient-to-br from-[#8A2332] via-primary to-secondary px-8 py-10 shadow-lg backdrop-blur-xl">
                 <div className="grid gap-8 lg:grid-cols-[1.5fr_0.5fr] lg:items-center">
                     <div>
-                        <p className="text-xs uppercase tracking-[0.45em] text-indigo-600 font-semibold">Sistem Informasi Asesmen</p>
-                        <h3 className="mt-4 max-w-2xl text-4xl font-extrabold tracking-tight text-slate-900">
+                        <p className="text-xs uppercase tracking-[0.45em] text-accent font-bold">Sistem Informasi Asesmen</p>
+                        <h3 className="mt-4 max-w-2xl text-4xl font-extrabold tracking-tight text-[#EEDCC8]">
                             Selamat Datang, {session?.user?.admin?.nama_lengkap || session?.user?.username || 'Admin'}
                         </h3>
-                        <p className="mt-4 max-w-2xl text-base leading-relaxed text-slate-600">
+                        <p className="mt-4 max-w-2xl text-base leading-relaxed text-accent">
                             Pusat pengendalian utama sistem. Pantau ringkasan data, grafik aktivitas pengguna, serta akses cepat ke manajemen data pokok.
                         </p>
                         <div className="mt-8 flex flex-wrap gap-4">
                             <a
                                 href="/admin/pengguna"
-                                className="inline-flex items-center rounded-full bg-slate-900 px-6 py-3 text-sm font-semibold text-white shadow-md transition-all hover:bg-indigo-600 hover:scale-105 hover:shadow-indigo-500/25"
+                                className="inline-flex items-center rounded-full bg-accent px-6 py-3 text-sm font-semibold text-[#EEDCC8] shadow-md transition-all hover:bg-accent hover:scale-105 hover:shadow-primary/25"
                             >
                                 Kelola Pengguna
                             </a>
                             <a
                                 href="/admin/pemetaan-akademik"
-                                className="inline-flex items-center rounded-full border border-slate-200 bg-white/50 px-6 py-3 text-sm font-semibold text-slate-700 backdrop-blur-md transition-all hover:bg-white hover:shadow-sm hover:scale-105"
+                                className="inline-flex items-center rounded-full border border-border bg-accent px-6 py-3 text-sm font-semibold text-[#EEDCC8] backdrop-blur-md transition-all hover:bg-accent hover:shadow-sm hover:scale-105"
                             >
                                 Lihat Pemetaan Akademik
                             </a>
@@ -74,27 +74,27 @@ export default function AdminDashboard({ session, onLogout }) {
                     </div>
 
                     <div className="hidden lg:block relative">
-                        <div className="absolute -inset-4 bg-gradient-to-tr from-indigo-100 to-cyan-50 blur-2xl opacity-50 rounded-full"></div>
+                        <div className="absolute -inset-4 bg-gradient-to-tr from-primary/10 to-info/5 blur-2xl opacity-50 rounded-full"></div>
                         <div className="relative grid grid-cols-2 gap-4">
-                            <div className="rounded-[1.5rem] bg-white/80 p-5 backdrop-blur-xl border border-white shadow-sm transition hover:shadow-md">
-                                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-indigo-100 text-indigo-600 mb-3">
+                            <div className="rounded-[1.5rem] bg-[#EEDCC8] p-5 backdrop-blur-xl border border-white shadow-sm transition hover:shadow-md">
+                                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary mb-3">
                                     <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
                                     </svg>
                                 </div>
-                                <div className="text-3xl font-extrabold text-slate-900">{loading ? '...' : data.summary.total_guru}</div>
-                                <div className="text-sm font-medium text-slate-500 mt-1">Guru Aktif</div>
+                                <div className="text-3xl font-extrabold text-accent">{loading ? '...' : data.summary.total_guru}</div>
+                                <div className="text-sm font-medium text-accent mt-1">Guru Aktif</div>
                             </div>
-                            <div className="rounded-[1.5rem] bg-white/80 p-5 backdrop-blur-xl border border-white shadow-sm transition hover:shadow-md translate-y-4">
-                                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-cyan-100 text-cyan-600 mb-3">
+                            <div className="rounded-[1.5rem] bg-[#EEDCC8] p-5 backdrop-blur-xl border border-white shadow-sm transition hover:shadow-md translate-y-4">
+                                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-info/10 text-info mb-3">
                                     <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                       <path d="M12 14l9-5-9-5-9 5 9 5z" />
                                       <path d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z" />
                                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 14l9-5-9-5-9 5 9 5zm0 0l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14zm-4 6v-7.5l4-2.222" />
                                     </svg>
                                 </div>
-                                <div className="text-3xl font-extrabold text-slate-900">{loading ? '...' : data.summary.total_siswa}</div>
-                                <div className="text-sm font-medium text-slate-500 mt-1">Siswa Terdaftar</div>
+                                <div className="text-3xl font-extrabold text-accent">{loading ? '...' : data.summary.total_siswa}</div>
+                                <div className="text-sm font-medium text-accent mt-1">Siswa Terdaftar</div>
                             </div>
                         </div>
                     </div>
@@ -135,14 +135,14 @@ export default function AdminDashboard({ session, onLogout }) {
             </section>
 
             <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
-                <section className="rounded-[2.5rem] border border-slate-200/60 bg-white/60 backdrop-blur-xl p-8 shadow-sm">
+                <section className="rounded-[2.5rem] border border-border bg-white/60 backdrop-blur-xl p-8 shadow-sm">
                     <div className="mb-6">
                         <h4 className="text-lg font-semibold text-slate-900">Grafik Pendaftaran Pengguna</h4>
                         <p className="text-sm text-slate-500">Jumlah akun baru yang ditambahkan dalam 7 hari terakhir.</p>
                     </div>
                     <div className="h-[300px] w-full">
                         {loading ? (
-                            <div className="flex h-full items-center justify-center rounded-xl bg-slate-50 border border-dashed border-slate-200 text-sm text-slate-400">
+                            <div className="flex h-full items-center justify-center rounded-xl bg-slate-50 border border-dashed border-border text-sm text-slate-400">
                                 Memuat grafik...
                             </div>
                         ) : (
@@ -170,10 +170,10 @@ export default function AdminDashboard({ session, onLogout }) {
                                         type="monotone" 
                                         dataKey="total" 
                                         name="Akun Baru"
-                                        stroke="#4f46e5" 
+                                        stroke="#1E3A5F" 
                                         strokeWidth={3} 
                                         dot={{ r: 4, strokeWidth: 2, fill: '#fff' }} 
-                                        activeDot={{ r: 6, stroke: '#4f46e5', strokeWidth: 2, fill: '#fff' }} 
+                                        activeDot={{ r: 6, stroke: '#1E3A5F', strokeWidth: 2, fill: '#fff' }} 
                                     />
                                 </LineChart>
                             </ResponsiveContainer>
@@ -181,7 +181,7 @@ export default function AdminDashboard({ session, onLogout }) {
                     </div>
                 </section>
 
-                <section className="rounded-[2.5rem] border border-slate-200/60 bg-white/60 backdrop-blur-xl p-8 shadow-sm">
+                <section className="rounded-[2.5rem] border border-border bg-white/60 backdrop-blur-xl p-8 shadow-sm">
                     <div className="mb-6 flex items-center justify-between">
                         <div>
                             <h4 className="text-lg font-semibold text-slate-900">Catatan Sistem</h4>
@@ -208,7 +208,7 @@ export default function AdminDashboard({ session, onLogout }) {
                             ) : (
                                 data.logs.map((log) => (
                                     <div key={log.id} className="flex items-start gap-3 rounded-xl p-2 transition hover:bg-slate-50">
-                                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-indigo-50 text-indigo-600">
+                                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/5 text-primary">
                                             {log.role === 'admin' && (
                                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                                                     <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
@@ -244,11 +244,6 @@ export default function AdminDashboard({ session, onLogout }) {
 
     return (
         <DashboardLayout user={session?.user} onLogout={onLogout} title={MENU_META.dashboard.title} navigation={navigation}>
-            <div className="mb-8">
-                <h1 className="text-2xl font-bold tracking-tight text-slate-900">{MENU_META.dashboard.title}</h1>
-                <p className="mt-2 text-sm text-slate-600">{MENU_META.dashboard.lead}</p>
-            </div>
-
             {renderDashboard()}
         </DashboardLayout>
     );

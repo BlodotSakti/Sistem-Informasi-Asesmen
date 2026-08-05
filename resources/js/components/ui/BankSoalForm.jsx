@@ -11,7 +11,7 @@ export default function BankSoalForm({
     isEditing
 }) {
     return (
-        <form onSubmit={onSubmit} className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+        <form onSubmit={onSubmit} className="rounded-3xl border border-border bg-white p-6 shadow-sm">
             <p className="text-sm font-medium uppercase tracking-[0.3em] text-slate-500">Bank Soal</p>
             <h3 className="mt-2 text-2xl font-semibold text-slate-900">Input soal digital terstruktur</h3>
 
@@ -93,11 +93,11 @@ export default function BankSoalForm({
                         <div className="flex flex-col gap-3">
                             {bankForm.gambar_soal_url && !bankForm.hapus_gambar && (
                                 <div className="relative w-max">
-                                    <img src={bankForm.gambar_soal_url} alt="Gambar Soal" className="max-h-40 rounded-xl border border-slate-200 object-cover shadow-sm" />
+                                    <img src={bankForm.gambar_soal_url} alt="Gambar Soal" className="max-h-40 rounded-xl border border-border object-cover shadow-sm" />
                                     <button 
                                         type="button" 
                                         onClick={() => setBankForm(curr => ({ ...curr, hapus_gambar: true, gambar_soal: null }))}
-                                        className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full bg-rose-500 text-white hover:bg-rose-600 shadow"
+                                        className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full bg-secondary text-white hover:bg-secondary/85 shadow"
                                         title="Hapus Gambar"
                                     >
                                         <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
@@ -114,7 +114,7 @@ export default function BankSoalForm({
                                         setBankForm(curr => ({ ...curr, gambar_soal: e.target.files[0], hapus_gambar: false }));
                                     }
                                 }}
-                                className="block w-full text-sm text-slate-500 file:mr-4 file:rounded-full file:border-0 file:bg-blue-50 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-blue-700 hover:file:bg-blue-100"
+                                className="block w-full text-sm text-slate-500 file:mr-4 file:rounded-full file:border-0 file:bg-primary/5 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-primary hover:file:bg-primary/10"
                             />
                         </div>
                     </label>
@@ -134,7 +134,7 @@ export default function BankSoalForm({
                                                 newOpsi.splice(idx, 1);
                                                 setBankForm(curr => ({ ...curr, opsi_jawaban: newOpsi }));
                                             }}
-                                            className="text-rose-500 hover:text-rose-700 text-xs"
+                                            className="text-error hover:text-rose-700 text-xs"
                                         >
                                             Hapus
                                         </button>
@@ -154,7 +154,7 @@ export default function BankSoalForm({
                         <button 
                             type="button" 
                             onClick={() => setBankForm(curr => ({ ...curr, opsi_jawaban: [...curr.opsi_jawaban, ''] }))}
-                            className="mt-2 text-sm text-blue-600 font-semibold hover:text-blue-800"
+                            className="mt-2 text-sm text-primary font-semibold hover:text-primary/85"
                         >
                             + Tambah Opsi Jawaban
                         </button>
@@ -203,7 +203,7 @@ export default function BankSoalForm({
             </div>
 
             <div className="mt-4 flex flex-wrap gap-3">
-                <button type="submit" className="rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800">
+                <button type="submit" className="rounded-full bg-primary px-5 py-3 text-sm font-semibold text-white transition hover:bg-primary/85">
                     {isEditing ? 'Simpan Perubahan' : 'Simpan Soal'}
                 </button>
                 {isEditing && onCancel ? (

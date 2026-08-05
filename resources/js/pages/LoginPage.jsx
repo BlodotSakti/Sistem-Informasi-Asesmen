@@ -59,8 +59,8 @@ export default function LoginPage({ session, onLogin }) {
         <>
         <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(15,23,42,0.95),_rgba(148,163,184,0.12)_45%,_rgba(241,245,249,1)_70%)] px-4 py-10 text-slate-900 sm:px-6 lg:px-8">
             <div className="mx-auto flex min-h-[calc(100vh-5rem)] w-full max-w-6xl items-center justify-center">
-                <div className="grid w-full overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-[0_30px_80px_rgba(15,23,42,0.18)] lg:grid-cols-[1.1fr_0.9fr]">
-                    <div className="hidden flex-col justify-between bg-slate-950 p-10 text-slate-100 lg:flex">
+                <div className="grid w-full overflow-hidden rounded-[2rem] border border-border bg-white shadow-[0_30px_80px_rgba(15,23,42,0.18)] lg:grid-cols-[1.1fr_0.9fr]">
+                    <div className="hidden flex-col justify-between bg-primary p-10 text-slate-100 lg:flex">
                         <div>
                             <BrandMark />
                             <div className="mt-10 max-w-md space-y-4">
@@ -90,7 +90,7 @@ export default function LoginPage({ session, onLogin }) {
                                 <BrandMark />
                             </div>
 
-                            <div className="rounded-[1.75rem] border border-slate-200 bg-white p-8 shadow-sm">
+                            <div className="rounded-[1.75rem] border border-border bg-white p-8 shadow-sm">
                                 <p className="text-sm font-medium uppercase tracking-[0.35em] text-slate-500">
                                     Halaman Autentikasi
                                 </p>
@@ -101,7 +101,7 @@ export default function LoginPage({ session, onLogin }) {
                                     Gunakan username dan password sekolah untuk mengakses dashboard sesuai role Anda.
                                 </p>
 
-                                <div className="mt-6 rounded-3xl border border-slate-200 bg-slate-50 p-4">
+                                <div className="mt-6 rounded-3xl border border-border bg-slate-50 p-4">
                                     <div className="flex items-center justify-between gap-3">
                                         <div>
                                             <p className="text-sm font-semibold text-slate-900">Akun testing</p>
@@ -109,7 +109,7 @@ export default function LoginPage({ session, onLogin }) {
                                                 Klik salah satu kartu untuk mengisi form login otomatis.
                                             </p>
                                         </div>
-                                        <span className="rounded-full bg-slate-950 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.28em] text-white">
+                                        <span className="rounded-full bg-primary px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.28em] text-white">
                                             Demo
                                         </span>
                                     </div>
@@ -125,7 +125,7 @@ export default function LoginPage({ session, onLogin }) {
                                                         password: account.password,
                                                     })
                                                 }
-                                                className="rounded-2xl border border-slate-200 bg-white p-4 text-left transition hover:border-slate-400 hover:bg-slate-50"
+                                                className="rounded-2xl border border-border bg-white p-4 text-left transition hover:border-slate-400 hover:bg-slate-50"
                                             >
                                                 <div className="flex items-center justify-between gap-3">
                                                     <div>
@@ -205,7 +205,7 @@ export default function LoginPage({ session, onLogin }) {
                                     <button
                                         type="submit"
                                         disabled={loading}
-                                        className="flex w-full items-center justify-center rounded-2xl bg-slate-950 px-4 py-3.5 text-sm font-semibold tracking-wide text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-70"
+                                        className="flex w-full items-center justify-center rounded-2xl bg-primary px-4 py-3.5 text-sm font-semibold tracking-wide text-white transition hover:bg-primary/85 disabled:cursor-not-allowed disabled:opacity-70"
                                     >
                                         {loading ? 'Memproses...' : 'Masuk'}
                                     </button>
@@ -251,7 +251,7 @@ export default function LoginPage({ session, onLogin }) {
                     <div className="mt-8 flex justify-end">
                         <button 
                             onClick={() => setIsForgotPasswordModalOpen(false)}
-                            className="rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800"
+                            className="rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-primary/85"
                         >
                             Saya Mengerti
                         </button>

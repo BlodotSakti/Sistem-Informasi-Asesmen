@@ -3,6 +3,7 @@ import DashboardLayout from '../components/layout/DashboardLayout';
 import StatCard from '../components/ui/StatCard';
 import { apiFetch } from '../lib/api';
 import { adminNavigation } from './adminNavigation';
+import { Users, UserMinus, CalendarCheck, CalendarDays, Library, BookOpen, UserCheck, Archive, Briefcase, Clock, FileSpreadsheet, Database, Network } from 'lucide-react';
 
 const MENU_META = {
     dashboard: {
@@ -59,7 +60,7 @@ function toTahunAjaranValue(value) {
     return String(value).split(' - ')[0].trim();
 }
 
-const TABLE_HEAD_CLASS = 'border-b border-slate-200 bg-slate-50 text-xs uppercase tracking-[0.2em] text-slate-500';
+const TABLE_HEAD_CLASS = 'border-b border-border bg-slate-50 text-xs uppercase tracking-[0.2em] text-slate-500';
 const TABLE_BODY_ROW_CLASS = 'align-top hover:bg-slate-50/70';
 const TABLE_TITLE_CELL_CLASS = 'px-5 py-4 font-semibold text-slate-900';
 const TABLE_CELL_CLASS = 'px-5 py-4 text-slate-600';
@@ -752,7 +753,7 @@ export default function AdminWorkspacePage({ session, onLogout, mode = 'dashboar
 
     const renderDashboard = () => (
         <div className="space-y-8">
-            <section className="overflow-hidden rounded-[2rem] border border-slate-200 bg-gradient-to-br from-slate-950 via-slate-900 to-amber-900 px-6 py-8 text-white shadow-2xl shadow-slate-950/20 lg:px-8">
+            <section className="overflow-hidden rounded-[2rem] border border-border bg-gradient-to-br from-slate-950 via-slate-900 to-amber-900 px-6 py-8 text-white shadow-2xl shadow-slate-950/20 lg:px-8">
                 <div className="grid gap-8 lg:grid-cols-[1.2fr_0.8fr] lg:items-center">
                     <div>
                         <p className="text-xs uppercase tracking-[0.45em] text-amber-200/80">Dashboard Admin</p>
@@ -770,19 +771,19 @@ export default function AdminWorkspacePage({ session, onLogout, mode = 'dashboar
                             <span className="text-xs uppercase tracking-[0.28em] text-amber-200">Live</span>
                         </div>
                         <div className="grid grid-cols-2 gap-3 text-sm text-slate-100">
-                            <div className="rounded-2xl bg-slate-950/40 px-4 py-3">
+                            <div className="rounded-2xl bg-primary/40 px-4 py-3">
                                 <p className="text-xs uppercase tracking-[0.24em] text-slate-300">Tahun Ajaran</p>
                                 <p className="mt-2 text-2xl font-semibold">{loading ? '...' : summary?.cards?.total_tahun_ajaran ?? 0}</p>
                             </div>
-                            <div className="rounded-2xl bg-slate-950/40 px-4 py-3">
+                            <div className="rounded-2xl bg-primary/40 px-4 py-3">
                                 <p className="text-xs uppercase tracking-[0.24em] text-slate-300">Kelas</p>
                                 <p className="mt-2 text-2xl font-semibold">{loading ? '...' : summary?.cards?.total_kelas ?? 0}</p>
                             </div>
-                            <div className="rounded-2xl bg-slate-950/40 px-4 py-3">
+                            <div className="rounded-2xl bg-primary/40 px-4 py-3">
                                 <p className="text-xs uppercase tracking-[0.24em] text-slate-300">Mapel</p>
                                 <p className="mt-2 text-2xl font-semibold">{loading ? '...' : summary?.cards?.total_mapel ?? 0}</p>
                             </div>
-                            <div className="rounded-2xl bg-slate-950/40 px-4 py-3">
+                            <div className="rounded-2xl bg-primary/40 px-4 py-3">
                                 <p className="text-xs uppercase tracking-[0.24em] text-slate-300">Akun Baru</p>
                                 <p className="mt-2 text-2xl font-semibold">{loading ? '...' : (summary?.recent_activities?.length ?? 0)}</p>
                             </div>
@@ -801,7 +802,7 @@ export default function AdminWorkspacePage({ session, onLogout, mode = 'dashboar
             </section>
 
             <section className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
-                <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+                <div className="rounded-3xl border border-border bg-white p-6 shadow-sm">
                     <div className="flex items-start justify-between gap-4">
                         <div>
                             <p className="text-sm font-medium uppercase tracking-[0.3em] text-slate-500">Distribusi Aktivitas</p>
@@ -820,7 +821,7 @@ export default function AdminWorkspacePage({ session, onLogout, mode = 'dashboar
                     </div>
                 </div>
 
-                <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+                <div className="rounded-3xl border border-border bg-white p-6 shadow-sm">
                     <p className="text-sm font-medium uppercase tracking-[0.3em] text-slate-500">Riwayat Aktivitas</p>
                     <h3 className="mt-2 text-xl font-semibold text-slate-900">Perubahan terbaru</h3>
                     <div className="mt-6 space-y-3">
@@ -865,7 +866,7 @@ export default function AdminWorkspacePage({ session, onLogout, mode = 'dashboar
                         <input type="date" value={yearForm.tanggal_selesai} onChange={(event) => setYearForm((current) => ({ ...current, tanggal_selesai: event.target.value }))} className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-slate-900" />
                     </label>
                     <label className="flex items-center gap-3 rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-medium text-slate-700 md:col-span-2">
-                        <input type="checkbox" checked={Boolean(yearForm.is_aktif)} onChange={(event) => setYearForm((current) => ({ ...current, is_aktif: event.target.checked }))} className="h-4 w-4 rounded border-slate-300 text-slate-950 focus:ring-slate-900" />
+                        <input type="checkbox" checked={Boolean(yearForm.is_aktif)} onChange={(event) => setYearForm((current) => ({ ...current, is_aktif: event.target.checked }))} className="h-4 w-4 rounded border-slate-300 text-text-primary focus:ring-slate-900" />
                         Jadikan periode aktif
                     </label>
                     <label className="space-y-2 text-sm font-medium text-slate-700 md:col-span-2">
@@ -874,17 +875,17 @@ export default function AdminWorkspacePage({ session, onLogout, mode = 'dashboar
                     </label>
                 </div>
                 <div className="flex flex-wrap gap-3">
-                    <button type="submit" className="rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800">{yearId ? 'Perbarui Tahun Ajaran' : 'Simpan Tahun Ajaran'}</button>
+                    <button type="submit" className="rounded-full bg-primary px-5 py-3 text-sm font-semibold text-white transition hover:bg-primary/85">{yearId ? 'Perbarui Tahun Ajaran' : 'Simpan Tahun Ajaran'}</button>
                     {yearId ? <button type="button" onClick={resetYearForm} className="rounded-full border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-100">Batal Edit</button> : null}
                 </div>
             </form>
 
-            <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white">
-                <div className="border-b border-slate-200 px-5 py-4">
+            <div className="overflow-hidden rounded-3xl border border-border bg-white">
+                <div className="border-b border-border px-5 py-4">
                     <h4 className="text-lg font-semibold text-slate-900">Daftar Tahun Ajaran</h4>
                     <p className="text-sm text-slate-500">Gunakan satu data aktif untuk membantu filter kelas dan laporan.</p>
                 </div>
-                <div className="border-b border-slate-200 px-5 py-4">
+                <div className="border-b border-border px-5 py-4">
                     <div className="grid gap-3 lg:grid-cols-[0.8fr_1.2fr] lg:items-end">
                         <div className="rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-600">
                             <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Total Data</p>
@@ -974,17 +975,17 @@ export default function AdminWorkspacePage({ session, onLogout, mode = 'dashboar
                     </label>
                 </div>
                 <div className="flex flex-wrap gap-3">
-                    <button type="submit" className="rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800">{classId ? 'Perbarui Kelas' : 'Simpan Kelas'}</button>
+                    <button type="submit" className="rounded-full bg-primary px-5 py-3 text-sm font-semibold text-white transition hover:bg-primary/85">{classId ? 'Perbarui Kelas' : 'Simpan Kelas'}</button>
                     {classId ? <button type="button" onClick={resetClassForm} className="rounded-full border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-100">Batal Edit</button> : null}
                 </div>
             </form>
 
-            <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white">
-                <div className="border-b border-slate-200 px-5 py-4">
+            <div className="overflow-hidden rounded-3xl border border-border bg-white">
+                <div className="border-b border-border px-5 py-4">
                     <h4 className="text-lg font-semibold text-slate-900">Daftar Kelas</h4>
                     <p className="text-sm text-slate-500">Gunakan daftar ini untuk melihat relasi guru wali dan periode kelas.</p>
                 </div>
-                <div className="border-b border-slate-200 px-5 py-4">
+                <div className="border-b border-border px-5 py-4">
                     <div className="grid gap-3 lg:grid-cols-[0.8fr_1.2fr] lg:items-end">
                         <div className="rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-600">
                             <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Total Data</p>
@@ -1056,17 +1057,17 @@ export default function AdminWorkspacePage({ session, onLogout, mode = 'dashboar
                     </label>
                 </div>
                 <div className="flex flex-wrap gap-3">
-                    <button type="submit" className="rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800">{mapelId ? 'Perbarui Mapel' : 'Simpan Mapel'}</button>
+                    <button type="submit" className="rounded-full bg-primary px-5 py-3 text-sm font-semibold text-white transition hover:bg-primary/85">{mapelId ? 'Perbarui Mapel' : 'Simpan Mapel'}</button>
                     {mapelId ? <button type="button" onClick={resetMapelForm} className="rounded-full border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-100">Batal Edit</button> : null}
                 </div>
             </form>
 
-            <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white">
-                <div className="border-b border-slate-200 px-5 py-4">
+            <div className="overflow-hidden rounded-3xl border border-border bg-white">
+                <div className="border-b border-border px-5 py-4">
                     <h4 className="text-lg font-semibold text-slate-900">Daftar Mata Pelajaran</h4>
                     <p className="text-sm text-slate-500">Data mapel dipakai untuk bank soal dan jadwal sesi asesmen.</p>
                 </div>
-                <div className="border-b border-slate-200 px-5 py-4">
+                <div className="border-b border-border px-5 py-4">
                     <div className="grid gap-3 lg:grid-cols-[0.8fr_1.2fr] lg:items-end">
                         <div className="rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-600">
                             <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Total Data</p>
@@ -1150,22 +1151,22 @@ export default function AdminWorkspacePage({ session, onLogout, mode = 'dashboar
                         </label>
                     </div>
                     <label className="flex items-center gap-3 rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-medium text-slate-700">
-                        <input type="checkbox" checked={Boolean(classStudentForm.is_aktif)} onChange={(event) => setClassStudentForm((current) => ({ ...current, is_aktif: event.target.checked }))} className="h-4 w-4 rounded border-slate-300 text-slate-950 focus:ring-slate-900" />
+                        <input type="checkbox" checked={Boolean(classStudentForm.is_aktif)} onChange={(event) => setClassStudentForm((current) => ({ ...current, is_aktif: event.target.checked }))} className="h-4 w-4 rounded border-slate-300 text-text-primary focus:ring-slate-900" />
                         Status relasi aktif
                     </label>
                 </div>
                 <div className="flex flex-wrap gap-3">
-                    <button type="submit" className="rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800">{classStudentId ? 'Perbarui Relasi' : 'Simpan Relasi'}</button>
+                    <button type="submit" className="rounded-full bg-primary px-5 py-3 text-sm font-semibold text-white transition hover:bg-primary/85">{classStudentId ? 'Perbarui Relasi' : 'Simpan Relasi'}</button>
                     {classStudentId ? <button type="button" onClick={resetClassStudentForm} className="rounded-full border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-100">Batal Edit</button> : null}
                 </div>
             </form>
 
-            <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white">
-                <div className="border-b border-slate-200 px-5 py-4">
+            <div className="overflow-hidden rounded-3xl border border-border bg-white">
+                <div className="border-b border-border px-5 py-4">
                     <h4 className="text-lg font-semibold text-slate-900">Daftar Relasi Siswa-Kelas</h4>
                     <p className="text-sm text-slate-500">Satu siswa dapat memiliki banyak riwayat kelas, tetapi hanya satu yang aktif.</p>
                 </div>
-                <div className="border-b border-slate-200 px-5 py-4">
+                <div className="border-b border-border px-5 py-4">
                     <div className="grid gap-3 lg:grid-cols-[1.3fr_0.8fr]">
                         <div className="rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-600 lg:col-span-2">
                             <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Total Data</p>
@@ -1201,10 +1202,10 @@ export default function AdminWorkspacePage({ session, onLogout, mode = 'dashboar
                                 type="file"
                                 accept=".xlsx,.xls,.csv"
                                 onChange={(event) => setClassStudentImport({ file: event.target.files?.[0] || null })}
-                                className="w-full rounded-2xl border border-dashed border-slate-300 bg-white px-4 py-3 text-sm text-slate-600 outline-none transition file:mr-4 file:rounded-full file:border-0 file:bg-slate-950 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white"
+                                className="w-full rounded-2xl border border-dashed border-slate-300 bg-white px-4 py-3 text-sm text-slate-600 outline-none transition file:mr-4 file:rounded-full file:border-0 file:bg-primary file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white"
                             />
                         </label>
-                        <button type="submit" className="rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800">
+                        <button type="submit" className="rounded-full bg-primary px-5 py-3 text-sm font-semibold text-white transition hover:bg-primary/85">
                             Import Relasi
                         </button>
                     </form>
@@ -1304,22 +1305,22 @@ export default function AdminWorkspacePage({ session, onLogout, mode = 'dashboar
                         <input value={teachingAssignmentForm.tahun_ajaran} onChange={(event) => setTeachingAssignmentForm((current) => ({ ...current, tahun_ajaran: event.target.value }))} className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-slate-900" placeholder="2025/2026 - Semester Ganjil" />
                     </label>
                     <label className="flex items-center gap-3 rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-medium text-slate-700">
-                        <input type="checkbox" checked={Boolean(teachingAssignmentForm.is_aktif)} onChange={(event) => setTeachingAssignmentForm((current) => ({ ...current, is_aktif: event.target.checked }))} className="h-4 w-4 rounded border-slate-300 text-slate-950 focus:ring-slate-900" />
+                        <input type="checkbox" checked={Boolean(teachingAssignmentForm.is_aktif)} onChange={(event) => setTeachingAssignmentForm((current) => ({ ...current, is_aktif: event.target.checked }))} className="h-4 w-4 rounded border-slate-300 text-text-primary focus:ring-slate-900" />
                         Status penugasan aktif
                     </label>
                 </div>
                 <div className="flex flex-wrap gap-3">
-                    <button type="submit" className="rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800">{teachingAssignmentId ? 'Perbarui Penugasan' : 'Simpan Penugasan'}</button>
+                    <button type="submit" className="rounded-full bg-primary px-5 py-3 text-sm font-semibold text-white transition hover:bg-primary/85">{teachingAssignmentId ? 'Perbarui Penugasan' : 'Simpan Penugasan'}</button>
                     {teachingAssignmentId ? <button type="button" onClick={resetTeachingAssignmentForm} className="rounded-full border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-100">Batal Edit</button> : null}
                 </div>
             </form>
 
-            <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white">
-                <div className="border-b border-slate-200 px-5 py-4">
+            <div className="overflow-hidden rounded-3xl border border-border bg-white">
+                <div className="border-b border-border px-5 py-4">
                     <h4 className="text-lg font-semibold text-slate-900">Daftar Penugasan Guru-Mapel</h4>
                     <p className="text-sm text-slate-500">Penugasan ini menjadi dasar validasi guru saat membuat bank soal dan sesi asesmen.</p>
                 </div>
-                <div className="border-b border-slate-200 px-5 py-4">
+                <div className="border-b border-border px-5 py-4">
                     <div className="grid gap-3 lg:grid-cols-[1.3fr_0.8fr]">
                         <div className="rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-600 lg:col-span-2">
                             <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Total Data</p>
@@ -1355,10 +1356,10 @@ export default function AdminWorkspacePage({ session, onLogout, mode = 'dashboar
                                 type="file"
                                 accept=".xlsx,.xls,.csv"
                                 onChange={(event) => setTeachingAssignmentImport({ file: event.target.files?.[0] || null })}
-                                className="w-full rounded-2xl border border-dashed border-slate-300 bg-white px-4 py-3 text-sm text-slate-600 outline-none transition file:mr-4 file:rounded-full file:border-0 file:bg-slate-950 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white"
+                                className="w-full rounded-2xl border border-dashed border-slate-300 bg-white px-4 py-3 text-sm text-slate-600 outline-none transition file:mr-4 file:rounded-full file:border-0 file:bg-primary file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white"
                             />
                         </label>
-                        <button type="submit" className="rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800">
+                        <button type="submit" className="rounded-full bg-primary px-5 py-3 text-sm font-semibold text-white transition hover:bg-primary/85">
                             Import Penugasan
                         </button>
                     </form>
@@ -1428,11 +1429,11 @@ export default function AdminWorkspacePage({ session, onLogout, mode = 'dashboar
         <div className="space-y-6">
             <div className="space-y-4 rounded-3xl bg-slate-50 p-5">
                 <div className="flex gap-2 rounded-full bg-white p-1 text-sm font-medium text-slate-600">
-                    <button type="button" onClick={() => setUserTab('manual')} className={`flex-1 rounded-full px-4 py-2 ${userTab === 'manual' ? 'bg-slate-950 text-white' : ''}`}>Manual</button>
-                    <button type="button" onClick={() => setUserTab('import')} className={`flex-1 rounded-full px-4 py-2 ${userTab === 'import' ? 'bg-slate-950 text-white' : ''}`}>Import Excel</button>
+                    <button type="button" onClick={() => setUserTab('manual')} className={`flex-1 rounded-full px-4 py-2 ${userTab === 'manual' ? 'bg-primary text-white' : ''}`}>Manual</button>
+                    <button type="button" onClick={() => setUserTab('import')} className={`flex-1 rounded-full px-4 py-2 ${userTab === 'import' ? 'bg-primary text-white' : ''}`}>Import Excel</button>
                 </div>
 
-                <div className="rounded-3xl border border-slate-200 bg-white p-4">
+                <div className="rounded-3xl border border-border bg-white p-4">
                     <p className="text-xs uppercase tracking-[0.3em] text-slate-500">Workflow CRUD</p>
                     <h4 className="mt-2 text-lg font-semibold text-slate-900">Tambah, ubah, arsip, dan impor akun</h4>
                     <p className="mt-2 text-sm leading-6 text-slate-500">Gunakan form manual untuk satu akun, atau pindah ke impor Excel untuk data massal.</p>
@@ -1497,7 +1498,7 @@ export default function AdminWorkspacePage({ session, onLogout, mode = 'dashboar
                         </div>
 
                         <div className="flex flex-wrap gap-3">
-                            <button type="submit" className="rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800">{userId ? 'Perbarui Akun' : 'Simpan Akun'}</button>
+                            <button type="submit" className="rounded-full bg-primary px-5 py-3 text-sm font-semibold text-white transition hover:bg-primary/85">{userId ? 'Perbarui Akun' : 'Simpan Akun'}</button>
                             {userId ? <button type="button" onClick={resetUserForm} className="rounded-full border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-100">Batal Edit</button> : null}
                         </div>
                     </form>
@@ -1512,9 +1513,9 @@ export default function AdminWorkspacePage({ session, onLogout, mode = 'dashboar
                         </label>
                         <label className="space-y-2 text-sm font-medium text-slate-700">
                             <span>File Excel</span>
-                            <input type="file" accept=".xlsx,.xls,.csv" onChange={(event) => setImportForm((current) => ({ ...current, file: event.target.files?.[0] || null }))} className="w-full rounded-2xl border border-dashed border-slate-300 bg-white px-4 py-3 text-sm text-slate-600 outline-none transition file:mr-4 file:rounded-full file:border-0 file:bg-slate-950 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white" />
+                            <input type="file" accept=".xlsx,.xls,.csv" onChange={(event) => setImportForm((current) => ({ ...current, file: event.target.files?.[0] || null }))} className="w-full rounded-2xl border border-dashed border-slate-300 bg-white px-4 py-3 text-sm text-slate-600 outline-none transition file:mr-4 file:rounded-full file:border-0 file:bg-primary file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white" />
                         </label>
-                        <button type="submit" className="rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800">Import Akun</button>
+                        <button type="submit" className="rounded-full bg-primary px-5 py-3 text-sm font-semibold text-white transition hover:bg-primary/85">Import Akun</button>
                         <div className="rounded-2xl bg-white px-4 py-3 text-sm text-slate-600">
                             Password default impor: <span className="font-semibold text-slate-900">{importResult?.default_password || 'SIA@12345'}</span>
                         </div>
@@ -1530,8 +1531,8 @@ export default function AdminWorkspacePage({ session, onLogout, mode = 'dashboar
                 ) : null}
             </div>
 
-            <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white">
-                <div className="border-b border-slate-200 px-5 py-4">
+            <div className="overflow-hidden rounded-3xl border border-border bg-white">
+                <div className="border-b border-border px-5 py-4">
                     <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
                         <div>
                             <h4 className="text-lg font-semibold text-slate-900">Daftar Akun</h4>
@@ -1579,7 +1580,7 @@ export default function AdminWorkspacePage({ session, onLogout, mode = 'dashboar
                             </select>
                         </label>
                         <div className="flex items-end gap-2">
-                            <button type="submit" className="rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800">Cari</button>
+                            <button type="submit" className="rounded-full bg-primary px-5 py-3 text-sm font-semibold text-white transition hover:bg-primary/85">Cari</button>
                             <button type="button" onClick={resetUserFilters} className="rounded-full border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-100">Reset</button>
                         </div>
                     </form>
@@ -1680,21 +1681,181 @@ export default function AdminWorkspacePage({ session, onLogout, mode = 'dashboar
         return renderUserPage();
     };
 
+    const renderContextualCard = () => {
+        const cardClass = "rounded-[1.5rem] bg-[#EEDCC8] p-5 backdrop-blur-xl border border-white shadow-sm transition hover:shadow-md flex-1 lg:flex-none lg:min-w-40";
+        const iconContainerClass = "flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary mb-3";
+        const valueClass = "text-3xl font-extrabold text-accent";
+        const labelClass = "text-sm font-medium text-accent mt-1";
+
+        if (mode === 'pengguna') {
+            const activeUsers = users?.data?.filter(u => u.is_aktif).length || 0;
+            const archiveUsers = users?.data?.filter(u => !u.is_aktif).length || 0;
+            return (
+                <div className="flex flex-col sm:flex-row gap-4 lg:justify-end">
+                    <div className={cardClass}>
+                        <div className={iconContainerClass}>
+                            <Users className="w-6 h-6" />
+                        </div>
+                        <div className={valueClass}>{activeUsers}</div>
+                        <div className={labelClass}>Akun Aktif</div>
+                    </div>
+                    <div className={cardClass}>
+                        <div className={iconContainerClass}>
+                            <UserMinus className="w-6 h-6" />
+                        </div>
+                        <div className={valueClass}>{archiveUsers}</div>
+                        <div className={labelClass}>Akun Arsip</div>
+                    </div>
+                </div>
+            );
+        }
+        if (mode === 'tahun-ajaran') {
+            const activeYears = masterData?.tahun_ajaran?.filter(y => y.is_aktif).length || 0;
+            const totalYears = masterData?.tahun_ajaran?.length || 0;
+            return (
+                <div className="flex flex-col sm:flex-row gap-4 lg:justify-end">
+                    <div className={cardClass}>
+                        <div className={iconContainerClass}>
+                            <CalendarCheck className="w-6 h-6" />
+                        </div>
+                        <div className={valueClass}>{activeYears}</div>
+                        <div className={labelClass}>Periode Aktif</div>
+                    </div>
+                    <div className={cardClass}>
+                        <div className={iconContainerClass}>
+                            <CalendarDays className="w-6 h-6" />
+                        </div>
+                        <div className={valueClass}>{totalYears}</div>
+                        <div className={labelClass}>Total Periode</div>
+                    </div>
+                </div>
+            );
+        }
+        if (mode === 'kelas') {
+            const totalClasses = masterData?.kelas?.length || 0;
+            return (
+                <div className="flex flex-col sm:flex-row gap-4 lg:justify-end">
+                    <div className={cardClass}>
+                        <div className={iconContainerClass}>
+                            <Library className="w-6 h-6" />
+                        </div>
+                        <div className={valueClass}>{totalClasses}</div>
+                        <div className={labelClass}>Total Rombel</div>
+                    </div>
+                </div>
+            );
+        }
+        if (mode === 'mata-pelajaran') {
+            const totalMapel = masterData?.mata_pelajaran?.length || 0;
+            return (
+                <div className="flex flex-col sm:flex-row gap-4 lg:justify-end">
+                    <div className={cardClass}>
+                        <div className={iconContainerClass}>
+                            <BookOpen className="w-6 h-6" />
+                        </div>
+                        <div className={valueClass}>{totalMapel}</div>
+                        <div className={labelClass}>Total Mapel</div>
+                    </div>
+                </div>
+            );
+        }
+        if (mode === 'kelas-siswa') {
+            const activeRelations = masterData?.kelas_siswa?.filter(r => r.is_aktif).length || 0;
+            const archiveRelations = masterData?.kelas_siswa?.filter(r => !r.is_aktif).length || 0;
+            return (
+                <div className="flex flex-col sm:flex-row gap-4 lg:justify-end">
+                    <div className={cardClass}>
+                        <div className={iconContainerClass}>
+                            <UserCheck className="w-6 h-6" />
+                        </div>
+                        <div className={valueClass}>{activeRelations}</div>
+                        <div className={labelClass}>Status Aktif</div>
+                    </div>
+                    <div className={cardClass}>
+                        <div className={iconContainerClass}>
+                            <Archive className="w-6 h-6" />
+                        </div>
+                        <div className={valueClass}>{archiveRelations}</div>
+                        <div className={labelClass}>Riwayat Arsip</div>
+                    </div>
+                </div>
+            );
+        }
+        if (mode === 'penugasan-pembelajaran') {
+            const activeAssignments = masterData?.penugasan_pembelajaran?.filter(a => a.is_aktif).length || 0;
+            const totalAssignments = masterData?.penugasan_pembelajaran?.length || 0;
+            return (
+                <div className="flex flex-col sm:flex-row gap-4 lg:justify-end">
+                    <div className={cardClass}>
+                        <div className={iconContainerClass}>
+                            <Briefcase className="w-6 h-6" />
+                        </div>
+                        <div className={valueClass}>{activeAssignments}</div>
+                        <div className={labelClass}>Tugas Aktif</div>
+                    </div>
+                    <div className={cardClass}>
+                        <div className={iconContainerClass}>
+                            <Clock className="w-6 h-6" />
+                        </div>
+                        <div className={valueClass}>{totalAssignments}</div>
+                        <div className={labelClass}>Total Riwayat</div>
+                    </div>
+                </div>
+            );
+        }
+        if (mode === 'import-akun') {
+            return (
+                <div className="flex flex-col sm:flex-row gap-4 lg:justify-end">
+                    <div className={cardClass}>
+                        <div className={iconContainerClass}>
+                            <FileSpreadsheet className="w-6 h-6" />
+                        </div>
+                        <div className="text-xl font-extrabold text-accent mt-3">Excel Massal</div>
+                        <div className={labelClass}>Eksekusi Cepat</div>
+                    </div>
+                </div>
+            );
+        }
+        if (mode === 'bank-soal') {
+            return (
+                <div className="flex flex-col sm:flex-row gap-4 lg:justify-end">
+                    <div className={cardClass}>
+                        <div className={iconContainerClass}>
+                            <Database className="w-6 h-6" />
+                        </div>
+                        <div className="text-xl font-extrabold text-accent mt-3">Kolam Soal</div>
+                        <div className={labelClass}>Shared Pool</div>
+                    </div>
+                </div>
+            );
+        }
+        if (mode === 'pemetaan-akademik') {
+            return (
+                <div className="flex flex-col sm:flex-row gap-4 lg:justify-end">
+                    <div className={cardClass}>
+                        <div className={iconContainerClass}>
+                            <Network className="w-6 h-6" />
+                        </div>
+                        <div className="text-xl font-extrabold text-accent mt-3">Data Visual</div>
+                        <div className={labelClass}>Sistem Relasi</div>
+                    </div>
+                </div>
+            );
+        }
+        
+        return null;
+    };
+
     return (
         <DashboardLayout title={pageTitle} user={session?.user} navigation={navigation} onLogout={onLogout}>
             <div className="space-y-8">
-                <section className="overflow-hidden rounded-[2rem] border border-slate-200 bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950 px-6 py-8 text-white shadow-2xl shadow-slate-950/20 lg:px-8">
+                <section className="overflow-hidden rounded-[2.5rem] border border-[#8A2332]/30 bg-gradient-to-br from-[#8A2332] via-primary to-secondary px-8 py-10 shadow-lg backdrop-blur-xl">
                     <div className="grid gap-8 lg:grid-cols-[1.2fr_0.8fr] lg:items-center">
                         <div>
-                            <p className="text-xs uppercase tracking-[0.45em] text-indigo-300">{pageTitle}</p>
-                            <h3 className="mt-4 max-w-2xl text-3xl font-semibold leading-tight text-white md:text-4xl">{pageLead}</h3>
-                            <p className="mt-4 max-w-2xl text-sm leading-7 text-slate-200 md:text-base">Sidebar sekarang membuka halaman sesuai menu. Dashboard hanya menampilkan rangkuman, sedangkan menu lain menampilkan modul yang spesifik.</p>
+                            <p className="text-xs uppercase tracking-[0.45em] text-accent">{pageTitle}</p>
+                            <h3 className="mt-4 max-w-2xl text-3xl font-semibold leading-tight text-[#EEDCC8] md:text-4xl">{pageLead}</h3>
                         </div>
-                        <div className="rounded-[1.75rem] border border-white/10 bg-white/10 p-5 backdrop-blur">
-                            <p className="text-xs uppercase tracking-[0.3em] text-slate-300">Mode halaman</p>
-                            <p className="mt-3 text-2xl font-semibold text-white">{pageTitle}</p>
-                            <p className="mt-2 text-sm text-slate-200">Gunakan menu sidebar untuk berpindah halaman.</p>
-                        </div>
+                        {renderContextualCard()}
                     </div>
                 </section>
 

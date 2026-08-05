@@ -45,18 +45,18 @@ export default function SiswaAppreciationPage({ session, onLogout }) {
         <DashboardLayout title="Apresiasi" user={session?.user} navigation={siswaNavigation} onLogout={onLogout} profileHref="/siswa/profil">
             <div className="space-y-8">
                 {/* Gamified Header Section */}
-                <section className="relative overflow-hidden rounded-[2.5rem] border border-slate-800 bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950 px-6 py-10 text-white shadow-2xl lg:px-10">
+                <section className="relative overflow-hidden rounded-[2.5rem] border border-[#8A2332]/30 bg-gradient-to-br from-[#8A2332] via-primary to-secondary px-6 py-10 shadow-lg backdrop-blur-xl lg:px-10">
                     {/* Decorative Elements */}
-                    <div className="absolute -top-24 -right-24 h-96 w-96 rounded-full bg-indigo-500/10 blur-3xl"></div>
-                    <div className="absolute -bottom-24 -left-24 h-96 w-96 rounded-full bg-rose-500/10 blur-3xl"></div>
+                    <div className="absolute -top-24 -right-24 h-96 w-96 rounded-full bg-white/10 blur-3xl"></div>
+                    <div className="absolute -bottom-24 -left-24 h-96 w-96 rounded-full bg-accent/10 blur-3xl"></div>
                     
                     <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-8">
                         <div>
-                            <div className="inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-1.5 backdrop-blur-md border border-white/10 mb-4">
-                                <span className="text-xs font-bold uppercase tracking-widest text-amber-400">Pencapaian & Prestasi</span>
+                            <div className="inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-1.5 backdrop-blur-md border border-[#EEDCC8]/20 mb-4">
+                                <span className="text-xs font-bold uppercase tracking-widest text-accent">Pencapaian & Prestasi</span>
                             </div>
-                            <h3 className="text-4xl font-black tracking-tight text-white sm:text-5xl drop-shadow-sm">Koleksi Lencana</h3>
-                            <p className="mt-4 text-lg text-indigo-200 max-w-xl">
+                            <h3 className="text-4xl font-black tracking-tight text-[#EEDCC8] sm:text-5xl drop-shadow-sm">Koleksi Lencana</h3>
+                            <p className="mt-4 text-lg text-accent max-w-xl">
                                 Kumpulkan berbagai lencana pencapaian akademik, karakter, dan sportivitas dari guru. Banggakan kemajuan belajarmu!
                             </p>
                         </div>
@@ -68,7 +68,7 @@ export default function SiswaAppreciationPage({ session, onLogout }) {
                                 <div>
                                     <p className="text-xs font-bold uppercase tracking-widest text-amber-400">Lencana Terbaru</p>
                                     <h4 className="mt-1 text-xl font-bold text-white">{summary.highlight.badge.jenis_badge || 'Apresiasi'}</h4>
-                                    <p className="mt-1 text-sm text-indigo-200">Dari: {summary.highlight.badge.guru?.nama_lengkap || '-'}</p>
+                                    <p className="mt-1 text-sm text-slate-400">Dari: {summary.highlight.badge.guru?.nama_lengkap || '-'}</p>
                                 </div>
                             </div>
                         )}
@@ -86,7 +86,7 @@ export default function SiswaAppreciationPage({ session, onLogout }) {
 
                 <section className="grid gap-8 lg:grid-cols-[1.5fr_1fr]">
                     {/* Daftar Badge (Gamified Grid) */}
-                    <div className="rounded-[2.5rem] border border-slate-200 bg-white p-8 shadow-sm">
+                    <div className="rounded-[2.5rem] border border-border bg-white p-8 shadow-sm">
                         <div className="flex items-center justify-between">
                             <div>
                                 <h3 className="text-2xl font-bold text-slate-900">Etalase Pencapaian</h3>
@@ -97,7 +97,7 @@ export default function SiswaAppreciationPage({ session, onLogout }) {
                         {allBadges.length > 0 ? (
                             <div className="mt-8 grid grid-cols-2 sm:grid-cols-3 gap-6">
                                 {allBadges.map((badge, idx) => (
-                                    <div key={idx} className="group relative flex flex-col items-center justify-center rounded-3xl border-2 border-slate-100 bg-slate-50 p-6 transition-all hover:border-indigo-100 hover:bg-indigo-50/50 hover:shadow-lg">
+                                    <div key={idx} className="group relative flex flex-col items-center justify-center rounded-3xl border-2 border-slate-100 bg-slate-50 p-6 transition-all hover:border-primary/10 hover:bg-primary/5 hover:shadow-lg">
                                         <BadgeIcon name={badge.jenis_badge} className="w-16 h-16 mb-4" />
                                         <h4 className="text-center text-sm font-bold text-slate-900">{badge.jenis_badge}</h4>
                                         <p className="mt-1 text-center text-xs text-slate-500">{formatDateLabel(badge.tanggal)}</p>
@@ -116,7 +116,7 @@ export default function SiswaAppreciationPage({ session, onLogout }) {
                                 ))}
                             </div>
                         ) : (
-                            <div className="mt-8 flex h-48 flex-col items-center justify-center rounded-3xl border-2 border-dashed border-slate-200 bg-slate-50 p-6 text-center">
+                            <div className="mt-8 flex h-48 flex-col items-center justify-center rounded-3xl border-2 border-dashed border-border bg-slate-50 p-6 text-center">
                                 <div className="mb-4 text-4xl opacity-30">🏆</div>
                                 <h4 className="font-semibold text-slate-700">Belum Ada Lencana</h4>
                                 <p className="mt-1 text-sm text-slate-500">Terus aktif di kelas dan kerjakan ujian dengan baik untuk mendapatkan lencana pertamamu!</p>
@@ -125,7 +125,7 @@ export default function SiswaAppreciationPage({ session, onLogout }) {
                     </div>
 
                     {/* Catatan Privat */}
-                    <div className="rounded-[2.5rem] border border-slate-200 bg-slate-50 p-8 shadow-sm flex flex-col">
+                    <div className="rounded-[2.5rem] border border-border bg-slate-50 p-8 shadow-sm flex flex-col">
                         <div className="mb-6">
                             <h3 className="text-2xl font-bold text-slate-900">Pesan Khusus</h3>
                             <p className="mt-1 text-sm text-slate-500">Catatan privat dari guru untuk kemajuanmu.</p>
@@ -135,14 +135,14 @@ export default function SiswaAppreciationPage({ session, onLogout }) {
                             <input 
                                 value={noteSearch} 
                                 onChange={(event) => setNoteSearch(event.target.value)} 
-                                className="w-full rounded-2xl border-2 border-slate-200 bg-white px-5 py-3 outline-none transition focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10" 
+                                className="w-full rounded-2xl border-2 border-border bg-white px-5 py-3 outline-none transition focus:border-primary focus:ring-4 focus:ring-primary/10" 
                                 placeholder="Cari pesan atau nama guru..." 
                             />
                         </div>
 
                         <div className="flex-grow space-y-4 overflow-y-auto pr-2 custom-scrollbar">
                             {filteredNotes.map((note) => (
-                                <div key={`${note.tanggal}-${note.id_catatan}`} className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-shadow hover:shadow-md">
+                                <div key={`${note.tanggal}-${note.id_catatan}`} className="relative overflow-hidden rounded-2xl border border-border bg-white p-5 shadow-sm transition-shadow hover:shadow-md">
                                     <div className="absolute left-0 top-0 h-full w-1 bg-gradient-to-b from-blue-400 to-indigo-500"></div>
                                     <div className="flex items-start justify-between gap-4 mb-2">
                                         <h4 className="font-bold text-slate-900">{note.guru?.nama_lengkap || '-'}</h4>

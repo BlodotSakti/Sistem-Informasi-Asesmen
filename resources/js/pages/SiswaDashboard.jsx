@@ -19,9 +19,9 @@ import {
 const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
         return (
-            <div className="rounded-2xl border border-slate-200/60 bg-white/80 backdrop-blur-md p-4 shadow-xl">
+            <div className="rounded-2xl border border-border bg-white/80 backdrop-blur-md p-4 shadow-xl">
                 <p className="mb-1 text-sm font-semibold text-slate-500 uppercase tracking-wider">{label}</p>
-                <p className="text-2xl font-black text-indigo-600">
+                <p className="text-2xl font-black text-primary">
                     {payload[0].value} <span className="text-sm font-semibold text-slate-400">Pts</span>
                 </p>
             </div>
@@ -50,20 +50,20 @@ export default function SiswaDashboard({ session, onLogout }) {
     return (
         <DashboardLayout title="Dashboard Siswa" user={session?.user} navigation={siswaNavigation} onLogout={onLogout} profileHref="/siswa/profil">
             <div className="space-y-8">
-                <section className="overflow-hidden rounded-[2.5rem] border border-slate-200/60 bg-gradient-to-br from-indigo-900 via-slate-900 to-cyan-900 px-8 py-10 text-white shadow-2xl shadow-indigo-900/20 relative">
+                <section className="overflow-hidden rounded-[2.5rem] border border-[#8A2332]/30 bg-gradient-to-br from-[#8A2332] via-primary to-secondary px-8 py-10 shadow-lg backdrop-blur-xl relative">
                     <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10"></div>
-                    <div className="absolute -top-24 -right-24 w-64 h-64 bg-cyan-500/30 blur-[80px] rounded-full"></div>
+                    <div className="absolute -top-24 -right-24 w-64 h-64 bg-accent/20 blur-[80px] rounded-full"></div>
                     <div className="flex flex-col gap-3 relative z-10">
-                        <p className="text-xs font-bold uppercase tracking-[0.4em] text-cyan-300">Ringkasan Akademik</p>
-                        <h3 className="text-4xl font-extrabold text-white tracking-tight">Halo, {session?.user?.nama_lengkap || 'Siswa'}! 👋</h3>
-                        <p className="max-w-2xl text-base text-slate-300 font-medium">Jelajahi perkembangan nilai, raih lebih banyak lencana, dan jadilah yang terbaik di setiap tantangan asesmen.</p>
+                        <p className="text-xs font-bold uppercase tracking-[0.4em] text-accent">Ringkasan Akademik</p>
+                        <h3 className="text-4xl font-extrabold text-[#EEDCC8] tracking-tight">Halo, {session?.user?.nama_lengkap || 'Siswa'}! 👋</h3>
+                        <p className="max-w-2xl text-base text-accent font-medium">Jelajahi perkembangan nilai, raih lebih banyak lencana, dan jadilah yang terbaik di setiap tantangan asesmen.</p>
                     </div>
 
                     <div className="mt-10 grid gap-4 md:grid-cols-2 xl:grid-cols-4 relative z-10">
-                        <StatCard label="Rata-rata Nilai" value={loading ? '...' : cards.rata_rata ?? 0} description="Skor CBT semester ini" tone="blue" />
-                        <StatCard label="Ujian Menunggu" value={loading ? '...' : cards.ujian_menunggu ?? 0} description="Misi CBT yang siap dikerjakan" tone="amber" />
-                        <StatCard label="Asesmen Selesai" value={loading ? '...' : cards.tugas_aktif ?? 0} description="CBT yang telah ditaklukkan" tone="emerald" />
-                        <StatCard label="Total Lencana" value={loading ? '...' : cards.apresiasi ?? 0} description="Penghargaan apresiasi guru" tone="indigo" />
+                        <StatCard label="Rata-rata Nilai" value={loading ? '...' : cards.rata_rata ?? 0} description="Skor CBT semester ini" tone="blue" className="!bg-[#EEDCC8] !border-transparent" />
+                        <StatCard label="Ujian Menunggu" value={loading ? '...' : cards.ujian_menunggu ?? 0} description="Misi CBT yang siap dikerjakan" tone="amber" className="!bg-[#EEDCC8] !border-transparent" />
+                        <StatCard label="Asesmen Selesai" value={loading ? '...' : cards.tugas_aktif ?? 0} description="CBT yang telah ditaklukkan" tone="emerald" className="!bg-[#EEDCC8] !border-transparent" />
+                        <StatCard label="Total Lencana" value={loading ? '...' : cards.apresiasi ?? 0} description="Penghargaan apresiasi guru" tone="indigo" className="!bg-[#EEDCC8] !border-transparent" />
                     </div>
                 </section>
 
@@ -72,21 +72,21 @@ export default function SiswaDashboard({ session, onLogout }) {
                 <section className="grid gap-6 xl:grid-cols-3">
                     <div className="xl:col-span-2 space-y-6">
                         {/* Grafik Area */}
-                        <div className="rounded-[2.5rem] border border-slate-200/60 bg-white/60 p-8 backdrop-blur-xl shadow-sm flex flex-col">
+                        <div className="rounded-[2.5rem] border border-border bg-white/60 p-8 backdrop-blur-xl shadow-sm flex flex-col">
                             <div className="flex items-center justify-between mb-6">
                                 <div>
                                     <p className="text-xs font-bold uppercase tracking-[0.3em] text-slate-500">Grafik Performa</p>
                                     <h3 className="mt-2 text-2xl font-extrabold text-slate-900 tracking-tight">Tren Perkembangan Nilai</h3>
                                 </div>
                             </div>
-                            <div className="h-72 w-full flex-grow rounded-3xl border border-slate-200/50 bg-white p-5 shadow-inner">
+                            <div className="h-72 w-full flex-grow rounded-3xl border border-border/50 bg-white p-5 shadow-inner">
                                 {chartData.length > 0 ? (
                                     <ResponsiveContainer width="100%" height="100%">
                                         <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                                             <defs>
                                                 <linearGradient id="colorNilai" x1="0" y1="0" x2="0" y2="1">
-                                                    <stop offset="5%" stopColor="#4f46e5" stopOpacity={0.4} />
-                                                    <stop offset="95%" stopColor="#4f46e5" stopOpacity={0} />
+                                                    <stop offset="5%" stopColor="#1E3A5F" stopOpacity={0.4} />
+                                                    <stop offset="95%" stopColor="#1E3A5F" stopOpacity={0} />
                                                 </linearGradient>
                                             </defs>
                                             <CartesianGrid strokeDasharray="4 4" vertical={false} stroke="#f1f5f9" />
@@ -106,11 +106,11 @@ export default function SiswaDashboard({ session, onLogout }) {
                                             <Area 
                                                 type="monotone" 
                                                 dataKey="Nilai" 
-                                                stroke="#4f46e5" 
+                                                stroke="#1E3A5F" 
                                                 strokeWidth={4}
                                                 fillOpacity={1} 
                                                 fill="url(#colorNilai)" 
-                                                activeDot={{ r: 8, fill: '#4f46e5', stroke: '#fff', strokeWidth: 3, shadow: '0 0 10px rgba(79,70,229,0.5)' }}
+                                                activeDot={{ r: 8, fill: '#1E3A5F', stroke: '#fff', strokeWidth: 3, shadow: '0 0 10px rgba(79,70,229,0.5)' }}
                                             />
                                         </AreaChart>
                                     </ResponsiveContainer>
@@ -126,16 +126,16 @@ export default function SiswaDashboard({ session, onLogout }) {
                         </div>
 
                         {/* Timeline Pembelajaran */}
-                        <div className="rounded-[2.5rem] border border-slate-200/60 bg-white/60 p-8 backdrop-blur-xl shadow-sm">
+                        <div className="rounded-[2.5rem] border border-border bg-white/60 p-8 backdrop-blur-xl shadow-sm">
                             <p className="text-xs font-bold uppercase tracking-[0.3em] text-slate-500">Aktivitas</p>
                             <h3 className="mt-2 text-2xl font-extrabold text-slate-900 tracking-tight">Timeline Pembelajaran</h3>
                             <div className="mt-6 space-y-6 relative before:absolute before:inset-0 before:ml-5 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-slate-200 before:to-transparent">
                                 {timelineData.length > 0 ? timelineData.map((item) => (
                                     <div key={item.id} className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
-                                        <div className="flex items-center justify-center w-10 h-10 rounded-full border-4 border-white bg-indigo-100 text-indigo-600 shadow shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 text-lg z-10 transition-transform group-hover:scale-110">
+                                        <div className="flex items-center justify-center w-10 h-10 rounded-full border-4 border-white bg-primary/10 text-primary shadow shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 text-lg z-10 transition-transform group-hover:scale-110">
                                             {item.icon}
                                         </div>
-                                        <div className="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] p-4 rounded-2xl border border-slate-100 bg-white shadow-sm transition-all hover:shadow-md hover:border-indigo-100">
+                                        <div className="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] p-4 rounded-2xl border border-slate-100 bg-white shadow-sm transition-all hover:shadow-md hover:border-primary/10">
                                             <div className="flex items-center justify-between mb-1">
                                                 <div className="font-bold text-slate-900">{item.title}</div>
                                             </div>
@@ -151,9 +151,9 @@ export default function SiswaDashboard({ session, onLogout }) {
 
                     <div className="flex flex-col gap-6">
                         {/* Bar Chart: Rata-rata per Mapel */}
-                        <div className="rounded-[2.5rem] border border-slate-200/60 bg-white/60 p-8 backdrop-blur-xl shadow-sm flex flex-col items-center">
+                        <div className="rounded-[2.5rem] border border-border bg-white/60 p-8 backdrop-blur-xl shadow-sm flex flex-col items-center">
                             <div className="w-full text-left mb-4">
-                                <p className="text-xs font-bold uppercase tracking-[0.3em] text-cyan-600">Statistik Nilai</p>
+                                <p className="text-xs font-bold uppercase tracking-[0.3em] text-info">Statistik Nilai</p>
                                 <h3 className="mt-2 text-xl font-extrabold text-slate-900">Rata-rata per Mata Pelajaran</h3>
                             </div>
                             <div className="w-full h-64">
@@ -175,7 +175,7 @@ export default function SiswaDashboard({ session, onLogout }) {
                         </div>
 
                         {/* Galeri Lencana */}
-                        <div className="rounded-[2.5rem] border border-slate-200/60 bg-gradient-to-b from-slate-950 to-slate-900 p-8 shadow-xl flex flex-col relative overflow-hidden">
+                        <div className="rounded-[2.5rem] border border-border bg-gradient-to-b from-slate-950 to-slate-900 p-8 shadow-xl flex flex-col relative overflow-hidden">
                             <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/20 blur-[50px] rounded-full"></div>
                             <div className="relative z-10 w-full text-left mb-6">
                                 <p className="text-xs font-bold uppercase tracking-[0.3em] text-amber-400">Gamifikasi</p>

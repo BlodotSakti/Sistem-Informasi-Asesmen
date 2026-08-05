@@ -46,7 +46,7 @@ export default function DashboardLayout({ title, user, navigation, onLogout, pro
                 )}
 
                 {/* Sidebar */}
-                <aside className={`fixed inset-y-0 left-0 z-50 flex w-72 flex-col bg-slate-950 text-slate-100 shadow-2xl transition-transform duration-300 ease-in-out lg:static lg:w-auto lg:translate-x-0 ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'} lg:overflow-y-auto`}>
+                <aside className={`fixed inset-y-0 left-0 z-50 flex w-72 flex-col bg-primary text-slate-100 shadow-2xl transition-transform duration-300 ease-in-out lg:static lg:w-auto lg:translate-x-0 ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'} lg:overflow-y-auto`}>
                     <div className="flex items-center justify-between gap-3 border-b border-white/10 px-6 py-5">
                         <div className="flex items-center gap-3">
                             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white p-1 shadow-sm overflow-hidden">
@@ -82,7 +82,7 @@ export default function DashboardLayout({ title, user, navigation, onLogout, pro
                             <a
                                 key={item.href}
                                 href={item.href}
-                                className={`flex items-center justify-between rounded-2xl px-4 py-3 text-sm font-medium transition ${currentPath === item.href ? 'bg-white/15 text-white ring-1 ring-white/10' : 'text-slate-200 hover:bg-white/10 hover:text-white'}`}
+                                className={`flex items-center justify-between rounded-2xl px-4 py-3 text-sm font-medium transition ${currentPath === item.href ? 'bg-accent/15 text-accent ring-1 ring-accent/30 font-semibold shadow-sm' : 'text-slate-200 hover:bg-white/10 hover:text-white'}`}
                             >
                                 <div className="flex items-center gap-3">
                                     {item.icon && <span className="flex-shrink-0">{item.icon}</span>}
@@ -99,11 +99,11 @@ export default function DashboardLayout({ title, user, navigation, onLogout, pro
                 </aside>
 
                 <main className="flex min-h-screen flex-col bg-slate-100 lg:h-screen lg:overflow-y-auto w-full">
-                    <header className="sticky top-0 z-30 flex items-center justify-between border-b border-slate-200/80 bg-white/90 px-4 md:px-6 py-4 shadow-sm backdrop-blur w-full">
+                    <header className="sticky top-0 z-30 flex items-center justify-between border-b border-border/80 bg-secondary px-4 md:px-6 py-4 shadow-sm backdrop-blur w-full">
                         <div className="flex items-center gap-3">
                             <button
                                 onClick={() => setIsMobileMenuOpen(true)}
-                                className="rounded-xl p-2 text-slate-600 hover:bg-slate-200 lg:hidden border border-slate-200"
+                                className="rounded-xl p-2 text-slate-600 hover:bg-slate-200 lg:hidden border border-border"
                                 aria-label="Buka menu"
                             >
                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -111,8 +111,8 @@ export default function DashboardLayout({ title, user, navigation, onLogout, pro
                                 </svg>
                             </button>
                             <div>
-                                <p className="hidden md:block text-xs uppercase tracking-[0.3em] text-slate-500">{user?.role || 'Dashboard'}</p>
-                                <h2 className="text-xl md:text-2xl font-semibold text-slate-900 truncate max-w-[200px] md:max-w-none">{title}</h2>
+                                <p className="hidden md:block text-xs uppercase tracking-[0.3em] text-accent">{user?.role || 'Dashboard'}</p>
+                                <h2 className="text-xl md:text-2xl font-semibold text-accent truncate max-w-[200px] md:max-w-none">{title}</h2>
                             </div>
                         </div>
                         <div className="flex items-center gap-2">
@@ -120,7 +120,7 @@ export default function DashboardLayout({ title, user, navigation, onLogout, pro
                             <button
                                 type="button"
                                 onClick={onLogout}
-                                className="hidden md:block rounded-full bg-slate-950 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800"
+                                className="hidden md:block rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-primary/85"
                             >
                                 Logout
                             </button>

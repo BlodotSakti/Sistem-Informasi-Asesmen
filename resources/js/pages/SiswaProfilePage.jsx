@@ -78,26 +78,26 @@ export default function SiswaProfilePage({ session, onLogout }) {
     return (
         <DashboardLayout title="Profil Siswa" user={session?.user} navigation={siswaNavigation} onLogout={onLogout} profileHref="/siswa/dashboard">
             <div className="space-y-6">
-                <section className="rounded-3xl border border-slate-200 bg-gradient-to-br from-slate-900 via-blue-900 to-cyan-800 p-6 text-white shadow-sm">
+                <section className="rounded-3xl border border-[#8A2332]/30 bg-gradient-to-br from-[#8A2332] via-primary to-secondary p-6 text-white shadow-sm">
                     <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
                         <div className="flex items-center gap-4">
-                            <div className="flex h-20 w-20 items-center justify-center rounded-full border border-white/15 bg-slate-700 text-2xl font-semibold uppercase text-amber-300">
+                            <div className="flex h-20 w-20 items-center justify-center rounded-full border border-[#EEDCC8]/20 bg-accent/20 text-2xl font-semibold uppercase text-[#EEDCC8]">
                                 {(profile.nama_lengkap || session?.user?.nama_lengkap || 'PR').slice(0, 2)}
                             </div>
                             <div>
-                                <p className="text-xs uppercase tracking-[0.35em] text-indigo-400">Profil Siswa</p>
-                                <h3 className="mt-2 text-3xl font-semibold">{profile.nama_lengkap || session?.user?.nama_lengkap || '-'}</h3>
-                                <p className="mt-2 text-sm text-slate-300">NISN: {profile.nisn || session?.user?.profile?.nisn || '-'}</p>
-                                <p className="text-sm text-slate-300">
+                                <p className="text-xs uppercase tracking-[0.35em] text-accent">Profil Siswa</p>
+                                <h3 className="mt-2 text-3xl font-semibold text-[#EEDCC8]">{profile.nama_lengkap || session?.user?.nama_lengkap || '-'}</h3>
+                                <p className="mt-2 text-sm text-accent">NISN: {profile.nisn || session?.user?.profile?.nisn || '-'}</p>
+                                <p className="text-sm text-accent">
                                     {profile.kelas_aktif?.nama_kelas || 'Belum ada kelas aktif'}
                                     {profile.kelas_aktif?.guru_wali ? ` • Wali kelas: ${profile.kelas_aktif.guru_wali}` : ''}
                                 </p>
                             </div>
                         </div>
 
-                        <a href="/siswa/dashboard" className="inline-flex items-center justify-center rounded-full border border-white/15 bg-white/5 px-5 py-3 text-sm font-semibold text-white transition hover:bg-white/10">
+                        {/*<a href="/siswa/dashboard" className="inline-flex items-center justify-center rounded-full border border-white/15 bg-white/5 px-5 py-3 text-sm font-semibold text-white transition hover:bg-white/10">
                             Kembali ke Dashboard
-                        </a>
+                        </a>*/}
                     </div>
                 </section>
 
@@ -111,7 +111,7 @@ export default function SiswaProfilePage({ session, onLogout }) {
 
                 <section className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
                     <div className="space-y-6">
-                        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+                        <div className="rounded-3xl border border-border bg-white p-6 shadow-sm">
                             <p className="text-sm font-medium uppercase tracking-[0.3em] text-slate-500">Identitas Akademik</p>
                             <h3 className="mt-2 text-xl font-semibold text-slate-900">Ringkasan data utama siswa</h3>
 
@@ -137,7 +137,7 @@ export default function SiswaProfilePage({ session, onLogout }) {
                     </div>
 
                     <div className="space-y-6">
-                        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+                        <div className="rounded-3xl border border-border bg-white p-6 shadow-sm">
                             <p className="text-sm font-medium uppercase tracking-[0.3em] text-slate-500">Riwayat Kelas</p>
                             <h3 className="mt-2 text-xl font-semibold text-slate-900">Perpindahan dan histori kelas</h3>
 
@@ -146,9 +146,9 @@ export default function SiswaProfilePage({ session, onLogout }) {
                                 <input value={classHistorySearch} onChange={(event) => setClassHistorySearch(event.target.value)} className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-slate-900" placeholder="Nama kelas, tahun ajaran, atau status" />
                             </label>
 
-                            <div className="mt-6 overflow-x-auto rounded-3xl border border-slate-200">
+                            <div className="mt-6 overflow-x-auto rounded-3xl border border-border">
                                 <table className="min-w-full divide-y divide-slate-200 text-left text-sm">
-                                    <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase tracking-[0.2em] text-slate-500">
+                                    <thead className="border-b border-border bg-slate-50 text-xs uppercase tracking-[0.2em] text-slate-500">
                                         <tr>
                                             <th className="px-4 py-3 font-semibold">Kelas</th>
                                             <th className="px-4 py-3 font-semibold">Tahun Ajaran</th>
@@ -178,7 +178,7 @@ export default function SiswaProfilePage({ session, onLogout }) {
                         </div>
 
 
-                        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+                        <div className="rounded-3xl border border-border bg-white p-6 shadow-sm">
                             <p className="text-sm font-medium uppercase tracking-[0.3em] text-slate-500">Mapel Aktif</p>
                             <h3 className="mt-2 text-xl font-semibold text-slate-900">Mata pelajaran yang terhubung ke kelas aktif</h3>
 
@@ -187,9 +187,9 @@ export default function SiswaProfilePage({ session, onLogout }) {
                                 <input value={subjectSearch} onChange={(event) => setSubjectSearch(event.target.value)} className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-slate-900" placeholder="Mata pelajaran, guru, atau tahun ajaran" />
                             </label>
 
-                            <div className="mt-6 overflow-x-auto rounded-3xl border border-slate-200">
+                            <div className="mt-6 overflow-x-auto rounded-3xl border border-border">
                                 <table className="min-w-full divide-y divide-slate-200 text-left text-sm">
-                                    <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase tracking-[0.2em] text-slate-500">
+                                    <thead className="border-b border-border bg-slate-50 text-xs uppercase tracking-[0.2em] text-slate-500">
                                         <tr>
                                             <th className="px-4 py-3 font-semibold">Mata Pelajaran</th>
                                             <th className="px-4 py-3 font-semibold">Guru</th>

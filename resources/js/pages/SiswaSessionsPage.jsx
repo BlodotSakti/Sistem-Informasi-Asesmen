@@ -27,29 +27,29 @@ export default function SiswaSessionsPage({ session, onLogout }) {
     return (
         <DashboardLayout title="Sesi Aktif" user={session?.user} navigation={siswaNavigation} onLogout={onLogout} profileHref="/siswa/profil">
             <div className="space-y-6">
-                <section className="overflow-hidden rounded-[2rem] border border-slate-200 bg-gradient-to-br from-slate-900 via-blue-900 to-cyan-800 px-6 py-8 text-white shadow-2xl shadow-slate-950/20 lg:px-8">
-                    <p className="text-sm font-medium uppercase tracking-[0.3em] text-indigo-300">Sesi CBT</p>
-                    <h3 className="mt-2 text-2xl font-semibold text-slate-100">Semua sesi yang sedang aktif</h3>
-                    <p className="mt-2 text-sm text-slate-300">Halaman ini khusus untuk melihat jadwal CBT yang bisa diakses siswa saat ini.</p>
+                <section className="overflow-hidden rounded-[2.5rem] border border-[#8A2332]/30 bg-gradient-to-br from-[#8A2332] via-primary to-secondary px-8 py-10 shadow-lg backdrop-blur-xl relative">
+                    <p className="text-xs uppercase tracking-[0.4em] text-accent font-bold">Sesi CBT</p>
+                    <h3 className="mt-2 text-3xl font-semibold text-[#EEDCC8]">Semua sesi yang sedang aktif</h3>
+                    <p className="mt-2 text-sm text-accent">Halaman ini khusus untuk melihat jadwal CBT yang bisa diakses siswa saat ini.</p>
 
                     <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-                        <StatCard label="Sesi Aktif" value={loading ? '...' : sessions.length} description="Jadwal yang tersedia" tone="blue" />
-                        <StatCard label="Kelas Aktif" value={loading ? '...' : summary?.profile?.kelas_aktif?.nama_kelas || '-'} description="Kelas yang dipakai filter" tone="amber" />
-                        <StatCard label="Mapel Aktif" value={loading ? '...' : (summary?.profile?.mata_pelajaran || []).length} description="Mapel terkait kelas" tone="slate" />
-                        <StatCard label="Ujian Menunggu" value={loading ? '...' : summary?.cards?.ujian_menunggu ?? 0} description="Dari ringkasan siswa" tone="rose" />
+                        <StatCard label="Sesi Aktif" value={loading ? '...' : sessions.length} description="Jadwal yang tersedia" tone="blue" className="!bg-[#EEDCC8] !border-transparent" />
+                        <StatCard label="Kelas Aktif" value={loading ? '...' : summary?.profile?.kelas_aktif?.nama_kelas || '-'} description="Kelas yang dipakai filter" tone="amber" className="!bg-[#EEDCC8] !border-transparent" />
+                        <StatCard label="Mapel Aktif" value={loading ? '...' : (summary?.profile?.mata_pelajaran || []).length} description="Mapel terkait kelas" tone="slate" className="!bg-[#EEDCC8] !border-transparent" />
+                        <StatCard label="Ujian Menunggu" value={loading ? '...' : summary?.cards?.ujian_menunggu ?? 0} description="Dari ringkasan siswa" tone="rose" className="!bg-[#EEDCC8] !border-transparent" />
                     </div>
                 </section>
 
                 {error ? <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div> : null}
 
-                <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+                <section className="rounded-3xl border border-border bg-white p-6 shadow-sm">
                     <label className="mb-4 block space-y-2 text-sm font-medium text-slate-700">
                         <span>Cari sesi aktif</span>
                         <input value={sessionSearch} onChange={(event) => setSessionSearch(event.target.value)} className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-slate-900" placeholder="Mapel, kelas, jenis asesmen, atau waktu" />
                     </label>
                     <div className="overflow-x-auto">
                         <table className="min-w-full divide-y divide-slate-200 text-left text-sm">
-                            <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase tracking-[0.2em] text-slate-500">
+                            <thead className="border-b border-border bg-slate-50 text-xs uppercase tracking-[0.2em] text-slate-500">
                                 <tr>
                                     <th className="px-4 py-3 font-semibold">Mata Pelajaran</th>
                                     <th className="px-4 py-3 font-semibold">Kelas</th>
@@ -112,7 +112,7 @@ export default function SiswaSessionsPage({ session, onLogout }) {
                                             ) : (
                                                 <a
                                                     href={`/siswa/cbt/${item.id_sesi}`}
-                                                    className="inline-flex items-center justify-center rounded-xl bg-blue-600 px-6 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:bg-blue-700 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-2"
+                                                    className="inline-flex items-center justify-center rounded-xl bg-primary px-6 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:bg-primary/85 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
                                                 >
                                                     {sudahDikerjakan ? 'Kerjakan Ulang' : 'Kerjakan'}
                                                 </a>

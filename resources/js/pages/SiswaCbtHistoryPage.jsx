@@ -80,27 +80,27 @@ export default function SiswaCbtHistoryPage({ session, onLogout }) {
         <DashboardLayout title="Riwayat CBT" user={session?.user} navigation={siswaNavigation} onLogout={onLogout} profileHref="/siswa/profil">
             <div className="space-y-6">
                 {/* Stats */}
-                <section className="overflow-hidden rounded-[2rem] border border-slate-200 bg-gradient-to-br from-slate-900 via-blue-900 to-cyan-800 px-6 py-8 text-white shadow-2xl shadow-slate-950/20 lg:px-8">
-                    <p className="text-sm font-medium uppercase tracking-[0.3em] text-indigo-300">Riwayat Ujian CBT</p>
-                    <h3 className="mt-2 text-2xl font-semibold text-slate-100">Nilai CBT yang pernah dikerjakan</h3>
+                <section className="overflow-hidden rounded-[2.5rem] border border-[#8A2332]/30 bg-gradient-to-br from-[#8A2332] via-primary to-secondary px-8 py-10 shadow-lg backdrop-blur-xl relative">
+                    <p className="text-xs uppercase tracking-[0.4em] text-accent font-bold">Riwayat Ujian CBT</p>
+                    <h3 className="mt-2 text-3xl font-semibold text-[#EEDCC8]">Nilai CBT yang pernah dikerjakan</h3>
                     <div className="mt-6 grid gap-4 md:grid-cols-3">
-                        <StatCard label="Total CBT" value={loading ? '...' : stats.total} description="Ujian yang pernah dikerjakan" tone="blue" />
-                        <StatCard label="Rata-Rata" value={loading ? '...' : `${stats.rataRata}%`} description="Persentase rata-rata skor" tone="amber" />
-                        <StatCard label="Tertinggi" value={loading ? '...' : `${stats.tertinggi}%`} description="Persentase skor tertinggi" tone="slate" />
+                        <StatCard label="Total CBT" value={loading ? '...' : stats.total} description="Ujian yang pernah dikerjakan" tone="blue" className="!bg-[#EEDCC8] !border-transparent" />
+                        <StatCard label="Rata-Rata" value={loading ? '...' : `${stats.rataRata}%`} description="Persentase rata-rata skor" tone="amber" className="!bg-[#EEDCC8] !border-transparent" />
+                        <StatCard label="Tertinggi" value={loading ? '...' : `${stats.tertinggi}%`} description="Persentase skor tertinggi" tone="slate" className="!bg-[#EEDCC8] !border-transparent" />
                     </div>
                 </section>
 
                 {error && <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div>}
 
                 {/* Table */}
-                <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+                <section className="rounded-3xl border border-border bg-white p-6 shadow-sm">
                     <label className="mb-4 block space-y-2 text-sm font-medium text-slate-700">
                         <span>Cari riwayat</span>
                         <input value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-slate-900" placeholder="Mapel, kelas, jenis..." />
                     </label>
                     <div className="overflow-x-auto">
                         <table className="min-w-full divide-y divide-slate-200 text-left text-sm">
-                            <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase tracking-[0.2em] text-slate-500">
+                            <thead className="border-b border-border bg-slate-50 text-xs uppercase tracking-[0.2em] text-slate-500">
                                 <tr>
                                     <th className="px-4 py-3 font-semibold">Mata Pelajaran</th>
                                     <th className="px-4 py-3 font-semibold">Kelas</th>
@@ -128,8 +128,8 @@ export default function SiswaCbtHistoryPage({ session, onLogout }) {
                                             </td>
                                             <td className="px-4 py-3 text-right">
                                                 <div className="flex items-center justify-end gap-2">
-                                                    {item.has_analisis && <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-[10px] font-bold text-indigo-700">🤖 AI</span>}
-                                                    <button onClick={() => openReview(item.id_sesi)} className="rounded-xl bg-blue-600 px-4 py-2 text-xs font-semibold text-white transition hover:bg-blue-700">
+                                                    {item.has_analisis && <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary">🤖 AI</span>}
+                                                    <button onClick={() => openReview(item.id_sesi)} className="rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-white transition hover:bg-primary/85">
                                                         Review
                                                     </button>
                                                 </div>
@@ -153,11 +153,11 @@ export default function SiswaCbtHistoryPage({ session, onLogout }) {
                         <div className="w-full max-w-4xl max-h-[85vh] overflow-y-auto rounded-3xl bg-white shadow-xl" onClick={(e) => e.stopPropagation()}>
                             {reviewLoading ? (
                                 <div className="flex items-center justify-center py-20">
-                                    <div className="h-10 w-10 animate-spin rounded-full border-b-2 border-t-2 border-blue-600"></div>
+                                    <div className="h-10 w-10 animate-spin rounded-full border-b-2 border-t-2 border-primary"></div>
                                 </div>
                             ) : reviewData ? (
                                 <>
-                                    <div className="border-b border-slate-200 px-6 py-5 flex justify-between items-center">
+                                    <div className="border-b border-border px-6 py-5 flex justify-between items-center">
                                         <div>
                                             <h3 className="text-xl font-bold text-slate-900">Review: {reviewData.sesi.mata_pelajaran}</h3>
                                             <p className="text-sm text-slate-500 capitalize">{reviewData.sesi.jenis_asesmen} — {reviewData.sesi.kelas}</p>
@@ -167,9 +167,9 @@ export default function SiswaCbtHistoryPage({ session, onLogout }) {
                                     <div className="px-6 py-4">
                                         {/* Score summary */}
                                         <div className="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
-                                            <div className="rounded-2xl bg-blue-50 px-4 py-4 text-center">
-                                                <p className="text-2xl font-bold text-blue-700">{Number(reviewData.total_skor).toFixed(2)}/{reviewData.total_bobot}</p>
-                                                <p className="text-xs text-blue-500">Total Skor</p>
+                                            <div className="rounded-2xl bg-primary/5 px-4 py-4 text-center">
+                                                <p className="text-2xl font-bold text-primary">{Number(reviewData.total_skor).toFixed(2)}/{reviewData.total_bobot}</p>
+                                                <p className="text-xs text-primary">Total Skor</p>
                                             </div>
                                             <div className="rounded-2xl bg-emerald-50 px-4 py-4 text-center">
                                                 <p className="text-2xl font-bold text-emerald-700">{reviewData.jumlah_benar}</p>
@@ -177,13 +177,13 @@ export default function SiswaCbtHistoryPage({ session, onLogout }) {
                                             </div>
                                             <div className="rounded-2xl bg-rose-50 px-4 py-4 text-center">
                                                 <p className="text-2xl font-bold text-rose-700">{reviewData.jumlah_soal - reviewData.jumlah_benar}</p>
-                                                <p className="text-xs text-rose-500">Salah</p>
+                                                <p className="text-xs text-error">Salah</p>
                                             </div>
                                             <div className="rounded-2xl bg-amber-50 px-4 py-4 text-center">
                                                 <p className="text-2xl font-bold text-amber-700">
                                                     {reviewData.total_bobot > 0 ? Number(((reviewData.total_skor / reviewData.total_bobot) * 100).toFixed(2)) : 0}%
                                                 </p>
-                                                <p className="text-xs text-amber-500">Persentase</p>
+                                                <p className="text-xs text-accent">Persentase</p>
                                             </div>
                                         </div>
 
@@ -200,7 +200,7 @@ export default function SiswaCbtHistoryPage({ session, onLogout }) {
                                                     <p className="text-sm text-slate-600 mb-3 whitespace-pre-wrap">{item.isi_soal}</p>
                                                     {item.gambar_soal && (
                                                         <div className="mb-3">
-                                                            <img src={`/storage/${item.gambar_soal}`} alt="Gambar Soal" className="max-h-40 rounded-lg border border-slate-200 object-contain shadow-sm" />
+                                                            <img src={`/storage/${item.gambar_soal}`} alt="Gambar Soal" className="max-h-40 rounded-lg border border-border object-contain shadow-sm" />
                                                         </div>
                                                     )}
 
@@ -216,7 +216,7 @@ export default function SiswaCbtHistoryPage({ session, onLogout }) {
                                                                 const isCorrectOption = kunciArr.includes(opsi);
                                                                 const isChosenOption = jawabanArr.includes(opsi);
 
-                                                                let style = 'border-slate-200 bg-white text-slate-600';
+                                                                let style = 'border-border bg-white text-slate-600';
                                                                 let label = '';
                                                                 let icon = '○';
 
@@ -252,11 +252,11 @@ export default function SiswaCbtHistoryPage({ session, onLogout }) {
                                                     {/* Essay answers */}
                                                     {item.jenis_soal === 'essay' && (
                                                         <div className="grid gap-2 text-sm sm:grid-cols-2">
-                                                            <div className="rounded-xl bg-white/80 border border-slate-200 px-4 py-2">
+                                                            <div className="rounded-xl bg-white/80 border border-border px-4 py-2">
                                                                 <span className="font-medium text-slate-500">Jawaban Anda:</span>
                                                                 <p className="mt-1 text-slate-700">{item.jawaban_siswa || <em className="text-slate-400">Tidak dijawab</em>}</p>
                                                             </div>
-                                                            <div className="rounded-xl bg-white/80 border border-slate-200 px-4 py-2">
+                                                            <div className="rounded-xl bg-white/80 border border-border px-4 py-2">
                                                                 <span className="font-medium text-slate-500">Kunci Jawaban:</span>
                                                                 <p className="mt-1 text-slate-700">{formatJawaban(item.kunci_jawaban, item.jenis_soal)}</p>
                                                             </div>
@@ -269,8 +269,8 @@ export default function SiswaCbtHistoryPage({ session, onLogout }) {
                                         {/* Analisis Diagnostik AI */}
                                         <AnalisisDiagnostikCard analisis={reviewData.analisis_diagnostik} />
                                     </div>
-                                    <div className="border-t border-slate-200 px-6 py-4 text-right">
-                                        <button onClick={() => setReviewData(null)} className="rounded-xl bg-slate-900 px-5 py-2 text-sm font-semibold text-white transition hover:bg-slate-800">Tutup</button>
+                                    <div className="border-t border-border px-6 py-4 text-right">
+                                        <button onClick={() => setReviewData(null)} className="rounded-xl bg-slate-900 px-5 py-2 text-sm font-semibold text-white transition hover:bg-primary/85">Tutup</button>
                                     </div>
                                 </>
                             ) : null}
