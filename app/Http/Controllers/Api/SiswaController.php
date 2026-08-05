@@ -142,8 +142,32 @@ class SiswaController extends Controller
             ->latest('tanggal_generate')
             ->get();
 
-        $latestScore = $analisis->first()?->skor_total ?? 0;
-        $averageScore = $analisis->avg('skor_total') ? round($analisis->avg('skor_total'), 2) : 0;
+        $pastSessionCount = $kelasAktif
+            ? SesiAsesmen::query()
+                ->where('id_kelas', $kelasAktif->id_kelas)
+                ->where('waktu_selesai', '<', now())
+                ->count()
+            : 0;
+
+        $totalSkorDiperoleh = JawabanSiswa::query()
+            ->join('detail_sesi_soal', 'jawaban_siswa.id_detail', '=', 'detail_sesi_soal.id_detail')
+            ->join('sesi_asesmen', 'detail_sesi_soal.id_sesi', '=', 'sesi_asesmen.id_sesi')
+            ->where('jawaban_siswa.id_siswa', $idSiswa)
+            ->where('sesi_asesmen.id_kelas', $kelasAktif?->id_kelas ?? 0)
+            ->sum('jawaban_siswa.skor_diperoleh');
+
+        $latestScoreRecord = JawabanSiswa::query()
+            ->join('detail_sesi_soal', 'jawaban_siswa.id_detail', '=', 'detail_sesi_soal.id_detail')
+            ->where('jawaban_siswa.id_siswa', $idSiswa)
+            ->selectRaw('detail_sesi_soal.id_sesi, sum(jawaban_siswa.skor_diperoleh) as total_skor, max(jawaban_siswa.created_at) as last_answered')
+            ->groupBy('detail_sesi_soal.id_sesi')
+            ->orderByDesc('last_answered')
+            ->first();
+            
+        $latestScore = $latestScoreRecord ? round((float) $latestScoreRecord->total_skor, 2) : 0;
+
+        $averageScore = $pastSessionCount > 0 ? round((float) $totalSkorDiperoleh / $pastSessionCount, 2) : 0;
+        
         $pendingSessionCount = $kelasAktif
             ? SesiAsesmen::query()
                 ->where('id_kelas', $kelasAktif->id_kelas)
@@ -234,7 +258,7 @@ class SiswaController extends Controller
             'cards' => [
                 'rata_rata' => $averageScore,
                 'ujian_menunggu' => $pendingSessionCount,
-                'tugas_aktif' => JawabanSiswa::query()->where('id_siswa', $idSiswa)->count(),
+                'tugas_aktif' => $pastSessionCount,
                 'apresiasi' => Apresiasi::query()->where('id_siswa', $idSiswa)->count(),
             ],
             'trend' => $analisis->take(7)->reverse()->values()->map(function (AnalisisDiagnostik $item): array {

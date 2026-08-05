@@ -67,7 +67,15 @@ class AdminController extends Controller
             };
         }
 
-        return response()->json($query->paginate(15)->withQueryString());
+        $paginator = $query->paginate(15)->withQueryString();
+
+        return response()->json([
+            'users' => $paginator,
+            'summary' => [
+                'total' => Pengguna::count(),
+                'active' => Pengguna::where('is_aktif', true)->count(),
+            ]
+        ]);
     }
 
     public function penggunaStore(Request $request): JsonResponse
@@ -157,11 +165,17 @@ class AdminController extends Controller
             'kelas_siswa' => KelasSiswa::query()->with(['kelas.guruWali', 'siswa'])->latest()->get(),
             'penugasan_pembelajaran' => PenugasanPembelajaran::query()->with(['kelas', 'mataPelajaran', 'guru'])->latest()->get(),
             'guru_options' => Guru::query()
-                ->select(['id_guru', 'nama_lengkap', 'nip'])
+                ->select(['id_guru', 'nama_lengkap', 'nip', 'id_pengguna'])
+                ->whereHas('pengguna', function ($query) {
+                    $query->where('is_aktif', true);
+                })
                 ->orderBy('nama_lengkap')
                 ->get(),
             'siswa_options' => Siswa::query()
-                ->select(['id_siswa', 'nama_lengkap', 'nisn'])
+                ->select(['id_siswa', 'nama_lengkap', 'nisn', 'id_pengguna'])
+                ->whereHas('pengguna', function ($query) {
+                    $query->where('is_aktif', true);
+                })
                 ->orderBy('nama_lengkap')
                 ->get(),
         ]);

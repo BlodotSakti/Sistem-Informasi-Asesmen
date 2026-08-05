@@ -55,12 +55,14 @@ export default function GuruSiswaPage({ session, onLogout }) {
 
     if (loading) {
         return (
-            <div className="flex min-h-screen items-center justify-center bg-slate-50">
-                <div className="flex flex-col items-center">
-                    <div className="h-10 w-10 animate-spin rounded-full border-4 border-primary/20 border-t-blue-600"></div>
-                    <p className="mt-4 text-sm font-medium text-slate-500">Memuat data kelas...</p>
+            <DashboardLayout title="Daftar Siswa & Kelas" user={session?.user} navigation={guruNavigation} onLogout={onLogout}>
+                <div className="flex h-[60vh] items-center justify-center">
+                    <div className="flex flex-col items-center">
+                        <div className="h-10 w-10 animate-spin rounded-full border-4 border-primary/20 border-t-blue-600"></div>
+                        <p className="mt-4 text-sm font-medium text-slate-500">Memuat data kelas...</p>
+                    </div>
                 </div>
-            </div>
+            </DashboardLayout>
         );
     }
 
@@ -91,19 +93,19 @@ export default function GuruSiswaPage({ session, onLogout }) {
         <DashboardLayout title="Daftar Siswa & Kelas" user={session?.user} navigation={navigation} onLogout={onLogout}>
             <div className="font-sans text-slate-900 selection:bg-primary/10 flex flex-col">
                 <main className="flex-1 max-w-7xl mx-auto w-full">
-                    <section className="mb-8 overflow-hidden rounded-[2.5rem] border border-[#8A2332]/30 bg-gradient-to-br from-[#8A2332] via-primary to-secondary p-8 shadow-lg backdrop-blur-xl relative">
-                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 relative z-10">
-                            <div>
+                    <section className="mb-8 overflow-hidden rounded-[2.5rem] border border-[#8A2332]/30 bg-gradient-to-br from-[#8A2332] via-primary to-secondary p-8 sm:p-12 shadow-lg backdrop-blur-xl relative">
+                        <div className="relative z-10 flex flex-col xl:flex-row justify-between items-start xl:items-center gap-8">
+                            <div className="flex-1">
                                 <p className="text-xs font-bold uppercase tracking-[0.4em] text-accent">Daftar Kelas & Siswa</p>
                                 <h3 className="mt-3 text-3xl font-extrabold tracking-tight text-[#EEDCC8]">Daftar Kelas & Siswa</h3>
-                                <p className="mt-2 max-w-2xl text-base text-accent">Lihat seluruh kelas dan daftar siswa yang berada di bawah bimbingan Anda. Pilih kelas pada tab di bawah untuk melihat detail lebih lanjut.</p>
+                                <p className="mt-2 max-w-xl text-base text-accent">Lihat seluruh kelas dan daftar siswa yang berada di bawah bimbingan Anda. Pilih kelas pada tab di bawah untuk melihat detail lebih lanjut.</p>
                             </div>
-                        </div>
-        
-                        <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-3 relative z-10">
-                            <StatCard label="Total Kelas" value={loading ? '...' : kelas_options.length} description="Kelas yang diampu" tone="slate" className="!bg-[#EEDCC8] !border-transparent" />
-                            <StatCard label="Total Siswa" value={loading ? '...' : (Object.values(students_by_class).flat().length)} description="Seluruh siswa yang diajar" tone="blue" className="!bg-[#EEDCC8] !border-transparent" />
-                            <StatCard label="Mata Pelajaran" value={loading ? '...' : (new Set(teaching_assignments.map(a => a.id_mapel)).size)} description="Mapel yang diampu" tone="emerald" className="!bg-[#EEDCC8] !border-transparent" />
+                            
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full xl:w-[60%]">
+                                <StatCard label="Total Kelas" value={loading ? '...' : kelas_options.length} description="Kelas yang diampu" tone="slate" className="!bg-[#EEDCC8] !border-transparent h-full" />
+                                <StatCard label="Total Siswa" value={loading ? '...' : (Object.values(students_by_class).flat().length)} description="Seluruh siswa yang diajar" tone="blue" className="!bg-[#EEDCC8] !border-transparent h-full" />
+                                <StatCard label="Mata Pelajaran" value={loading ? '...' : (new Set(teaching_assignments.map(a => a.id_mapel)).size)} description="Mapel yang diampu" tone="emerald" className="!bg-[#EEDCC8] !border-transparent h-full" />
+                            </div>
                         </div>
                     </section>
 

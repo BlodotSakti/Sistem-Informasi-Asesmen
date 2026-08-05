@@ -75,8 +75,8 @@ export default function SiswaDashboard({ session, onLogout }) {
                         <div className="rounded-[2.5rem] border border-border bg-white/60 p-8 backdrop-blur-xl shadow-sm flex flex-col">
                             <div className="flex items-center justify-between mb-6">
                                 <div>
-                                    <p className="text-xs font-bold uppercase tracking-[0.3em] text-slate-500">Grafik Performa</p>
-                                    <h3 className="mt-2 text-2xl font-extrabold text-slate-900 tracking-tight">Tren Perkembangan Nilai</h3>
+                                    <p className="text-xs font-bold uppercase tracking-[0.3em] text-secondary">Grafik Performa</p>
+                                    <h3 className="mt-2 text-2xl font-extrabold text-primary tracking-tight">Tren Perkembangan Nilai</h3>
                                 </div>
                             </div>
                             <div className="h-72 w-full flex-grow rounded-3xl border border-border/50 bg-white p-5 shadow-inner">
@@ -153,8 +153,8 @@ export default function SiswaDashboard({ session, onLogout }) {
                         {/* Bar Chart: Rata-rata per Mapel */}
                         <div className="rounded-[2.5rem] border border-border bg-white/60 p-8 backdrop-blur-xl shadow-sm flex flex-col items-center">
                             <div className="w-full text-left mb-4">
-                                <p className="text-xs font-bold uppercase tracking-[0.3em] text-info">Statistik Nilai</p>
-                                <h3 className="mt-2 text-xl font-extrabold text-slate-900">Rata-rata per Mata Pelajaran</h3>
+                                <p className="text-xs font-bold uppercase tracking-[0.3em] text-secondary">Statistik Nilai</p>
+                                <h3 className="mt-2 text-xl font-extrabold text-accent">Rata-rata per Mata Pelajaran</h3>
                             </div>
                             <div className="w-full h-64">
                                 {barChartData.length > 0 ? (
@@ -164,7 +164,7 @@ export default function SiswaDashboard({ session, onLogout }) {
                                             <XAxis type="number" domain={[0, 100]} hide />
                                             <YAxis dataKey="subject" type="category" axisLine={false} tickLine={false} tick={{ fill: '#475569', fontSize: 11, fontWeight: 600 }} width={80} />
                                             <Tooltip content={<CustomTooltip />} cursor={{ fill: '#f8fafc' }} />
-                                            <Bar dataKey="A" fill="#0ea5e9" radius={[0, 4, 4, 0]} barSize={20} />
+                                            <Bar dataKey="A" fill="#D9A441" radius={[0, 4, 4, 0]} barSize={20} />
                                         </BarChart>
                                     </ResponsiveContainer>
                                 ) : (

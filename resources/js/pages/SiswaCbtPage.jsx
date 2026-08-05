@@ -187,7 +187,8 @@ export default function SiswaCbtPage({ session, onLogout, idSesi }) {
         const handleContextMenu = (e) => e.preventDefault();
         const handleVisibilityChange = () => {
             if (document.visibilityState === 'hidden') {
-                alert('Peringatan: Terdeteksi perpindahan tab atau jendela. Aktivitas ini dicatat oleh sistem.');
+                // Silently ignore or implement actual logging if backend supports it in the future
+                // Currently removed to match the silent lock behavior of contextmenu
             }
         };
         window.addEventListener('contextmenu', handleContextMenu);

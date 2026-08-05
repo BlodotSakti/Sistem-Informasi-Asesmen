@@ -53,8 +53,8 @@ export default function DashboardLayout({ title, user, navigation, onLogout, pro
                                 <img src="/logo-sman.jpg" alt="Logo SMAN" className="h-full w-full object-contain" />
                             </div>
                             <div>
-                                <p className="text-[10px] uppercase tracking-[0.2em] text-slate-400">SMAN Sumsel</p>
-                                <h1 className="text-sm font-semibold text-slate-100">CBT Asesmen</h1>
+                                <p className="text-[10px] uppercase tracking-[0.2em] text-accent">SMAN Sumsel</p>
+                                <h1 className="text-sm font-semibold text-accent">CBT Asesmen</h1>
                             </div>
                         </div>
                         {/* Close button for mobile */}
@@ -112,7 +112,7 @@ export default function DashboardLayout({ title, user, navigation, onLogout, pro
                             </button>
                             <div>
                                 <p className="hidden md:block text-xs uppercase tracking-[0.3em] text-accent">{user?.role || 'Dashboard'}</p>
-                                <h2 className="text-xl md:text-2xl font-semibold text-accent truncate max-w-[200px] md:max-w-none">{title}</h2>
+                                <h2 className="text-lg md:text-2xl font-semibold text-accent truncate max-w-[140px] sm:max-w-[200px] md:max-w-none">{title}</h2>
                             </div>
                         </div>
                         <div className="flex items-center gap-2">
@@ -120,16 +120,9 @@ export default function DashboardLayout({ title, user, navigation, onLogout, pro
                             <button
                                 type="button"
                                 onClick={onLogout}
-                                className="hidden md:block rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-primary/85"
+                                className="rounded-full bg-primary px-4 py-2 md:px-5 md:py-2.5 text-xs md:text-sm font-semibold text-accent transition hover:bg-primary/85 whitespace-nowrap"
                             >
                                 Logout
-                            </button>
-                            <button
-                                type="button"
-                                onClick={onLogout}
-                                className="md:hidden rounded-full bg-rose-100 text-rose-600 px-3 py-2 text-xs font-bold"
-                            >
-                                Keluar
                             </button>
                         </div>
                     </header>

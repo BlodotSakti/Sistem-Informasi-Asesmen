@@ -2,12 +2,20 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import '../css/app.css';
 import LoginPage from './pages/LoginPage';
-import AdminWorkspacePage from './pages/AdminWorkspacePage';
 import AdminAcademicMappingPage from './pages/AdminAcademicMappingPage';
 import AdminDashboard from './pages/AdminDashboard';
 import AdminBankSoalPage from './pages/AdminBankSoalPage';
 import AdminBackupPage from './pages/AdminBackupPage';
+import AdminPenggunaPage from './pages/AdminPenggunaPage';
+import AdminTahunAjaranPage from './pages/AdminTahunAjaranPage';
+import AdminKelasPage from './pages/AdminKelasPage';
+import AdminMataPelajaranPage from './pages/AdminMataPelajaranPage';
+import AdminPenempatanSiswaPage from './pages/AdminPenempatanSiswaPage';
+import AdminPenugasanGuruPage from './pages/AdminPenugasanGuruPage';
 import GuruDashboard from './pages/GuruDashboard';
+import GuruJadwalCbtPage from './pages/GuruJadwalCbtPage';
+import GuruBankSoalPage from './pages/GuruBankSoalPage';
+import GuruBeritaAcaraPage from './pages/GuruBeritaAcaraPage';
 import SiswaDashboard from './pages/SiswaDashboard';
 import SiswaProfilePage from './pages/SiswaProfilePage';
 import SiswaSessionsPage from './pages/SiswaSessionsPage';
@@ -165,14 +173,29 @@ function App() {
             '/admin/import-akun': 'import-akun',
         };
 
-        if (adminRouteMap[pathname]) {
-            if (pathname === '/admin/pemetaan-akademik') {
-                return <AdminAcademicMappingPage session={session} onLogout={onLogout} />;
-            }
-            if (pathname === '/admin/dashboard') {
-                return <AdminDashboard session={session} onLogout={onLogout} />;
-            }
-            return <AdminWorkspacePage session={session} onLogout={onLogout} mode={adminRouteMap[pathname]} />;
+        if (pathname === '/admin/pemetaan-akademik') {
+            return <AdminAcademicMappingPage session={session} onLogout={onLogout} />;
+        }
+        if (pathname === '/admin/dashboard') {
+            return <AdminDashboard session={session} onLogout={onLogout} />;
+        }
+        if (pathname === '/admin/pengguna' || pathname === '/admin/import-akun') {
+            return <AdminPenggunaPage session={session} onLogout={onLogout} mode={pathname === '/admin/import-akun' ? 'import-akun' : 'pengguna'} />;
+        }
+        if (pathname === '/admin/tahun-ajaran') {
+            return <AdminTahunAjaranPage session={session} onLogout={onLogout} />;
+        }
+        if (pathname === '/admin/kelas') {
+            return <AdminKelasPage session={session} onLogout={onLogout} />;
+        }
+        if (pathname === '/admin/mata-pelajaran') {
+            return <AdminMataPelajaranPage session={session} onLogout={onLogout} />;
+        }
+        if (pathname === '/admin/kelas-siswa') {
+            return <AdminPenempatanSiswaPage session={session} onLogout={onLogout} />;
+        }
+        if (pathname === '/admin/penugasan-pembelajaran') {
+            return <AdminPenugasanGuruPage session={session} onLogout={onLogout} />;
         }
 
         if (pathname === '/admin/bank-soal') {
@@ -183,15 +206,20 @@ function App() {
             return <AdminBackupPage session={session} onLogout={onLogout} />;
         }
 
-        const guruRouteMap = {
-            '/guru/dashboard': 'dashboard',
-            '/guru/jadwal-cbt': 'jadwal-cbt',
-            '/guru/bank-soal': 'bank-soal',
-            '/guru/berita-acara': 'berita-acara',
-        };
+        if (pathname === '/guru/dashboard') {
+            return <GuruDashboard session={session} onLogout={onLogout} />;
+        }
 
-        if (guruRouteMap[pathname]) {
-            return <GuruDashboard session={session} onLogout={onLogout} mode={guruRouteMap[pathname]} />;
+        if (pathname === '/guru/jadwal-cbt') {
+            return <GuruJadwalCbtPage session={session} onLogout={onLogout} />;
+        }
+
+        if (pathname === '/guru/bank-soal') {
+            return <GuruBankSoalPage session={session} onLogout={onLogout} />;
+        }
+
+        if (pathname === '/guru/berita-acara') {
+            return <GuruBeritaAcaraPage session={session} onLogout={onLogout} />;
         }
 
         if (pathname === '/guru/siswa') return <GuruSiswaPage session={session} onLogout={onLogout} />;

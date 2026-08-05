@@ -66,8 +66,10 @@ export default function SiswaSessionsPage({ session, onLogout }) {
                                     const bolehUlang = !!item.boleh_ulang;
                                     const isExpired = item.waktu_selesai && new Date() > new Date(item.waktu_selesai);
                                     const isBelumMulai = item.waktu_mulai && new Date() < new Date(item.waktu_mulai);
+                                    const isActiveRow = !sudahDikerjakan && !isExpired && !isBelumMulai;
+                                    
                                     return (
-                                    <tr key={item.id_sesi} className="align-top hover:bg-slate-50/70">
+                                    <tr key={item.id_sesi} className={`align-top transition-colors ${isActiveRow ? 'bg-blue-50/80 hover:bg-blue-50/100' : 'hover:bg-slate-50/70'}`}>
                                         <td className="px-4 py-3 font-semibold text-slate-900">{item.mata_pelajaran?.nama_lengkap || item.mata_pelajaran?.nama_mapel || item.mataPelajaran?.nama_lengkap || item.mataPelajaran?.nama_mapel || '-'}</td>
                                         <td className="px-4 py-3 text-slate-600">{item.kelas?.nama_kelas || '-'}</td>
                                         <td className="px-4 py-3 text-slate-600">{item.tipe_soal || '-'} • {item.jenis_asesmen || '-'}</td>
