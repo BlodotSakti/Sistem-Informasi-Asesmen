@@ -3,6 +3,7 @@ import DashboardLayout from '../components/layout/DashboardLayout';
 import { apiFetch } from '../lib/api';
 import { adminNavigation } from './adminNavigation';
 import useAdminWorkspace from '../hooks/useAdminWorkspace';
+import * as XLSX from 'xlsx';
 
 const TABLE_HEAD_CLASS = 'border-b border-border bg-slate-50 text-xs uppercase tracking-[0.2em] text-slate-500';
 const TABLE_BODY_ROW_CLASS = 'align-top hover:bg-slate-50/70';
@@ -31,7 +32,7 @@ export default function AdminPenggunaPage({ session, onLogout, mode = 'pengguna'
         page: 1,
     });
 
-    const [userTab, setUserTab] = useState(mode === 'import-akun' ? 'import' : 'manual');
+    const [userTab, setUserTab] = useState('manual');
     const [userForm, setUserForm] = useState({
         role: 'guru',
         nama_lengkap: '',
@@ -101,7 +102,7 @@ export default function AdminPenggunaPage({ session, onLogout, mode = 'pengguna'
             is_aktif: true,
         });
         setUserId(null);
-        setUserTab(mode === 'import-akun' ? 'import' : 'manual');
+        setUserTab('manual');
     };
 
     const submitUser = async (event) => {
@@ -195,26 +196,52 @@ export default function AdminPenggunaPage({ session, onLogout, mode = 'pengguna'
         }
     };
 
-    const isImportMode = mode === 'import-akun';
-    const title = isImportMode ? 'Import Akun' : 'Akun Pengguna';
+    const downloadTemplate = () => {
+        const headers = ["nama_lengkap", "nip", "nisn", "role"];
+        const exampleData = [
+            {
+                "nama_lengkap": "Budi Santoso",
+                "nip": "198001012010011001",
+                "nisn": "",
+                "role": "guru"
+            },
+            {
+                "nama_lengkap": "Andi Darmawan",
+                "nip": "",
+                "nisn": "0012345678",
+                "role": "siswa"
+            }
+        ];
+
+        const worksheet = XLSX.utils.json_to_sheet(exampleData, { header: headers });
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Template Pengguna");
+
+        const wscols = [
+            {wch: 30}, {wch: 25}, {wch: 20}, {wch: 15}
+        ];
+        worksheet['!cols'] = wscols;
+
+        XLSX.writeFile(workbook, "Template_Import_Pengguna.xlsx");
+    };
+
+    const title = 'Akun Pengguna';
 
     return (
         <DashboardLayout title={title} user={session?.user} navigation={adminNavigation} onLogout={onLogout}>
             <div className="font-sans text-slate-900 selection:bg-primary/10 flex flex-col">
                 <main className="flex-1 max-w-7xl mx-auto w-full">
-                    <section className="mb-8 overflow-hidden rounded-[2.5rem] border border-[#8A2332]/30 bg-gradient-to-br from-[#8A2332] via-primary to-secondary px-8 py-10 shadow-lg backdrop-blur-xl relative">
-                        <div className="relative z-10 flex flex-col xl:flex-row justify-between items-start xl:items-center gap-8">
+                    <section className="mb-8 overflow-hidden rounded-2xl sm:rounded-[2.5rem] border border-[#8A2332]/30 bg-gradient-to-br from-[#8A2332] via-primary to-secondary px-4 py-6 sm:px-8 sm:py-10 shadow-lg backdrop-blur-xl relative">
+                        <div className="relative z-10 flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4 sm:gap-8">
                             <div className="flex-1">
                                 <p className="text-xs font-bold uppercase tracking-[0.4em] text-accent">{title}</p>
-                                <h3 className="mt-4 text-3xl font-semibold leading-tight text-[#EEDCC8] md:text-4xl">{title}</h3>
+                                <h3 className="mt-4 text-xl sm:text-3xl font-semibold leading-tight text-[#EEDCC8] md:text-4xl">{title}</h3>
                                 <p className="mt-4 max-w-xl text-sm leading-7 text-accent md:text-base">
-                                    {isImportMode 
-                                        ? 'Import akun guru dan siswa dari Excel dengan username otomatis dari NIP/NISN.' 
-                                        : 'Kelola akun guru, siswa, dan admin, termasuk arsip akun yang sudah tidak aktif.'}
+                                    Kelola akun guru, siswa, dan admin, termasuk arsip akun yang sudah tidak aktif.
                                 </p>
                             </div>
-                            <div className="flex flex-wrap gap-4 w-full xl:w-auto">
-                                <div className="flex flex-col items-start justify-center rounded-[1.5rem] bg-[#EEDCC8] p-6 shadow-sm border border-white/20 min-w-[140px] transition-transform hover:-translate-y-1">
+                            <div className="grid grid-cols-2 gap-3 w-full xl:w-auto xl:flex xl:flex-wrap xl:gap-4">
+                                <div className="flex flex-col items-start justify-center rounded-2xl sm:rounded-[1.5rem] bg-[#EEDCC8] p-4 sm:p-6 shadow-sm border border-white/20 transition-transform hover:-translate-y-1">
                                     <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#1e2a3a]/10 text-[#1e2a3a] mb-3">
                                         <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
@@ -223,7 +250,7 @@ export default function AdminPenggunaPage({ session, onLogout, mode = 'pengguna'
                                     <div className="text-3xl font-extrabold text-[#CA8A04]">{loadingUsers ? '...' : (summary.total - summary.active)}</div>
                                     <div className="text-sm font-semibold text-[#CA8A04] mt-1">Akun Diarsipkan</div>
                                 </div>
-                                <div className="flex flex-col items-start justify-center rounded-[1.5rem] bg-[#EEDCC8] p-6 shadow-sm border border-white/20 min-w-[140px] transition-transform hover:-translate-y-1">
+                                <div className="flex flex-col items-start justify-center rounded-2xl sm:rounded-[1.5rem] bg-[#EEDCC8] p-4 sm:p-6 shadow-sm border border-white/20 transition-transform hover:-translate-y-1">
                                     <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#1e2a3a]/10 text-[#1e2a3a] mb-3">
                                         <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -337,7 +364,13 @@ export default function AdminPenggunaPage({ session, onLogout, mode = 'pengguna'
                                         <span>File Excel</span>
                                         <input type="file" accept=".xlsx,.xls,.csv" onChange={(event) => setImportForm((current) => ({ ...current, file: event.target.files?.[0] || null }))} className="w-full rounded-2xl border border-dashed border-slate-300 bg-white px-4 py-3 text-sm text-slate-600 outline-none transition file:mr-4 file:rounded-full file:border-0 file:bg-primary file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white" />
                                     </label>
-                                    <button type="submit" className="rounded-full bg-primary px-5 py-3 text-sm font-semibold text-white transition hover:bg-primary/85">Import Akun</button>
+                                    <div className="flex flex-wrap gap-3 pt-2">
+                                        <button type="submit" className="rounded-full bg-primary px-5 py-3 text-sm font-semibold text-white transition hover:bg-primary/85">Import Akun</button>
+                                        <button type="button" onClick={downloadTemplate} className="rounded-full border border-primary px-5 py-3 text-sm font-semibold text-primary transition hover:bg-primary/5 flex items-center gap-2">
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                                            Unduh Template
+                                        </button>
+                                    </div>
                                     <div className="rounded-2xl bg-white px-4 py-3 text-sm text-slate-600">
                                         Password default impor: <span className="font-semibold text-slate-900">{importResult?.default_password || 'SIA@12345'}</span>
                                     </div>

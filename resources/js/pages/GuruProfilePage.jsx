@@ -11,7 +11,7 @@ export default function GuruProfilePage({ session, onLogout }) {
     return (
         <DashboardLayout title="Profil Guru" user={session?.user} navigation={guruNavigation} onLogout={onLogout} profileHref="/guru/dashboard">
             <div className="space-y-6">
-                <section className="relative overflow-hidden rounded-[2.5rem] border border-[#8A2332]/30 bg-gradient-to-br from-[#8A2332] via-primary to-secondary p-8 shadow-lg backdrop-blur-xl">
+                <section className="relative overflow-hidden rounded-2xl sm:rounded-[2.5rem] border border-[#8A2332]/30 bg-gradient-to-br from-[#8A2332] via-primary to-secondary p-4 sm:p-8 shadow-lg backdrop-blur-xl">
                     <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between relative z-10">
                         <div className="flex items-center gap-4">
                             <div className="flex h-20 w-20 items-center justify-center rounded-full border-2 border-[#EEDCC8]/20 bg-white/10 text-2xl font-semibold uppercase text-[#EEDCC8] shadow-inner backdrop-blur-sm">
@@ -19,7 +19,7 @@ export default function GuruProfilePage({ session, onLogout }) {
                             </div>
                             <div>
                                 <p className="text-xs uppercase tracking-[0.4em] text-accent font-bold">Profil Guru</p>
-                                <h3 className="mt-2 text-3xl font-extrabold tracking-tight text-[#EEDCC8]">{profile.nama_lengkap || session?.user?.nama_lengkap || '-'}</h3>
+                                <h3 className="mt-2 text-2xl sm:text-3xl font-extrabold tracking-tight text-[#EEDCC8]">{profile.nama_lengkap || session?.user?.nama_lengkap || '-'}</h3>
                                 <p className="mt-2 text-sm text-accent">NIP: {profile.nip || '-'}</p>
                             </div>
                         </div>

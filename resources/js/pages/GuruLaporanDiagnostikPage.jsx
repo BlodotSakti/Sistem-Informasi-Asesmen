@@ -91,7 +91,7 @@ export default function GuruLaporanDiagnostikPage({ session, onLogout, idAnalisi
     if (error || !laporan) {
         return (
             <DashboardLayout title="Laporan Diagnostik AI" user={session?.user} navigation={guruNavigation} onLogout={onLogout} profileHref="/guru/profil">
-                <div className="rounded-3xl bg-white p-8 text-center shadow-sm border border-border">
+                <div className="rounded-2xl sm:rounded-3xl bg-white p-4 sm:p-8 text-center shadow-sm border border-border">
                     <h3 className="text-xl font-bold text-slate-800">Ups, Terjadi Kesalahan</h3>
                     <p className="mt-2 text-slate-500">{error || 'Data laporan tidak ditemukan.'}</p>
                     <button onClick={() => window.location.href = '/guru/dashboard'} className="mt-6 rounded-xl bg-slate-900 px-6 py-3 text-sm font-semibold text-white shadow-md transition hover:bg-primary/85">
@@ -113,7 +113,7 @@ export default function GuruLaporanDiagnostikPage({ session, onLogout, idAnalisi
                             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
                             Kembali
                         </button>
-                        <h2 className="text-3xl font-extrabold text-slate-900 tracking-tight">Evaluasi Diagnostik</h2>
+                        <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">Evaluasi Diagnostik</h2>
                         <p className="text-slate-500 mt-1">Laporan komprehensif didukung oleh analitik AI.</p>
                     </div>
                     <button onClick={() => window.print()} className="flex w-fit items-center gap-2 rounded-xl bg-white border border-border px-4 py-2 text-sm font-bold text-slate-700 shadow-sm transition hover:bg-slate-50 hover:border-slate-300">

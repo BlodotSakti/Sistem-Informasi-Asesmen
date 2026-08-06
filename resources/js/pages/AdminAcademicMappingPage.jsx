@@ -52,15 +52,15 @@ export default function AdminAcademicMappingPage({ session, onLogout }) {
     return (
         <DashboardLayout title="Pemetaan Akademik" user={session?.user} navigation={navigation} onLogout={onLogout}>
             <div className="space-y-8">
-                <section className="overflow-hidden rounded-[2.5rem] border border-[#8A2332]/30 bg-gradient-to-br from-[#8A2332] via-primary to-secondary px-8 py-10 shadow-lg backdrop-blur-xl">
-                    <div className="grid gap-8 lg:grid-cols-[1.2fr_0.8fr] lg:items-center">
+                <section className="overflow-hidden rounded-2xl sm:rounded-[2.5rem] border border-[#8A2332]/30 bg-gradient-to-br from-[#8A2332] via-primary to-secondary px-4 py-6 sm:px-8 sm:py-10 shadow-lg backdrop-blur-xl">
+                    <div className="grid gap-4 sm:gap-8 lg:grid-cols-[1.2fr_0.8fr] lg:items-center">
                         <div>
                             <p className="text-xs uppercase tracking-[0.45em] text-accent">Pemetaan Akademik</p>
-                            <h3 className="mt-4 max-w-2xl text-3xl font-semibold leading-tight text-[#EEDCC8] md:text-4xl">Sentralisasi Relasi Data</h3>
+                            <h3 className="mt-4 max-w-2xl text-xl sm:text-3xl font-semibold leading-tight text-[#EEDCC8] md:text-4xl">Sentralisasi Relasi Data</h3>
                             <p className="mt-4 max-w-2xl text-sm leading-7 text-accent md:text-base">Lihat pemetaan lengkap antara Kelas, Guru Wali, Guru Pengampu Mata Pelajaran, dan Populasi Siswa dalam satu tampilan terpadu.</p>
                         </div>
-                        <div className="flex flex-col sm:flex-row gap-4 lg:justify-end">
-                            <div className="rounded-[1.5rem] bg-[#EEDCC8] p-5 backdrop-blur-xl border border-white shadow-sm transition hover:shadow-md flex-1 lg:flex-none lg:min-w-40">
+                        <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 lg:justify-end">
+                            <div className="rounded-2xl sm:rounded-[1.5rem] bg-[#EEDCC8] p-4 sm:p-5 backdrop-blur-xl border border-white shadow-sm transition hover:shadow-md flex-1 lg:flex-none lg:min-w-40">
                                 <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary mb-3">
                                     <Network className="w-6 h-6" />
                                 </div>

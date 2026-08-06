@@ -86,7 +86,7 @@ export default function SiswaProfilePage({ session, onLogout }) {
                             </div>
                             <div>
                                 <p className="text-xs uppercase tracking-[0.35em] text-accent">Profil Siswa</p>
-                                <h3 className="mt-2 text-3xl font-semibold text-[#EEDCC8]">{profile.nama_lengkap || session?.user?.nama_lengkap || '-'}</h3>
+                                <h3 className="mt-2 text-2xl sm:text-3xl font-semibold text-[#EEDCC8]">{profile.nama_lengkap || session?.user?.nama_lengkap || '-'}</h3>
                                 <p className="mt-2 text-sm text-accent">NISN: {profile.nisn || session?.user?.profile?.nisn || '-'}</p>
                                 <p className="text-sm text-accent">
                                     {profile.kelas_aktif?.nama_kelas || 'Belum ada kelas aktif'}
@@ -101,7 +101,7 @@ export default function SiswaProfilePage({ session, onLogout }) {
                     </div>
                 </section>
 
-                <section className="grid gap-4 md:grid-cols-3">
+                <section className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3">
                     <StatCard label="Kelas Aktif" value={loading ? '...' : profile.kelas_aktif?.nama_kelas || '0'} description="Kelas yang sedang diikuti" tone="blue" />
                     <StatCard label="Riwayat Kelas" value={loading ? '...' : classHistory.length} description="Jejak perpindahan kelas" tone="amber" />
                     <StatCard label="Mapel Aktif" value={loading ? '...' : subjects.length} description="Penugasan guru terkait" tone="slate" />

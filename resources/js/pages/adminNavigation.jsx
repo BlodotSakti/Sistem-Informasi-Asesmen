@@ -23,6 +23,5 @@ export const adminNavigation = [
     { label: 'Penugasan Guru', href: '/admin/penugasan-pembelajaran', badge: 'Relasi', icon: <Network className="w-5 h-5" /> },
     { label: 'Pemetaan Akademik', href: '/admin/pemetaan-akademik', badge: 'Lihat', icon: <Map className="w-5 h-5" /> },
     { label: 'Bank Soal', href: '/admin/bank-soal', badge: 'Pool', icon: <Database className="w-5 h-5" /> },
-    { label: 'Import Akun', href: '/admin/import-akun', badge: 'Excel', icon: <FileUp className="w-5 h-5" /> },
     { label: 'Backup & Restore', href: '/admin/backup', badge: 'Data', icon: <HardDriveDownload className="w-5 h-5" /> },
 ];

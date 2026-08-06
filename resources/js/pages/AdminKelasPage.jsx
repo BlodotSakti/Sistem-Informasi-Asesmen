@@ -121,17 +121,17 @@ export default function AdminKelasPage({ session, onLogout }) {
         <DashboardLayout title={title} user={session?.user} navigation={adminNavigation} onLogout={onLogout}>
             <div className="font-sans text-slate-900 selection:bg-primary/10 flex flex-col">
                 <main className="flex-1 max-w-7xl mx-auto w-full">
-                    <section className="mb-8 overflow-hidden rounded-[2.5rem] border border-[#8A2332]/30 bg-gradient-to-br from-[#8A2332] via-primary to-secondary px-8 py-10 shadow-lg backdrop-blur-xl relative">
-                        <div className="relative z-10 flex flex-col xl:flex-row justify-between items-start xl:items-center gap-8">
+                    <section className="mb-8 overflow-hidden rounded-2xl sm:rounded-[2.5rem] border border-[#8A2332]/30 bg-gradient-to-br from-[#8A2332] via-primary to-secondary px-4 py-6 sm:px-8 sm:py-10 shadow-lg backdrop-blur-xl relative">
+                        <div className="relative z-10 flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4 sm:gap-8">
                             <div className="flex-1">
                                 <p className="text-xs font-bold uppercase tracking-[0.4em] text-accent">{title}</p>
-                                <h3 className="mt-4 text-3xl font-semibold leading-tight text-[#EEDCC8] md:text-4xl">{title}</h3>
+                                <h3 className="mt-4 text-xl sm:text-3xl font-semibold leading-tight text-[#EEDCC8] md:text-4xl">{title}</h3>
                                 <p className="mt-4 max-w-xl text-sm leading-7 text-accent md:text-base">
                                     Kelola daftar kelas dan tentukan wali kelas untuk masing-masing kelas.
                                 </p>
                             </div>
-                            <div className="flex flex-wrap gap-4 w-full xl:w-auto">
-                                <div className="flex flex-col items-start justify-center rounded-[1.5rem] bg-[#EEDCC8] p-6 shadow-sm border border-white/20 min-w-[140px] transition-transform hover:-translate-y-1">
+                            <div className="grid grid-cols-1 gap-3 w-full xl:w-auto xl:flex xl:flex-wrap xl:gap-4">
+                                <div className="flex flex-col items-start justify-center rounded-2xl sm:rounded-[1.5rem] bg-[#EEDCC8] p-4 sm:p-6 shadow-sm border border-white/20 transition-transform hover:-translate-y-1">
                                     <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#1e2a3a]/10 text-[#1e2a3a] mb-3">
                                         <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />

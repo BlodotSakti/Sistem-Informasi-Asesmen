@@ -100,12 +100,12 @@ export default function AdminBackupPage({ session, onLogout }) {
             <div className="space-y-6">
                 
                 {/* Header */}
-                <section className="overflow-hidden rounded-[2.5rem] border border-[#8A2332]/30 bg-gradient-to-br from-[#8A2332] via-primary to-secondary px-8 py-10 shadow-lg backdrop-blur-xl flex flex-col sm:flex-row sm:items-center justify-between gap-8">
+                <section className="overflow-hidden rounded-2xl sm:rounded-[2.5rem] border border-[#8A2332]/30 bg-gradient-to-br from-[#8A2332] via-primary to-secondary px-4 py-6 sm:px-8 sm:py-10 shadow-lg backdrop-blur-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 sm:gap-8">
                     <div>
                         <p className="text-xs uppercase tracking-[0.45em] text-accent flex items-center gap-2">
                             <HardDriveDownload className="w-4 h-4" /> Data
                         </p>
-                        <h3 className="mt-4 max-w-2xl text-3xl font-semibold leading-tight text-[#EEDCC8] md:text-4xl">Backup & Restore</h3>
+                        <h3 className="mt-4 max-w-2xl text-xl sm:text-3xl font-semibold leading-tight text-[#EEDCC8] md:text-4xl">Backup & Restore</h3>
                         <p className="mt-4 max-w-2xl text-sm leading-7 text-accent md:text-base">Manajemen pencadangan data sistem dan database</p>
                     </div>
                     <div className="flex flex-wrap items-center gap-3">

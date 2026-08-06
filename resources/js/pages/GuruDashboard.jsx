@@ -24,11 +24,11 @@ export default function GuruDashboard({ session, onLogout }) {
                 )}
 
                 <div className="space-y-8">
-                    <section className="overflow-hidden rounded-[2.5rem] border border-[#8A2332]/30 bg-gradient-to-br from-[#8A2332] via-primary to-secondary p-8 shadow-lg backdrop-blur-xl relative">
+                    <section className="overflow-hidden rounded-2xl sm:rounded-[2.5rem] border border-[#8A2332]/30 bg-gradient-to-br from-[#8A2332] via-primary to-secondary p-4 sm:p-8 shadow-lg backdrop-blur-xl relative">
                         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 relative z-10">
                             <div>
                                 <p className="text-xs font-bold uppercase tracking-[0.4em] text-accent">Ringkasan Aktivitas Harian</p>
-                                <h3 className="mt-3 text-3xl font-extrabold tracking-tight text-[#EEDCC8]">Halo, {session?.user?.nama_lengkap || 'Guru'}! 👋</h3>
+                                <h3 className="mt-3 text-2xl sm:text-3xl font-extrabold tracking-tight text-[#EEDCC8]">Halo, {session?.user?.nama_lengkap || 'Guru'}! 👋</h3>
                                 <p className="mt-2 max-w-2xl text-base text-accent">Fokus pada apa yang paling penting hari ini. Kelola penilaian, buat soal, atau persiapkan asesmen CBT selanjutnya.</p>
                             </div>
                             <div className="flex gap-3 mt-4 sm:mt-0">
@@ -38,7 +38,7 @@ export default function GuruDashboard({ session, onLogout }) {
                             </div>
                         </div>
 
-                        <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4 relative z-10">
+                        <div className="mt-6 sm:mt-8 grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4 relative z-10">
                             <StatCard label="Kelas Diampu" value={loading ? '...' : summary?.cards?.total_kelas ?? 0} description="Total kelas aktif" tone="slate" className="!bg-[#EEDCC8] !border-transparent" />
                             <StatCard label="Bank Soal" value={loading ? '...' : summary?.cards?.total_bank_soal ?? 0} description="Soal yang Anda buat" tone="blue" className="!bg-[#EEDCC8] !border-transparent" />
                             <StatCard label="Penugasan" value={loading ? '...' : summary?.cards?.total_penugasan ?? 0} description="Relasi mapel & kelas" tone="emerald" className="!bg-[#EEDCC8] !border-transparent" />
@@ -47,7 +47,7 @@ export default function GuruDashboard({ session, onLogout }) {
                     </section>
 
                     <section className="grid gap-6 xl:grid-cols-[1fr_2fr]">
-                        <div className="rounded-[2rem] border border-border bg-white/60 p-6 backdrop-blur-xl shadow-sm flex flex-col">
+                        <div className="rounded-2xl sm:rounded-[2rem] border border-border bg-white/60 p-4 sm:p-6 backdrop-blur-xl shadow-sm flex flex-col">
                             <p className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-500">To-Do Prioritas</p>
                             <h3 className="mt-2 text-xl font-bold text-slate-900">Jadwal Asesmen</h3>
                             <p className="mt-1 text-sm text-slate-500">Daftar agenda CBT terdekat yang butuh perhatian.</p>
@@ -75,7 +75,7 @@ export default function GuruDashboard({ session, onLogout }) {
                             </div>
                         </div>
 
-                        <div className="rounded-[2rem] border border-[#8A2332]/30 bg-gradient-to-br from-[#8A2332] via-primary to-secondary p-8 text-white shadow-lg flex flex-col relative overflow-hidden">
+                        <div className="rounded-2xl sm:rounded-[2rem] border border-[#8A2332]/30 bg-gradient-to-br from-[#8A2332] via-primary to-secondary p-4 sm:p-8 text-white shadow-lg flex flex-col relative overflow-hidden">
                             <div className="absolute top-0 right-0 p-8 opacity-10">
                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-32 w-32" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
@@ -84,7 +84,7 @@ export default function GuruDashboard({ session, onLogout }) {
                             <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
                                 <div>
                                     <p className="text-xs font-semibold uppercase tracking-[0.3em] text-accent">Dashboard Analitik</p>
-                                    <h3 className="mt-1 text-2xl font-bold text-[#EEDCC8] tracking-tight">Insight Diagnostik & Area Peningkatan</h3>
+                                    <h3 className="mt-1 text-lg sm:text-2xl font-bold text-[#EEDCC8] tracking-tight">Insight Diagnostik & Area Peningkatan</h3>
                                 </div>
                                 <button 
                                     onClick={() => window.location.href = '/guru/arsip-diagnostik'}

@@ -47,11 +47,11 @@ export default function AdminDashboard({ session, onLogout }) {
 
     const renderDashboard = () => (
         <div className="space-y-8">
-            <section className="overflow-hidden rounded-[2.5rem] border border-[#8A2332]/30 bg-gradient-to-br from-[#8A2332] via-primary to-secondary px-8 py-10 shadow-lg backdrop-blur-xl">
-                <div className="grid gap-8 lg:grid-cols-[1.5fr_0.5fr] lg:items-center">
+            <section className="overflow-hidden rounded-2xl sm:rounded-[2.5rem] border border-[#8A2332]/30 bg-gradient-to-br from-[#8A2332] via-primary to-secondary px-4 py-6 sm:px-8 sm:py-10 shadow-lg backdrop-blur-xl">
+                <div className="grid gap-6 lg:gap-8 lg:grid-cols-[1.5fr_0.5fr] lg:items-center">
                     <div>
                         <p className="text-xs uppercase tracking-[0.45em] text-accent font-bold">Sistem Informasi Asesmen</p>
-                        <h3 className="mt-4 max-w-2xl text-4xl font-extrabold tracking-tight text-[#EEDCC8]">
+                        <h3 className="mt-4 max-w-2xl text-2xl sm:text-4xl font-extrabold tracking-tight text-[#EEDCC8]">
                             Selamat Datang, {session?.user?.admin?.nama_lengkap || session?.user?.username || 'Admin'}
                         </h3>
                         <p className="mt-4 max-w-2xl text-base leading-relaxed text-accent">
@@ -70,6 +70,27 @@ export default function AdminDashboard({ session, onLogout }) {
                             >
                                 Lihat Pemetaan Akademik
                             </a>
+                        </div>
+                    </div>
+
+                    <div className="lg:hidden grid grid-cols-2 gap-3 mt-6">
+                        <div className="rounded-2xl sm:rounded-[1.5rem] bg-[#EEDCC8] p-4 sm:p-5 border border-white shadow-sm">
+                            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary mb-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                                </svg>
+                            </div>
+                            <div className="text-2xl font-extrabold text-accent">{loading ? '...' : data.summary.total_guru}</div>
+                            <div className="text-xs sm:text-sm font-medium text-accent mt-1">Guru Aktif</div>
+                        </div>
+                        <div className="rounded-2xl sm:rounded-[1.5rem] bg-[#EEDCC8] p-4 sm:p-5 border border-white shadow-sm">
+                            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-info/10 text-info mb-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 14l9-5-9-5-9 5 9 5zm0 0l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14zm-4 6v-7.5l4-2.222" />
+                                </svg>
+                            </div>
+                            <div className="text-2xl font-extrabold text-accent">{loading ? '...' : data.summary.total_siswa}</div>
+                            <div className="text-xs sm:text-sm font-medium text-accent mt-1">Siswa Terdaftar</div>
                         </div>
                     </div>
 
@@ -135,7 +156,7 @@ export default function AdminDashboard({ session, onLogout }) {
             </section>
 
             <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
-                <section className="rounded-[2.5rem] border border-border bg-white/60 backdrop-blur-xl p-8 shadow-sm">
+                <section className="rounded-2xl sm:rounded-[2.5rem] border border-border bg-white/60 backdrop-blur-xl p-4 sm:p-8 shadow-sm">
                     <div className="mb-6">
                         <h4 className="text-lg font-semibold text-slate-900">Grafik Pendaftaran Pengguna</h4>
                         <p className="text-sm text-slate-500">Jumlah akun baru yang ditambahkan dalam 7 hari terakhir.</p>
@@ -181,7 +202,7 @@ export default function AdminDashboard({ session, onLogout }) {
                     </div>
                 </section>
 
-                <section className="rounded-[2.5rem] border border-border bg-white/60 backdrop-blur-xl p-8 shadow-sm">
+                <section className="rounded-2xl sm:rounded-[2.5rem] border border-border bg-white/60 backdrop-blur-xl p-4 sm:p-8 shadow-sm">
                     <div className="mb-6 flex items-center justify-between">
                         <div>
                             <h4 className="text-lg font-semibold text-slate-900">Catatan Sistem</h4>

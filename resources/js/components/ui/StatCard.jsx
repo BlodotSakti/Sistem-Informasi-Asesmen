@@ -11,18 +11,18 @@ export default function StatCard({ label, value, description, tone = 'primary', 
 
     return (
         <div className={`card hover:scale-[1.02] transition-transform duration-300 ${className}`}>
-            <div className="flex items-center justify-between">
-                <div>
-                    <p className="text-sm font-semibold uppercase tracking-wider text-text-secondary">{label}</p>
-                    <div className="mt-3 text-4xl font-bold tracking-tight text-text-primary">{value}</div>
+            <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                    <p className="text-xs sm:text-sm font-semibold uppercase tracking-wider text-text-secondary truncate">{label}</p>
+                    <div className="mt-2 sm:mt-3 text-2xl sm:text-4xl font-bold tracking-tight text-text-primary">{value}</div>
                 </div>
-                <div className={`flex h-12 w-12 items-center justify-center rounded-full ${iconTones[tone] || iconTones.primary}`}>
-                    <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <div className={`flex h-10 w-10 sm:h-12 sm:w-12 shrink-0 items-center justify-center rounded-full ${iconTones[tone] || iconTones.primary}`}>
+                    <svg className="h-5 w-5 sm:h-6 sm:w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
                     </svg>
                 </div>
             </div>
-            {description ? <p className="mt-4 text-sm font-medium text-text-secondary">{description}</p> : null}
+            {description ? <p className="mt-3 sm:mt-4 text-xs sm:text-sm font-medium text-text-secondary">{description}</p> : null}
         </div>
     );
 }

@@ -87,12 +87,12 @@ export default function SiswaLearningHistoryPage({ session, onLogout }) {
     return (
         <DashboardLayout title="Riwayat Pembelajaran" user={session?.user} navigation={siswaNavigation} onLogout={onLogout} profileHref="/siswa/profil">
             <div className="space-y-6">
-                <section className="overflow-hidden rounded-[2.5rem] border border-[#8A2332]/30 bg-gradient-to-br from-[#8A2332] via-primary to-secondary px-8 py-10 shadow-lg backdrop-blur-xl relative">
+                <section className="overflow-hidden rounded-2xl sm:rounded-[2.5rem] border border-[#8A2332]/30 bg-gradient-to-br from-[#8A2332] via-primary to-secondary px-4 py-6 sm:px-8 sm:py-10 shadow-lg backdrop-blur-xl relative">
                     <p className="text-xs uppercase tracking-[0.4em] text-accent font-bold">Riwayat BAP</p>
-                    <h3 className="mt-2 text-3xl font-semibold text-[#EEDCC8]">Jejak setiap pertemuan dan mata pelajaran</h3>
+                    <h3 className="mt-2 text-2xl sm:text-3xl font-semibold text-[#EEDCC8]">Jejak setiap pertemuan dan mata pelajaran</h3>
                     <p className="mt-2 text-sm text-accent">Halaman ini menampilkan topik yang dipelajari, status kehadiran Anda, dan ringkasan per mata pelajaran.</p>
 
-                    <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                    <div className="mt-6 grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
                         <StatCard label="Total Pertemuan" value={loading ? '...' : history?.total_pertemuan ?? 0} description="Seluruh BAP yang relevan" tone="blue" className="!bg-[#EEDCC8] !border-transparent" />
                         <StatCard label="Hadir" value={loading ? '...' : history?.summary_kehadiran?.hadir ?? 0} description="Pertemuan yang dihadiri" tone="emerald" className="!bg-[#EEDCC8] !border-transparent" />
                         <StatCard label="Izin/Sakit" value={loading ? '...' : (history?.summary_kehadiran?.izin ?? 0) + (history?.summary_kehadiran?.sakit ?? 0)} description="Absensi yang tercatat" tone="amber" className="!bg-[#EEDCC8] !border-transparent" />
@@ -129,7 +129,7 @@ export default function SiswaLearningHistoryPage({ session, onLogout }) {
                         <p className="text-sm font-medium uppercase tracking-[0.3em] text-slate-500">Ringkasan Mapel</p>
                         <h3 className="mt-2 text-xl font-semibold text-slate-900">Topik terakhir dan jumlah pertemuan</h3>
 
-                        <div className="mt-6 overflow-hidden rounded-3xl border border-border">
+                        <div className="mt-6 overflow-x-auto rounded-3xl border border-border">
                             <table className="min-w-full divide-y divide-slate-200 text-left text-sm">
                                 <thead className="border-b border-border bg-slate-50 text-xs uppercase tracking-[0.2em] text-slate-500">
                                     <tr>

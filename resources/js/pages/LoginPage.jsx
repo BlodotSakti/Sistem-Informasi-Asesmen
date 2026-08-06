@@ -57,17 +57,17 @@ export default function LoginPage({ session, onLogin }) {
 
     return (
         <>
-        <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(15,23,42,0.95),_rgba(148,163,184,0.12)_45%,_rgba(241,245,249,1)_70%)] px-4 py-10 text-slate-900 sm:px-6 lg:px-8">
+        <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(138,35,50,0.85),_rgba(30,58,95,0.15)_45%,_rgba(241,245,249,1)_70%)] px-4 py-10 text-slate-900 sm:px-6 lg:px-8">
             <div className="mx-auto flex min-h-[calc(100vh-5rem)] w-full max-w-6xl items-center justify-center">
                 <div className="grid w-full overflow-hidden rounded-[2rem] border border-border bg-white shadow-[0_30px_80px_rgba(15,23,42,0.18)] lg:grid-cols-[1.1fr_0.9fr]">
-                    <div className="hidden flex-col justify-between bg-primary p-10 text-slate-100 lg:flex">
+                    <div className="hidden flex-col justify-between bg-secondary p-10 text-slate-100 lg:flex">
                         <div>
                             <BrandMark />
                             <div className="mt-10 max-w-md space-y-4">
-                                <h2 className="text-4xl font-semibold leading-tight text-white">
+                                <h2 className="text-4xl font-semibold leading-tight text-accent">
                                     Sistem Informasi Asesmen yang sederhana, cepat, dan terarah.
                                 </h2>
-                                <p className="text-sm leading-6 text-slate-300">
+                                <p className="text-sm leading-6 text-[#EEDCC8]">
                                     Dirancang untuk membantu guru, siswa, dan operator sekolah memantau progres belajar
                                     dengan tampilan yang bersih dan mudah dipahami.
                                 </p>
@@ -77,14 +77,14 @@ export default function LoginPage({ session, onLogin }) {
                         <ul className="space-y-3 text-sm text-slate-300">
                             {heroPoints.map((point) => (
                                 <li key={point} className="flex items-start gap-3">
-                                    <span className="mt-1 h-2.5 w-2.5 rounded-full bg-amber-300" />
+                                    <span className="mt-1 h-2.5 w-2.5 rounded-full bg-accent" />
                                     <span>{point}</span>
                                 </li>
                             ))}
                         </ul>
                     </div>
 
-                    <div className="flex items-center justify-center bg-slate-50 px-6 py-12 sm:px-10 lg:px-12">
+                    <div className="flex items-center justify-center bg-primary px-6 py-12 sm:px-10 lg:px-12">
                         <div className="w-full max-w-md">
                             <div className="mb-8 lg:hidden">
                                 <BrandMark />
@@ -224,7 +224,7 @@ export default function LoginPage({ session, onLogin }) {
         {/* Forgot Password Modal */}
         {isForgotPasswordModalOpen && (
             <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
-                <div className="w-full max-w-md rounded-3xl bg-white p-8 shadow-xl ring-1 ring-slate-200">
+                <div className="w-full max-w-md rounded-3xl bg-accent p-8 shadow-xl ring-1 ring-slate-200">
                     <div className="flex items-center justify-between mb-6">
                         <h2 className="text-xl font-bold text-slate-900">Lupa Password</h2>
                         <button 
@@ -236,13 +236,13 @@ export default function LoginPage({ session, onLogin }) {
                             </svg>
                         </button>
                     </div>
-                    <div className="space-y-4 text-slate-600 text-sm leading-relaxed">
+                    <div className="space-y-4 text-primary text-sm leading-relaxed">
                         <p>
                             Untuk alasan keamanan, fitur penggantian password mandiri tidak tersedia pada sistem ini.
                         </p>
-                        <div className="rounded-2xl bg-amber-50 border border-amber-100 p-4">
-                            <p className="font-semibold text-amber-900 mb-1">Cara Reset Password:</p>
-                            <ul className="list-disc list-inside space-y-1 text-amber-800">
+                        <div className="rounded-2xl bg-[#EEDCC8]/80 border border-[#EEDCC8]/20 p-4">
+                            <p className="font-semibold text-secondary mb-1">Cara Reset Password:</p>
+                            <ul className="list-disc list-inside space-y-1 text-slate-700">
                                 <li><strong>Siswa:</strong> Silakan hubungi Wali Kelas Anda.</li>
                                 <li><strong>Guru:</strong> Silakan hubungi Administrator Sekolah.</li>
                             </ul>

@@ -175,6 +175,67 @@ export default function AdminBankSoalPage({ session, onLogout }) {
         }
     };
 
+    const downloadTemplateExcel = () => {
+        const headers = [
+            "nama_mapel", "isi_soal", "opsi_a", "opsi_b", "opsi_c", "opsi_d", "opsi_e",
+            "kunci_jawaban", "jenis_soal", "topik_materi", "level_kognitif"
+        ];
+
+        const exampleData = [
+            {
+                "nama_mapel": "Bahasa Indonesia (X)",
+                "isi_soal": "Siapakah penemu bola lampu?",
+                "opsi_a": "Albert Einstein",
+                "opsi_b": "Thomas Edison",
+                "opsi_c": "Nikola Tesla",
+                "opsi_d": "Isaac Newton",
+                "opsi_e": "Galileo Galilei",
+                "kunci_jawaban": "Thomas Edison",
+                "jenis_soal": "pilihan_ganda",
+                "topik_materi": "Sejarah Penemuan",
+                "level_kognitif": "C1"
+            },
+            {
+                "nama_mapel": "Bahasa Indonesia (X)",
+                "isi_soal": "1 + 1 = ?",
+                "opsi_a": "1",
+                "opsi_b": "2",
+                "opsi_c": "3",
+                "opsi_d": "4",
+                "opsi_e": "5",
+                "kunci_jawaban": "2",
+                "jenis_soal": "pilihan_ganda",
+                "topik_materi": "Matematika Dasar",
+                "level_kognitif": "C2"
+            },
+            {
+                "nama_mapel": "Bahasa Indonesia (X)",
+                "isi_soal": "Manakah dari berikut ini yang merupakan bahasa pemrograman?",
+                "opsi_a": "Python",
+                "opsi_b": "Kobra",
+                "opsi_c": "JavaScript",
+                "opsi_d": "HTML",
+                "opsi_e": "C++",
+                "kunci_jawaban": "Python, JavaScript, C++",
+                "jenis_soal": "pilihan_ganda_kompleks",
+                "topik_materi": "Informatika",
+                "level_kognitif": "C2"
+            }
+        ];
+
+        const worksheet = XLSX.utils.json_to_sheet(exampleData, { header: headers });
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Template Soal");
+
+        const wscols = [
+            {wch: 25}, {wch: 40}, {wch: 20}, {wch: 20}, {wch: 20}, {wch: 20}, {wch: 20},
+            {wch: 20}, {wch: 15}, {wch: 20}, {wch: 15},
+        ];
+        worksheet['!cols'] = wscols;
+
+        XLSX.writeFile(workbook, "Template_Import_Soal_Admin_SMAN.xlsx");
+    };
+
     const handleFileUpload = (e) => {
         const file = e.target.files[0];
         if (!file) return;
@@ -193,29 +254,57 @@ export default function AdminBankSoalPage({ session, onLogout }) {
                     return;
                 }
 
-                // Map data from excel
-                const mapelGroup = data.reduce((acc, row) => {
-                    const idMapel = row.id_mapel;
-                    if (!idMapel) return acc;
-                    if (!acc[idMapel]) acc[idMapel] = [];
-                    
-                    let opsi = [];
-                    if (row.opsi_a) opsi.push(row.opsi_a);
-                    if (row.opsi_b) opsi.push(row.opsi_b);
-                    if (row.opsi_c) opsi.push(row.opsi_c);
-                    if (row.opsi_d) opsi.push(row.opsi_d);
-                    if (row.opsi_e) opsi.push(row.opsi_e);
+                // Build a lookup map: nama_mapel (case-insensitive) -> id_mapel
+                const mapelLookup = {};
+                masterMapel.forEach(m => {
+                    const namaLengkap = `${m.nama_mapel} (${m.tingkat})`.toLowerCase();
+                    mapelLookup[namaLengkap] = m.id_mapel;
+                    mapelLookup[m.nama_mapel.toLowerCase()] = m.id_mapel;
+                });
 
-                    acc[idMapel].push({
-                        isi_soal: row.isi_soal,
+                // Map data from excel — support both nama_mapel and id_mapel columns
+                const mapelGroup = {};
+                const skippedRows = [];
+
+                data.forEach((row, idx) => {
+                    let resolvedId = null;
+
+                    // Prefer nama_mapel column
+                    if (row.nama_mapel) {
+                        const key = String(row.nama_mapel).trim().toLowerCase();
+                        resolvedId = mapelLookup[key] || null;
+                        if (!resolvedId) {
+                            skippedRows.push(`Baris ${idx + 2}: Mapel '${row.nama_mapel}' tidak ditemukan.`);
+                            return;
+                        }
+                    } else if (row.id_mapel) {
+                        // Fallback to id_mapel for backward compatibility
+                        resolvedId = parseInt(row.id_mapel);
+                    }
+
+                    if (!resolvedId) {
+                        skippedRows.push(`Baris ${idx + 2}: Kolom nama_mapel atau id_mapel kosong.`);
+                        return;
+                    }
+
+                    if (!mapelGroup[resolvedId]) mapelGroup[resolvedId] = [];
+
+                    let opsi = [];
+                    if (row.opsi_a) opsi.push(String(row.opsi_a));
+                    if (row.opsi_b) opsi.push(String(row.opsi_b));
+                    if (row.opsi_c) opsi.push(String(row.opsi_c));
+                    if (row.opsi_d) opsi.push(String(row.opsi_d));
+                    if (row.opsi_e) opsi.push(String(row.opsi_e));
+
+                    mapelGroup[resolvedId].push({
+                        isi_soal: String(row.isi_soal || ''),
                         jenis_soal: row.jenis_soal || 'pilihan_ganda',
-                        kunci_jawaban: row.kunci_jawaban,
+                        kunci_jawaban: String(row.kunci_jawaban || ''),
                         topik_materi: row.topik_materi || 'Umum',
                         level_kognitif: row.level_kognitif || 'C1',
                         opsi_jawaban: opsi
                     });
-                    return acc;
-                }, {});
+                });
 
                 for (const [idMapel, soalArray] of Object.entries(mapelGroup)) {
                     await apiFetch('/api/admin/bank-soal/bulk', session, {
@@ -227,7 +316,11 @@ export default function AdminBankSoalPage({ session, onLogout }) {
                     });
                 }
                 
-                alert('Berhasil mengimpor soal dari Excel!');
+                let msg = 'Berhasil mengimpor soal dari Excel!';
+                if (skippedRows.length > 0) {
+                    msg += '\n\nBaris yang dilewati:\n' + skippedRows.join('\n');
+                }
+                alert(msg);
                 loadData();
             } catch (err) {
                 console.error(err);
@@ -275,10 +368,10 @@ export default function AdminBankSoalPage({ session, onLogout }) {
     return (
         <DashboardLayout user={session?.user} title="Bank Soal (Shared Pool)" navigation={navigation} onLogout={onLogout}>
             <div className="space-y-6">
-                <section className="overflow-hidden rounded-[2.5rem] border border-[#8A2332]/30 bg-gradient-to-br from-[#8A2332] via-primary to-secondary px-8 py-10 shadow-lg backdrop-blur-xl flex flex-col sm:flex-row sm:items-center justify-between gap-8">
+                <section className="overflow-hidden rounded-2xl sm:rounded-[2.5rem] border border-[#8A2332]/30 bg-gradient-to-br from-[#8A2332] via-primary to-secondary px-4 py-6 sm:px-8 sm:py-10 shadow-lg backdrop-blur-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 sm:gap-8">
                     <div>
                         <p className="text-xs uppercase tracking-[0.45em] text-accent">Bank Soal</p>
-                        <h3 className="mt-4 max-w-2xl text-3xl font-semibold leading-tight text-[#EEDCC8] md:text-4xl">Manajemen Bank Soal</h3>
+                        <h3 className="mt-4 max-w-2xl text-xl sm:text-3xl font-semibold leading-tight text-[#EEDCC8] md:text-4xl">Manajemen Bank Soal</h3>
                         <p className="mt-4 max-w-2xl text-sm leading-7 text-accent md:text-base">Kolam soal bersama antar Admin dan Guru</p>
                     </div>
                     <div className="flex flex-wrap items-center gap-3">
@@ -293,6 +386,9 @@ export default function AdminBankSoalPage({ session, onLogout }) {
                         </button>
                         <button onClick={() => fileInputRef.current?.click()} className="px-6 py-3 bg-[#EEDCC8] hover:scale-105 text-primary rounded-full text-sm font-semibold transition-all shadow-md">
                             Import Excel
+                        </button>
+                        <button onClick={downloadTemplateExcel} className="px-6 py-3 bg-white/15 hover:bg-white/25 hover:scale-105 text-[#EEDCC8] rounded-full text-sm font-semibold transition-all shadow-md border border-white/20 backdrop-blur-sm">
+                            ↓ Unduh Template
                         </button>
                     </div>
                 </section>

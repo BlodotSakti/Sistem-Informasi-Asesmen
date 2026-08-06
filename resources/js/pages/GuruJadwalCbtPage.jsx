@@ -182,7 +182,7 @@ export default function GuruJadwalCbtPage({ session, onLogout }) {
         >
             <div className="mx-auto max-w-7xl space-y-6">
                 <section className="flex flex-col gap-6">
-                    <div className="rounded-[2.5rem] border border-[#8A2332]/30 bg-gradient-to-br from-[#8A2332] via-primary to-secondary p-8 sm:p-12 text-white shadow-xl relative overflow-hidden">
+                    <div className="rounded-2xl sm:rounded-[2.5rem] border border-[#8A2332]/30 bg-gradient-to-br from-[#8A2332] via-primary to-secondary p-4 sm:p-8 sm:p-12 text-white shadow-xl relative overflow-hidden">
                         <div className="absolute top-0 right-0 p-8 opacity-10">
                             <svg xmlns="http://www.w3.org/2000/svg" className="h-48 w-48" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -191,7 +191,7 @@ export default function GuruJadwalCbtPage({ session, onLogout }) {
                         <div className="relative z-10 flex flex-col xl:flex-row justify-between items-start xl:items-center gap-8">
                             <div className="flex-1">
                                 <p className="text-xs font-bold uppercase tracking-[0.4em] text-accent">Manajemen Jadwal Ujian</p>
-                                <h3 className="mt-3 text-3xl font-extrabold tracking-tight text-[#EEDCC8]">Jadwal CBT</h3>
+                                <h3 className="mt-3 text-2xl sm:text-3xl font-extrabold tracking-tight text-[#EEDCC8]">Jadwal CBT</h3>
                                 <p className="mt-2 max-w-xl text-base text-accent">Buat dan kelola sesi ujian (Computer Based Test) untuk siswa-siswi Anda di sini.</p>
                                 <div className="mt-8">
                                     <button onClick={() => setIsSesiModalOpen(true)} type="button" className="rounded-full border border-[#EEDCC8]/20 bg-white/10 px-6 py-3 text-sm font-semibold text-[#EEDCC8] shadow-md transition-all hover:bg-white/20 hover:scale-105 backdrop-blur-md whitespace-nowrap">
@@ -529,7 +529,7 @@ export default function GuruJadwalCbtPage({ session, onLogout }) {
                                     <div className="flex items-center justify-between mb-4">
                                         <h4 className="text-base font-semibold text-slate-900">Pilih Soal dari Bank Soal ({Object.keys(selectedSoalMap).length} Terpilih)</h4>
                                     </div>
-                                    <div className="max-h-64 overflow-y-auto border border-border rounded-xl">
+                                    <div className="max-h-64 overflow-y-auto overflow-x-auto border border-border rounded-xl">
                                         <table className="min-w-full text-left text-sm divide-y divide-slate-200">
                                             <thead className="bg-slate-50 sticky top-0">
                                                 <tr>

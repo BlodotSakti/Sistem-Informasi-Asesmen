@@ -27,12 +27,12 @@ export default function SiswaSessionsPage({ session, onLogout }) {
     return (
         <DashboardLayout title="Sesi Aktif" user={session?.user} navigation={siswaNavigation} onLogout={onLogout} profileHref="/siswa/profil">
             <div className="space-y-6">
-                <section className="overflow-hidden rounded-[2.5rem] border border-[#8A2332]/30 bg-gradient-to-br from-[#8A2332] via-primary to-secondary px-8 py-10 shadow-lg backdrop-blur-xl relative">
+                <section className="overflow-hidden rounded-2xl sm:rounded-[2.5rem] border border-[#8A2332]/30 bg-gradient-to-br from-[#8A2332] via-primary to-secondary px-4 py-6 sm:px-8 sm:py-10 shadow-lg backdrop-blur-xl relative">
                     <p className="text-xs uppercase tracking-[0.4em] text-accent font-bold">Sesi CBT</p>
-                    <h3 className="mt-2 text-3xl font-semibold text-[#EEDCC8]">Semua sesi yang sedang aktif</h3>
+                    <h3 className="mt-2 text-2xl sm:text-3xl font-semibold text-[#EEDCC8]">Semua sesi yang sedang aktif</h3>
                     <p className="mt-2 text-sm text-accent">Halaman ini khusus untuk melihat jadwal CBT yang bisa diakses siswa saat ini.</p>
 
-                    <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                    <div className="mt-6 grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
                         <StatCard label="Sesi Aktif" value={loading ? '...' : sessions.length} description="Jadwal yang tersedia" tone="blue" className="!bg-[#EEDCC8] !border-transparent" />
                         <StatCard label="Kelas Aktif" value={loading ? '...' : summary?.profile?.kelas_aktif?.nama_kelas || '-'} description="Kelas yang dipakai filter" tone="amber" className="!bg-[#EEDCC8] !border-transparent" />
                         <StatCard label="Mapel Aktif" value={loading ? '...' : (summary?.profile?.mata_pelajaran || []).length} description="Mapel terkait kelas" tone="slate" className="!bg-[#EEDCC8] !border-transparent" />

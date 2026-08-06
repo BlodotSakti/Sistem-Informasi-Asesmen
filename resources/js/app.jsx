@@ -69,7 +69,6 @@ function App() {
             '/admin/kelas-siswa',
             '/admin/penugasan-pembelajaran',
             '/admin/pemetaan-akademik',
-            '/admin/import-akun',
             '/admin/bank-soal',
             '/guru/dashboard',
             '/guru/jadwal-cbt',
@@ -170,7 +169,6 @@ function App() {
             '/admin/kelas-siswa': 'kelas-siswa',
             '/admin/penugasan-pembelajaran': 'penugasan-pembelajaran',
             '/admin/pemetaan-akademik': 'pemetaan-akademik',
-            '/admin/import-akun': 'import-akun',
         };
 
         if (pathname === '/admin/pemetaan-akademik') {
@@ -179,8 +177,8 @@ function App() {
         if (pathname === '/admin/dashboard') {
             return <AdminDashboard session={session} onLogout={onLogout} />;
         }
-        if (pathname === '/admin/pengguna' || pathname === '/admin/import-akun') {
-            return <AdminPenggunaPage session={session} onLogout={onLogout} mode={pathname === '/admin/import-akun' ? 'import-akun' : 'pengguna'} />;
+        if (pathname === '/admin/pengguna') {
+            return <AdminPenggunaPage session={session} onLogout={onLogout} mode="pengguna" />;
         }
         if (pathname === '/admin/tahun-ajaran') {
             return <AdminTahunAjaranPage session={session} onLogout={onLogout} />;

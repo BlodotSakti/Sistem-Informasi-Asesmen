@@ -361,28 +361,38 @@ class AdminController extends Controller
         $summary = ['created' => 0, 'updated' => 0, 'skipped' => 0, 'skipped_rows' => []];
 
         foreach ($rows as $index => $row) {
-            $idKelas = $this->normalizeInteger($row['id_kelas'] ?? null);
-            $idSiswa = $this->normalizeInteger($row['id_siswa'] ?? null);
+            $namaKelas = trim((string) ($row['nama_kelas'] ?? ''));
+            $namaSiswa = trim((string) ($row['nama_siswa'] ?? ''));
             $tahunAjaran = trim((string) ($row['tahun_ajaran'] ?? ''));
 
-            if (! $idKelas || ! $idSiswa) {
+            if ($namaKelas === '' || $namaSiswa === '') {
                 $summary['skipped']++;
                 $summary['skipped_rows'][] = [
                     'row' => $index + 2,
-                    'reason' => 'id_kelas atau id_siswa tidak valid.',
+                    'reason' => 'nama_kelas atau nama_siswa kosong.',
                 ];
 
                 continue;
             }
 
-            $kelas = Kelas::query()->find($idKelas);
-            $siswa = Siswa::query()->find($idSiswa);
+            $kelas = Kelas::query()->where('nama_kelas', $namaKelas)->first();
+            $siswa = Siswa::query()->where('nama_lengkap', $namaSiswa)->first();
 
-            if (! $kelas || ! $siswa) {
+            if (! $kelas) {
                 $summary['skipped']++;
                 $summary['skipped_rows'][] = [
                     'row' => $index + 2,
-                    'reason' => 'Kelas atau siswa tidak ditemukan.',
+                    'reason' => "Kelas '{$namaKelas}' tidak ditemukan di database.",
+                ];
+
+                continue;
+            }
+
+            if (! $siswa) {
+                $summary['skipped']++;
+                $summary['skipped_rows'][] = [
+                    'row' => $index + 2,
+                    'reason' => "Siswa '{$namaSiswa}' tidak ditemukan di database.",
                 ];
 
                 continue;
@@ -433,30 +443,62 @@ class AdminController extends Controller
         $summary = ['created' => 0, 'updated' => 0, 'skipped' => 0, 'skipped_rows' => []];
 
         foreach ($rows as $index => $row) {
-            $idKelas = $this->normalizeInteger($row['id_kelas'] ?? null);
-            $idMapel = $this->normalizeInteger($row['id_mapel'] ?? null);
-            $idGuru = $this->normalizeInteger($row['id_guru'] ?? null);
+            $namaKelas = trim((string) ($row['nama_kelas'] ?? ''));
+            $namaMapel = trim((string) ($row['nama_mapel'] ?? ''));
+            $namaGuru = trim((string) ($row['nama_guru'] ?? ''));
             $tahunAjaran = trim((string) ($row['tahun_ajaran'] ?? ''));
 
-            if (! $idKelas || ! $idMapel || ! $idGuru) {
+            if ($namaKelas === '' || $namaMapel === '' || $namaGuru === '') {
                 $summary['skipped']++;
                 $summary['skipped_rows'][] = [
                     'row' => $index + 2,
-                    'reason' => 'id_kelas, id_mapel, atau id_guru tidak valid.',
+                    'reason' => 'nama_kelas, nama_mapel, atau nama_guru kosong.',
                 ];
 
                 continue;
             }
 
-            $kelas = Kelas::query()->find($idKelas);
-            $mapel = MataPelajaran::query()->find($idMapel);
-            $guru = Guru::query()->find($idGuru);
+            $kelas = Kelas::query()->where('nama_kelas', $namaKelas)->first();
 
-            if (! $kelas || ! $mapel || ! $guru) {
+            // Match mapel by "nama_mapel (tingkat)" format or exact nama_mapel
+            $mapel = null;
+            if (preg_match('/^(.+?)\s*\((\w+)\)$/', $namaMapel, $matches)) {
+                $mapel = MataPelajaran::query()
+                    ->where('nama_mapel', trim($matches[1]))
+                    ->where('tingkat', trim($matches[2]))
+                    ->first();
+            }
+            if (! $mapel) {
+                $mapel = MataPelajaran::query()->where('nama_mapel', $namaMapel)->first();
+            }
+
+            $guru = Guru::query()->where('nama_lengkap', $namaGuru)->first();
+
+            if (! $kelas) {
                 $summary['skipped']++;
                 $summary['skipped_rows'][] = [
                     'row' => $index + 2,
-                    'reason' => 'Kelas, mapel, atau guru tidak ditemukan.',
+                    'reason' => "Kelas '{$namaKelas}' tidak ditemukan di database.",
+                ];
+
+                continue;
+            }
+
+            if (! $mapel) {
+                $summary['skipped']++;
+                $summary['skipped_rows'][] = [
+                    'row' => $index + 2,
+                    'reason' => "Mata Pelajaran '{$namaMapel}' tidak ditemukan di database.",
+                ];
+
+                continue;
+            }
+
+            if (! $guru) {
+                $summary['skipped']++;
+                $summary['skipped_rows'][] = [
+                    'row' => $index + 2,
+                    'reason' => "Guru '{$namaGuru}' tidak ditemukan di database.",
                 ];
 
                 continue;
@@ -497,13 +539,13 @@ class AdminController extends Controller
         $definitions = [
             'kelas-siswa' => [
                 'filename' => 'template-relasi-siswa-kelas',
-                'headers' => ['id_kelas', 'id_siswa', 'tahun_ajaran', 'is_aktif', 'tanggal_masuk', 'tanggal_keluar'],
-                'sample' => ['1', '1', '2026/2027', 'true', '2026-07-10', ''],
+                'headers' => ['nama_kelas', 'nama_siswa', 'tahun_ajaran', 'is_aktif', 'tanggal_masuk', 'tanggal_keluar'],
+                'sample' => ['XI IPA 1', 'Rani Putri', '2026/2027', 'true', '2026-07-10', ''],
             ],
             'penugasan-pembelajaran' => [
                 'filename' => 'template-penugasan-pembelajaran',
-                'headers' => ['id_kelas', 'id_mapel', 'id_guru', 'tahun_ajaran', 'is_aktif'],
-                'sample' => ['1', '1', '1', '2026/2027', 'true'],
+                'headers' => ['nama_kelas', 'nama_mapel', 'nama_guru', 'tahun_ajaran', 'is_aktif'],
+                'sample' => ['XI IPA 1', 'Bahasa Indonesia (X)', 'Andi Pratama', '2026/2027', 'true'],
             ],
         ];
 

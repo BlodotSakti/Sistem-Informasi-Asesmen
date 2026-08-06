@@ -45,7 +45,7 @@ export default function SiswaAppreciationPage({ session, onLogout }) {
         <DashboardLayout title="Apresiasi" user={session?.user} navigation={siswaNavigation} onLogout={onLogout} profileHref="/siswa/profil">
             <div className="space-y-8">
                 {/* Gamified Header Section */}
-                <section className="relative overflow-hidden rounded-[2.5rem] border border-[#8A2332]/30 bg-gradient-to-br from-[#8A2332] via-primary to-secondary px-6 py-10 shadow-lg backdrop-blur-xl lg:px-10">
+                <section className="relative overflow-hidden rounded-2xl sm:rounded-[2.5rem] border border-[#8A2332]/30 bg-gradient-to-br from-[#8A2332] via-primary to-secondary px-4 py-6 sm:px-6 sm:py-10 shadow-lg backdrop-blur-xl lg:px-10">
                     {/* Decorative Elements */}
                     <div className="absolute -top-24 -right-24 h-96 w-96 rounded-full bg-white/10 blur-3xl"></div>
                     <div className="absolute -bottom-24 -left-24 h-96 w-96 rounded-full bg-accent/10 blur-3xl"></div>
@@ -55,7 +55,7 @@ export default function SiswaAppreciationPage({ session, onLogout }) {
                             <div className="inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-1.5 backdrop-blur-md border border-[#EEDCC8]/20 mb-4">
                                 <span className="text-xs font-bold uppercase tracking-widest text-accent">Pencapaian & Prestasi</span>
                             </div>
-                            <h3 className="text-4xl font-black tracking-tight text-[#EEDCC8] sm:text-5xl drop-shadow-sm">Koleksi Lencana</h3>
+                            <h3 className="text-2xl sm:text-4xl font-black tracking-tight text-[#EEDCC8] sm:text-5xl drop-shadow-sm">Koleksi Lencana</h3>
                             <p className="mt-4 text-lg text-accent max-w-xl">
                                 Kumpulkan berbagai lencana pencapaian akademik, karakter, dan sportivitas dari guru. Banggakan kemajuan belajarmu!
                             </p>
@@ -75,7 +75,7 @@ export default function SiswaAppreciationPage({ session, onLogout }) {
                     </div>
                 </section>
 
-                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
                     <StatCard label="Total Lencana" value={loading ? '...' : summary?.cards?.apresiasi ?? 0} description="Badge pencapaian" tone="amber" />
                     <StatCard label="Catatan Privat" value={loading ? '...' : (summary?.highlight?.notes || []).length} description="Pesan khusus dari guru" tone="blue" />
                     <StatCard label="Skor Terbaru" value={loading ? '...' : summary?.highlight?.latest_score ?? 0} description="Dari ujian terakhir" tone="rose" />
@@ -86,7 +86,7 @@ export default function SiswaAppreciationPage({ session, onLogout }) {
 
                 <section className="grid gap-8 lg:grid-cols-[1.5fr_1fr]">
                     {/* Daftar Badge (Gamified Grid) */}
-                    <div className="rounded-[2.5rem] border border-border bg-white p-8 shadow-sm">
+                    <div className="rounded-2xl sm:rounded-[2.5rem] border border-border bg-white p-4 sm:p-8 shadow-sm">
                         <div className="flex items-center justify-between">
                             <div>
                                 <h3 className="text-2xl font-bold text-slate-900">Etalase Pencapaian</h3>
@@ -125,7 +125,7 @@ export default function SiswaAppreciationPage({ session, onLogout }) {
                     </div>
 
                     {/* Catatan Privat */}
-                    <div className="rounded-[2.5rem] border border-border bg-slate-50 p-8 shadow-sm flex flex-col">
+                    <div className="rounded-2xl sm:rounded-[2.5rem] border border-border bg-slate-50 p-4 sm:p-8 shadow-sm flex flex-col">
                         <div className="mb-6">
                             <h3 className="text-2xl font-bold text-slate-900">Pesan Khusus</h3>
                             <p className="mt-1 text-sm text-slate-500">Catatan privat dari guru untuk kemajuanmu.</p>

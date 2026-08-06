@@ -80,10 +80,10 @@ export default function SiswaCbtHistoryPage({ session, onLogout }) {
         <DashboardLayout title="Riwayat CBT" user={session?.user} navigation={siswaNavigation} onLogout={onLogout} profileHref="/siswa/profil">
             <div className="space-y-6">
                 {/* Stats */}
-                <section className="overflow-hidden rounded-[2.5rem] border border-[#8A2332]/30 bg-gradient-to-br from-[#8A2332] via-primary to-secondary px-8 py-10 shadow-lg backdrop-blur-xl relative">
+                <section className="overflow-hidden rounded-2xl sm:rounded-[2.5rem] border border-[#8A2332]/30 bg-gradient-to-br from-[#8A2332] via-primary to-secondary px-4 py-6 sm:px-8 sm:py-10 shadow-lg backdrop-blur-xl relative">
                     <p className="text-xs uppercase tracking-[0.4em] text-accent font-bold">Riwayat Ujian CBT</p>
-                    <h3 className="mt-2 text-3xl font-semibold text-[#EEDCC8]">Nilai CBT yang pernah dikerjakan</h3>
-                    <div className="mt-6 grid gap-4 md:grid-cols-3">
+                    <h3 className="mt-2 text-2xl sm:text-3xl font-semibold text-[#EEDCC8]">Nilai CBT yang pernah dikerjakan</h3>
+                    <div className="mt-6 grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3">
                         <StatCard label="Total CBT" value={loading ? '...' : stats.total} description="Ujian yang pernah dikerjakan" tone="blue" className="!bg-[#EEDCC8] !border-transparent" />
                         <StatCard label="Rata-Rata" value={loading ? '...' : `${stats.rataRata}%`} description="Persentase rata-rata skor" tone="amber" className="!bg-[#EEDCC8] !border-transparent" />
                         <StatCard label="Tertinggi" value={loading ? '...' : `${stats.tertinggi}%`} description="Persentase skor tertinggi" tone="slate" className="!bg-[#EEDCC8] !border-transparent" />

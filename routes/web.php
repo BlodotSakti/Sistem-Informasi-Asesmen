@@ -25,11 +25,10 @@ Route::view('/admin/kelas', 'app');
 Route::view('/admin/mata-pelajaran', 'app');
 Route::view('/admin/kelas-siswa', 'app');
 Route::view('/admin/penugasan-pembelajaran', 'app');
-Route::view('/admin/import-akun', 'app');
 Route::view('/admin/backup', 'app');
 Route::get('/admin/{path?}', function () {
     return view('app');
-})->where('path', 'dashboard|pengguna|tahun-ajaran|kelas|mata-pelajaran|kelas-siswa|penugasan-pembelajaran|import-akun|pemetaan-akademik|bank-soal|backup');
+})->where('path', 'dashboard|pengguna|tahun-ajaran|kelas|mata-pelajaran|kelas-siswa|penugasan-pembelajaran|pemetaan-akademik|bank-soal|backup');
 Route::get('/guru/{path?}', function () {
     return view('app');
 })->where('path', 'dashboard|jadwal-cbt|bank-soal|berita-acara|siswa|profil|arsip-diagnostik');

@@ -50,16 +50,16 @@ export default function SiswaDashboard({ session, onLogout }) {
     return (
         <DashboardLayout title="Dashboard Siswa" user={session?.user} navigation={siswaNavigation} onLogout={onLogout} profileHref="/siswa/profil">
             <div className="space-y-8">
-                <section className="overflow-hidden rounded-[2.5rem] border border-[#8A2332]/30 bg-gradient-to-br from-[#8A2332] via-primary to-secondary px-8 py-10 shadow-lg backdrop-blur-xl relative">
+                <section className="overflow-hidden rounded-2xl sm:rounded-[2.5rem] border border-[#8A2332]/30 bg-gradient-to-br from-[#8A2332] via-primary to-secondary px-4 py-6 sm:px-8 sm:py-10 shadow-lg backdrop-blur-xl relative">
                     <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10"></div>
                     <div className="absolute -top-24 -right-24 w-64 h-64 bg-accent/20 blur-[80px] rounded-full"></div>
                     <div className="flex flex-col gap-3 relative z-10">
                         <p className="text-xs font-bold uppercase tracking-[0.4em] text-accent">Ringkasan Akademik</p>
-                        <h3 className="text-4xl font-extrabold text-[#EEDCC8] tracking-tight">Halo, {session?.user?.nama_lengkap || 'Siswa'}! 👋</h3>
+                        <h3 className="text-2xl sm:text-4xl font-extrabold text-[#EEDCC8] tracking-tight">Halo, {session?.user?.nama_lengkap || 'Siswa'}! 👋</h3>
                         <p className="max-w-2xl text-base text-accent font-medium">Jelajahi perkembangan nilai, raih lebih banyak lencana, dan jadilah yang terbaik di setiap tantangan asesmen.</p>
                     </div>
 
-                    <div className="mt-10 grid gap-4 md:grid-cols-2 xl:grid-cols-4 relative z-10">
+                    <div className="mt-6 sm:mt-10 grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4 relative z-10">
                         <StatCard label="Rata-rata Nilai" value={loading ? '...' : cards.rata_rata ?? 0} description="Skor CBT semester ini" tone="blue" className="!bg-[#EEDCC8] !border-transparent" />
                         <StatCard label="Ujian Menunggu" value={loading ? '...' : cards.ujian_menunggu ?? 0} description="Misi CBT yang siap dikerjakan" tone="amber" className="!bg-[#EEDCC8] !border-transparent" />
                         <StatCard label="Asesmen Selesai" value={loading ? '...' : cards.tugas_aktif ?? 0} description="CBT yang telah ditaklukkan" tone="emerald" className="!bg-[#EEDCC8] !border-transparent" />
@@ -72,11 +72,11 @@ export default function SiswaDashboard({ session, onLogout }) {
                 <section className="grid gap-6 xl:grid-cols-3">
                     <div className="xl:col-span-2 space-y-6">
                         {/* Grafik Area */}
-                        <div className="rounded-[2.5rem] border border-border bg-white/60 p-8 backdrop-blur-xl shadow-sm flex flex-col">
+                        <div className="rounded-2xl sm:rounded-[2.5rem] border border-border bg-white/60 p-4 sm:p-8 backdrop-blur-xl shadow-sm flex flex-col">
                             <div className="flex items-center justify-between mb-6">
                                 <div>
                                     <p className="text-xs font-bold uppercase tracking-[0.3em] text-secondary">Grafik Performa</p>
-                                    <h3 className="mt-2 text-2xl font-extrabold text-primary tracking-tight">Tren Perkembangan Nilai</h3>
+                                    <h3 className="mt-2 text-lg sm:text-2xl font-extrabold text-primary tracking-tight">Tren Perkembangan Nilai</h3>
                                 </div>
                             </div>
                             <div className="h-72 w-full flex-grow rounded-3xl border border-border/50 bg-white p-5 shadow-inner">
@@ -126,9 +126,9 @@ export default function SiswaDashboard({ session, onLogout }) {
                         </div>
 
                         {/* Timeline Pembelajaran */}
-                        <div className="rounded-[2.5rem] border border-border bg-white/60 p-8 backdrop-blur-xl shadow-sm">
+                        <div className="rounded-2xl sm:rounded-[2.5rem] border border-border bg-white/60 p-4 sm:p-8 backdrop-blur-xl shadow-sm">
                             <p className="text-xs font-bold uppercase tracking-[0.3em] text-slate-500">Aktivitas</p>
-                            <h3 className="mt-2 text-2xl font-extrabold text-slate-900 tracking-tight">Timeline Pembelajaran</h3>
+                            <h3 className="mt-2 text-lg sm:text-2xl font-extrabold text-slate-900 tracking-tight">Timeline Pembelajaran</h3>
                             <div className="mt-6 space-y-6 relative before:absolute before:inset-0 before:ml-5 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-slate-200 before:to-transparent">
                                 {timelineData.length > 0 ? timelineData.map((item) => (
                                     <div key={item.id} className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
@@ -151,7 +151,7 @@ export default function SiswaDashboard({ session, onLogout }) {
 
                     <div className="flex flex-col gap-6">
                         {/* Bar Chart: Rata-rata per Mapel */}
-                        <div className="rounded-[2.5rem] border border-border bg-white/60 p-8 backdrop-blur-xl shadow-sm flex flex-col items-center">
+                        <div className="rounded-2xl sm:rounded-[2.5rem] border border-border bg-white/60 p-4 sm:p-8 backdrop-blur-xl shadow-sm flex flex-col items-center">
                             <div className="w-full text-left mb-4">
                                 <p className="text-xs font-bold uppercase tracking-[0.3em] text-secondary">Statistik Nilai</p>
                                 <h3 className="mt-2 text-xl font-extrabold text-accent">Rata-rata per Mata Pelajaran</h3>
@@ -175,14 +175,14 @@ export default function SiswaDashboard({ session, onLogout }) {
                         </div>
 
                         {/* Galeri Lencana */}
-                        <div className="rounded-[2.5rem] border border-border bg-gradient-to-b from-slate-950 to-slate-900 p-8 shadow-xl flex flex-col relative overflow-hidden">
+                        <div className="rounded-2xl sm:rounded-[2.5rem] border border-border bg-gradient-to-b from-slate-950 to-slate-900 p-4 sm:p-8 shadow-xl flex flex-col relative overflow-hidden">
                             <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/20 blur-[50px] rounded-full"></div>
                             <div className="relative z-10 w-full text-left mb-6">
                                 <p className="text-xs font-bold uppercase tracking-[0.3em] text-amber-400">Gamifikasi</p>
                                 <h3 className="mt-2 text-2xl font-extrabold text-white">Galeri Lencana</h3>
                                 <p className="text-sm text-slate-400 mt-1">Koleksi apresiasi spesial dari gurumu!</p>
                             </div>
-                            <div className="relative z-10 grid grid-cols-3 gap-3">
+                            <div className="relative z-10 grid grid-cols-2 sm:grid-cols-3 gap-3">
                                 {badgeData.length > 0 ? badgeData.map((badge) => {
                                     return (
                                         <div key={badge.id_apresiasi} className="group relative flex flex-col items-center">
