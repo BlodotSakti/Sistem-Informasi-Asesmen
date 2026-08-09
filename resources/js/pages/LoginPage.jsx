@@ -7,27 +7,6 @@ const heroPoints = [
     'Data tersimpan aman melalui token Laravel Sanctum.',
 ];
 
-const demoAccounts = [
-    {
-        role: 'Admin',
-        username: 'admin',
-        password: 'password',
-        description: 'Untuk operator sistem dan pengaturan data.',
-    },
-    {
-        role: 'Guru',
-        username: 'guru01',
-        password: 'password',
-        description: 'Untuk testing dashboard dan fitur guru.',
-    },
-    {
-        role: 'Siswa',
-        username: 'siswa01',
-        password: 'password',
-        description: 'Untuk testing akses siswa dan halaman belajar.',
-    },
-];
-
 export default function LoginPage({ session, onLogin }) {
     const [form, setForm] = useState({ username: '', password: '' });
     const [error, setError] = useState('');
@@ -57,14 +36,14 @@ export default function LoginPage({ session, onLogin }) {
 
     return (
         <>
-        <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(138,35,50,0.85),_rgba(30,58,95,0.15)_45%,_rgba(241,245,249,1)_70%)] px-4 py-10 text-slate-900 sm:px-6 lg:px-8">
+        <div className="min-h-screen bg-slate-50 px-4 py-10 text-slate-900 sm:px-6 lg:px-8">
             <div className="mx-auto flex min-h-[calc(100vh-5rem)] w-full max-w-6xl items-center justify-center">
-                <div className="grid w-full overflow-hidden rounded-[2rem] border border-border bg-white shadow-[0_30px_80px_rgba(15,23,42,0.18)] lg:grid-cols-[1.1fr_0.9fr]">
-                    <div className="hidden flex-col justify-between bg-secondary p-10 text-slate-100 lg:flex">
+                <div className="grid w-full overflow-hidden rounded-[2rem] border border-border bg-white shadow-[0_30px_80px_rgba(15,23,42,0.18)] grid-cols-1 lg:grid-cols-[1.1fr_0.9fr]">
+                    <div className="flex flex-col justify-between bg-secondary p-8 sm:p-10 text-slate-100">
                         <div>
                             <BrandMark />
-                            <div className="mt-10 max-w-md space-y-4">
-                                <h2 className="text-4xl font-semibold leading-tight text-accent">
+                            <div className="mt-8 sm:mt-10 max-w-md space-y-4">
+                                <h2 className="text-3xl sm:text-4xl font-semibold leading-tight text-accent">
                                     Sistem Informasi Asesmen yang sederhana, cepat, dan terarah.
                                 </h2>
                                 <p className="text-sm leading-6 text-[#EEDCC8]">
@@ -74,7 +53,7 @@ export default function LoginPage({ session, onLogin }) {
                             </div>
                         </div>
 
-                        <ul className="space-y-3 text-sm text-slate-300">
+                        <ul className="mt-10 lg:mt-0 space-y-3 text-sm text-slate-300">
                             {heroPoints.map((point) => (
                                 <li key={point} className="flex items-start gap-3">
                                     <span className="mt-1 h-2.5 w-2.5 rounded-full bg-accent" />
@@ -84,13 +63,9 @@ export default function LoginPage({ session, onLogin }) {
                         </ul>
                     </div>
 
-                    <div className="flex items-center justify-center bg-primary px-6 py-12 sm:px-10 lg:px-12">
+                    <div className="flex items-center justify-center bg-primary px-6 py-10 sm:px-10 lg:px-12">
                         <div className="w-full max-w-md">
-                            <div className="mb-8 lg:hidden">
-                                <BrandMark />
-                            </div>
-
-                            <div className="rounded-[1.75rem] border border-border bg-white p-8 shadow-sm">
+                            <div className="rounded-[1.75rem] border border-border bg-white p-6 sm:p-8 shadow-sm">
                                 <p className="text-sm font-medium uppercase tracking-[0.35em] text-slate-500">
                                     Halaman Autentikasi
                                 </p>
@@ -101,45 +76,7 @@ export default function LoginPage({ session, onLogin }) {
                                     Gunakan username dan password sekolah untuk mengakses dashboard sesuai role Anda.
                                 </p>
 
-                                <div className="mt-6 rounded-3xl border border-border bg-slate-50 p-4">
-                                    <div className="flex items-center justify-between gap-3">
-                                        <div>
-                                            <p className="text-sm font-semibold text-slate-900">Akun testing</p>
-                                            <p className="mt-1 text-xs leading-5 text-slate-500">
-                                                Klik salah satu kartu untuk mengisi form login otomatis.
-                                            </p>
-                                        </div>
-                                        <span className="rounded-full bg-primary px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.28em] text-white">
-                                            Demo
-                                        </span>
-                                    </div>
-
-                                    <div className="mt-4 grid gap-3">
-                                        {demoAccounts.map((account) => (
-                                            <button
-                                                key={account.role}
-                                                type="button"
-                                                onClick={() =>
-                                                    setForm({
-                                                        username: account.username,
-                                                        password: account.password,
-                                                    })
-                                                }
-                                                className="rounded-2xl border border-border bg-white p-4 text-left transition hover:border-slate-400 hover:bg-slate-50"
-                                            >
-                                                <div className="flex items-center justify-between gap-3">
-                                                    <div>
-                                                        <p className="text-sm font-semibold text-slate-900">{account.role}</p>
-                                                        <p className="mt-1 text-xs text-slate-500">{account.description}</p>
-                                                    </div>
-                                                    <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700">
-                                                        {account.username}
-                                                    </span>
-                                                </div>
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
+                                
 
                                 <form onSubmit={handleSubmit} className="mt-8 space-y-5">
                                     <label className="block">
