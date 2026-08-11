@@ -51,6 +51,7 @@ export default function SiswaSessionsPage({ session, onLogout }) {
                         <table className="min-w-full divide-y divide-slate-200 text-left text-sm">
                             <thead className="border-b border-border bg-slate-50 text-xs uppercase tracking-[0.2em] text-slate-500">
                                 <tr>
+                                    <th className="px-4 py-3 font-semibold text-center w-12">No.</th>
                                     <th className="px-4 py-3 font-semibold">Mata Pelajaran</th>
                                     <th className="px-4 py-3 font-semibold">Kelas</th>
                                     <th className="px-4 py-3 font-semibold">Jenis</th>
@@ -61,7 +62,7 @@ export default function SiswaSessionsPage({ session, onLogout }) {
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100 bg-white">
-                                {filteredSessions.map((item) => {
+                                {filteredSessions.map((item, index) => {
                                     const sudahDikerjakan = !!item.sudah_dikerjakan;
                                     const bolehUlang = !!item.boleh_ulang;
                                     const isExpired = item.waktu_selesai && new Date() > new Date(item.waktu_selesai);
@@ -70,6 +71,7 @@ export default function SiswaSessionsPage({ session, onLogout }) {
                                     
                                     return (
                                     <tr key={item.id_sesi} className={`align-top transition-colors ${isActiveRow ? 'bg-blue-50/80 hover:bg-blue-50/100' : 'hover:bg-slate-50/70'}`}>
+                                        <td className="px-4 py-3 font-semibold text-slate-500 text-center">{index + 1}</td>
                                         <td className="px-4 py-3 font-semibold text-slate-900">{item.mata_pelajaran?.nama_lengkap || item.mata_pelajaran?.nama_mapel || item.mataPelajaran?.nama_lengkap || item.mataPelajaran?.nama_mapel || '-'}</td>
                                         <td className="px-4 py-3 text-slate-600">{item.kelas?.nama_kelas || '-'}</td>
                                         <td className="px-4 py-3 text-slate-600">{item.tipe_soal || '-'} • {item.jenis_asesmen || '-'}</td>
@@ -85,7 +87,7 @@ export default function SiswaSessionsPage({ session, onLogout }) {
                                                     Selesai
                                                 </span>
                                             ) : isExpired ? (
-                                                <span className="inline-flex items-center rounded-full bg-rose-50 px-3 py-1 text-xs font-semibold text-rose-700">
+                                                <span className="inline-flex items-center rounded-full bg-rose-50 px-3 py-1 text-xs font-semibold text-rose-700 text-center">
                                                     Waktu Habis
                                                 </span>
                                             ) : isBelumMulai ? (
@@ -125,7 +127,7 @@ export default function SiswaSessionsPage({ session, onLogout }) {
                                 })}
                                 {!loading && filteredSessions.length === 0 ? (
                                     <tr>
-                                        <td colSpan="7" className="px-4 py-4 text-center text-sm text-slate-500">Belum ada sesi aktif untuk kelas ini.</td>
+                                        <td colSpan="8" className="px-4 py-4 text-center text-sm text-slate-500">Belum ada sesi aktif untuk kelas ini.</td>
                                     </tr>
                                 ) : null}
                             </tbody>

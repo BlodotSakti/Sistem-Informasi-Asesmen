@@ -102,31 +102,33 @@ export default function SiswaCbtHistoryPage({ session, onLogout }) {
                         <table className="min-w-full divide-y divide-slate-200 text-left text-sm">
                             <thead className="border-b border-border bg-slate-50 text-xs uppercase tracking-[0.2em] text-slate-500">
                                 <tr>
+                                    <th className="px-4 py-3 font-semibold text-center w-12">No.</th>
                                     <th className="px-4 py-3 font-semibold">Mata Pelajaran</th>
                                     <th className="px-4 py-3 font-semibold">Kelas</th>
                                     <th className="px-4 py-3 font-semibold">Jenis</th>
                                     <th className="px-4 py-3 font-semibold">Soal</th>
                                     <th className="px-4 py-3 font-semibold">Benar</th>
-                                    <th className="px-4 py-3 font-semibold">Skor</th>
-                                    <th className="px-4 py-3 font-semibold text-right">Aksi</th>
+                                    <th className="px-4 py-3 font-semibold text-center">Skor</th>
+                                    <th className="px-4 py-3 font-semibold text-center">Aksi</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100 bg-white">
-                                {filteredHistory.map((item) => {
+                                {filteredHistory.map((item, index) => {
                                     const persen = item.total_bobot > 0 ? Number(((item.total_skor / item.total_bobot) * 100).toFixed(2)) : 0;
                                     return (
                                         <tr key={item.id_sesi} className="align-top hover:bg-slate-50/70">
+                                            <td className="px-4 py-3 font-semibold text-slate-500 text-center">{index + 1}</td>
                                             <td className="px-4 py-3 font-semibold text-slate-900">{item.mata_pelajaran || '-'}</td>
                                             <td className="px-4 py-3 text-slate-600">{item.kelas || '-'}</td>
                                             <td className="px-4 py-3 text-slate-600 capitalize">{item.jenis_asesmen}</td>
                                             <td className="px-4 py-3 text-slate-600">{item.jumlah_dijawab}/{item.jumlah_soal}</td>
                                             <td className="px-4 py-3 text-slate-600">{item.jumlah_benar}</td>
-                                            <td className="px-4 py-3">
+                                            <td className="px-4 py-3 text-center">
                                                 <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-bold ${persen >= 70 ? 'bg-emerald-100 text-emerald-700' : persen >= 50 ? 'bg-amber-100 text-amber-700' : 'bg-rose-100 text-rose-700'}`}>
                                                     {Number(item.total_skor).toFixed(2)}/{item.total_bobot} ({persen}%)
                                                 </span>
                                             </td>
-                                            <td className="px-4 py-3 text-right">
+                                            <td className="px-4 py-3 text-center">
                                                 <div className="flex items-center justify-end gap-2">
                                                     {item.has_analisis && <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary">🤖 AI</span>}
                                                     <button onClick={() => openReview(item.id_sesi)} className="rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-white transition hover:bg-primary/85">
@@ -139,7 +141,7 @@ export default function SiswaCbtHistoryPage({ session, onLogout }) {
                                 })}
                                 {!loading && filteredHistory.length === 0 && (
                                     <tr>
-                                        <td colSpan="7" className="px-4 py-8 text-center text-sm text-slate-500">Belum ada riwayat CBT.</td>
+                                        <td colSpan="8" className="px-4 py-8 text-center text-sm text-slate-500">Belum ada riwayat CBT.</td>
                                     </tr>
                                 )}
                             </tbody>

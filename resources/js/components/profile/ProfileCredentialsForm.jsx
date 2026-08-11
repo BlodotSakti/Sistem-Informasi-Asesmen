@@ -66,9 +66,16 @@ export default function ProfileCredentialsForm({ session }) {
     };
 
     return (
-        <form onSubmit={handleSubmit} className="rounded-3xl border border-border bg-white p-6 shadow-sm">
-            <p className="text-sm font-medium uppercase tracking-[0.3em] text-slate-500">Pengaturan Akun</p>
-            <h3 className="mt-2 text-xl font-semibold text-slate-900">Ubah Kredensial Login</h3>
+        <form onSubmit={handleSubmit} className="rounded-3xl border border-slate-200/80 bg-white p-6 sm:p-8 shadow-sm hover:shadow-md transition-shadow duration-300">
+            <div className="flex items-center gap-4 mb-6">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-amber-50 text-amber-600 shadow-inner">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+                </div>
+                <div>
+                    <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">Pengaturan Akun</p>
+                    <h3 className="mt-1 text-lg sm:text-xl font-extrabold text-slate-800 tracking-tight">Ubah Kredensial Login</h3>
+                </div>
+            </div>
 
             {error && <div className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div>}
             {success && <div className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{success}</div>}
@@ -80,7 +87,7 @@ export default function ProfileCredentialsForm({ session }) {
                         required
                         value={form.username}
                         onChange={(event) => setForm((current) => ({ ...current, username: event.target.value }))}
-                        className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-slate-900"
+                        className="w-full rounded-2xl border border-slate-200 bg-slate-50/50 px-5 py-3.5 text-slate-800 outline-none transition-all focus:border-primary focus:bg-white focus:ring-4 focus:ring-primary/10 placeholder:text-slate-400"
                         placeholder="Masukkan username login"
                     />
                 </label>
@@ -94,7 +101,7 @@ export default function ProfileCredentialsForm({ session }) {
                                 type={showCurrentPassword ? 'text' : 'password'}
                                 value={form.current_password}
                                 onChange={(event) => setForm((current) => ({ ...current, current_password: event.target.value }))}
-                                className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 pr-12 outline-none transition focus:border-slate-900"
+                                className="w-full rounded-2xl border border-slate-200 bg-slate-50/50 px-5 py-3.5 pr-12 text-slate-800 outline-none transition-all focus:border-primary focus:bg-white focus:ring-4 focus:ring-primary/10 placeholder:text-slate-400"
                                 placeholder="Masukkan password lama Anda"
                                 required={form.password.length > 0}
                             />
@@ -118,7 +125,7 @@ export default function ProfileCredentialsForm({ session }) {
                             type={showPassword ? 'text' : 'password'}
                             value={form.password}
                             onChange={(event) => setForm((current) => ({ ...current, password: event.target.value }))}
-                            className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 pr-12 outline-none transition focus:border-slate-900"
+                            className="w-full rounded-2xl border border-slate-200 bg-slate-50/50 px-5 py-3.5 pr-12 text-slate-800 outline-none transition-all focus:border-primary focus:bg-white focus:ring-4 focus:ring-primary/10 placeholder:text-slate-400"
                             placeholder="Kosongkan jika tidak ingin mengubah password"
                             minLength={8}
                         />
@@ -142,7 +149,7 @@ export default function ProfileCredentialsForm({ session }) {
                                 type={showConfirmPassword ? 'text' : 'password'}
                                 value={form.password_confirmation}
                                 onChange={(event) => setForm((current) => ({ ...current, password_confirmation: event.target.value }))}
-                                className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 pr-12 outline-none transition focus:border-slate-900"
+                                className="w-full rounded-2xl border border-slate-200 bg-slate-50/50 px-5 py-3.5 pr-12 text-slate-800 outline-none transition-all focus:border-primary focus:bg-white focus:ring-4 focus:ring-primary/10 placeholder:text-slate-400"
                                 placeholder="Ulangi password baru Anda"
                                 required={form.password.length > 0}
                                 minLength={8}

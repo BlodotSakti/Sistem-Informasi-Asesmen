@@ -30,29 +30,33 @@ export default function GuruProfilePage({ session, onLogout }) {
                     </div>
                 </section>
 
-                <section className="grid gap-4 md:grid-cols-2">
-                    <StatCard label="Penugasan Kelas" value={assignments.length} description="Kelas yang diampu saat ini" tone="blue" className="border-border bg-white p-6 shadow-sm !border-transparent" />
-                    <StatCard label="Role Sistem" value="Guru" description="Hak akses aplikasi" tone="slate" className="border-border bg-white p-6 shadow-sm !border-transparent" />
-                </section>
+                
 
                 <section className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
                     <div className="space-y-6">
-                        <div className="rounded-3xl border border-border bg-white p-6 shadow-sm">
-                            <p className="text-sm font-medium uppercase tracking-[0.3em] text-slate-500">Identitas Pribadi</p>
-                            <h3 className="mt-2 text-xl font-semibold text-slate-900">Ringkasan data utama</h3>
+                        <div className="rounded-3xl border border-slate-200/80 bg-white p-6 sm:p-8 shadow-sm hover:shadow-md transition-shadow duration-300">
+                            <div className="flex items-center gap-4 mb-8">
+                                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 shadow-inner">
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+                                </div>
+                                <div>
+                                    <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">Identitas Pribadi</p>
+                                    <h3 className="mt-1 text-lg sm:text-xl font-extrabold text-slate-800 tracking-tight">Ringkasan Data Utama</h3>
+                                </div>
+                            </div>
 
-                            <div className="mt-6 space-y-3">
-                                <div className="rounded-2xl bg-slate-50 px-4 py-3">
-                                    <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Nama Lengkap</p>
-                                    <p className="mt-1 font-semibold text-slate-900">{profile.nama_lengkap || session?.user?.nama_lengkap || '-'}</p>
+                            <div className="space-y-4">
+                                <div className="rounded-2xl border border-slate-100 bg-slate-50/50 px-5 py-4 transition-colors hover:bg-slate-50">
+                                    <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">Nama Lengkap</p>
+                                    <p className="text-base font-semibold text-slate-800">{profile.nama_lengkap || session?.user?.nama_lengkap || '-'}</p>
                                 </div>
-                                <div className="rounded-2xl bg-slate-50 px-4 py-3">
-                                    <p className="text-xs uppercase tracking-[0.24em] text-slate-500">NIP</p>
-                                    <p className="mt-1 font-semibold text-slate-900">{profile.nip || '-'}</p>
+                                <div className="rounded-2xl border border-slate-100 bg-slate-50/50 px-5 py-4 transition-colors hover:bg-slate-50">
+                                    <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">NIP</p>
+                                    <p className="text-base font-semibold text-slate-800">{profile.nip || '-'}</p>
                                 </div>
-                                <div className="rounded-2xl bg-slate-50 px-4 py-3">
-                                    <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Username Login</p>
-                                    <p className="mt-1 font-semibold text-slate-900">{session?.user?.username || '-'}</p>
+                                <div className="rounded-2xl border border-slate-100 bg-slate-50/50 px-5 py-4 transition-colors hover:bg-slate-50">
+                                    <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">Username Login</p>
+                                    <p className="text-base font-semibold text-slate-800">{session?.user?.username || '-'}</p>
                                 </div>
                             </div>
                         </div>
@@ -61,30 +65,37 @@ export default function GuruProfilePage({ session, onLogout }) {
                     </div>
 
                     <div className="space-y-6">
-                        <div className="rounded-3xl border border-border bg-white p-6 shadow-sm">
-                            <p className="text-sm font-medium uppercase tracking-[0.3em] text-slate-500">Daftar Penugasan</p>
-                            <h3 className="mt-2 text-xl font-semibold text-slate-900">Kelas & Mata Pelajaran Diampu</h3>
+                        <div className="rounded-3xl border border-slate-200/80 bg-white p-6 sm:p-8 shadow-sm hover:shadow-md transition-shadow duration-300">
+                            <div className="flex items-center gap-4 mb-8">
+                                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600 shadow-inner">
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" /></svg>
+                                </div>
+                                <div>
+                                    <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">Daftar Penugasan</p>
+                                    <h3 className="mt-1 text-lg sm:text-xl font-extrabold text-slate-800 tracking-tight">Kelas & Mata Pelajaran</h3>
+                                </div>
+                            </div>
 
-                            <div className="mt-6 overflow-x-auto rounded-3xl border border-border">
-                                <table className="min-w-full divide-y divide-slate-200 text-left text-sm">
-                                    <thead className="border-b border-border bg-slate-50 text-xs uppercase tracking-[0.2em] text-slate-500">
+                            <div className="overflow-hidden rounded-2xl border border-slate-200/60 bg-white shadow-sm">
+                                <table className="min-w-full divide-y divide-slate-100 text-left text-sm">
+                                    <thead className="bg-slate-50/80 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">
                                         <tr>
-                                            <th className="px-4 py-3 font-semibold">Kelas</th>
-                                            <th className="px-4 py-3 font-semibold">Mata Pelajaran</th>
-                                            <th className="px-4 py-3 font-semibold">Tahun Ajaran</th>
+                                            <th className="px-5 py-4">Kelas</th>
+                                            <th className="px-5 py-4">Mata Pelajaran</th>
+                                            <th className="px-5 py-4">Tahun Ajaran</th>
                                         </tr>
                                     </thead>
-                                    <tbody className="divide-y divide-slate-100 bg-white">
+                                    <tbody className="divide-y divide-slate-50 bg-white">
                                         {assignments.map((item) => (
-                                            <tr key={item.id_penugasan_pembelajaran} className="align-top hover:bg-slate-50/70">
-                                                <td className="px-4 py-3 font-semibold text-slate-900">{item.kelas?.nama_kelas || '-'}</td>
-                                                <td className="px-4 py-3 text-slate-600">{item.mata_pelajaran?.nama_mapel || '-'}</td>
-                                                <td className="px-4 py-3 text-slate-600">{item.tahun_ajaran || '-'}</td>
+                                            <tr key={item.id_penugasan_pembelajaran} className="transition-colors hover:bg-slate-50/50">
+                                                <td className="px-5 py-4 font-semibold text-slate-800">{item.kelas?.nama_kelas || '-'}</td>
+                                                <td className="px-5 py-4 text-slate-600 font-medium">{item.mata_pelajaran?.nama_mapel || '-'}</td>
+                                                <td className="px-5 py-4 text-slate-500">{item.tahun_ajaran || '-'}</td>
                                             </tr>
                                         ))}
                                         {assignments.length === 0 ? (
                                             <tr>
-                                                <td colSpan="3" className="px-4 py-4 text-sm text-slate-500 text-center">Belum ada penugasan untuk guru ini.</td>
+                                                <td colSpan="3" className="px-5 py-8 text-sm text-slate-400 text-center italic">Belum ada penugasan kelas.</td>
                                             </tr>
                                         ) : null}
                                     </tbody>
