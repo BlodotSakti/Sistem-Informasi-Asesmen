@@ -35,7 +35,7 @@ export default function GuruArsipDiagnostikPage({ session, onLogout }) {
         const timer = setTimeout(() => {
             setCurrentPage(1);
             fetchDiagnostics(1, searchQuery);
-        }, 500); // 500ms debounce
+        }, 300); // 300ms debounce untuk rasa pencarian lebih instan
 
         return () => clearTimeout(timer);
     }, [searchQuery, fetchDiagnostics]);
@@ -87,18 +87,19 @@ export default function GuruArsipDiagnostikPage({ session, onLogout }) {
                         <table className="min-w-full divide-y divide-slate-200 text-left text-sm">
                             <thead className="bg-slate-50/50">
                                 <tr>
+                                    <th className="px-6 py-4 font-semibold text-slate-500 w-16 text-center">No</th>
                                     <th className="px-6 py-4 font-semibold text-slate-500">Nama Siswa</th>
                                     <th className="px-6 py-4 font-semibold text-slate-500">Kelas</th>
                                     <th className="px-6 py-4 font-semibold text-slate-500">Mata Pelajaran</th>
-                                    <th className="px-6 py-4 font-semibold text-slate-500">Skor</th>
+                                    <th className="px-6 py-4 font-semibold text-slate-500 text-center">Skor</th>
                                     <th className="px-6 py-4 font-semibold text-slate-500">Tanggal Generate</th>
-                                    <th className="px-6 py-4 font-semibold text-slate-500 text-right">Aksi</th>
+                                    <th className="px-6 py-4 font-semibold text-slate-500 text-center">Aksi</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100 bg-white">
                                 {loading && diagnostics.data.length === 0 ? (
                                     <tr>
-                                        <td colSpan="6" className="px-6 py-12 text-center text-slate-500">
+                                        <td colSpan="7" className="px-6 py-12 text-center text-slate-500">
                                             <div className="flex justify-center mb-4">
                                                 <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
                                             </div>
@@ -107,13 +108,16 @@ export default function GuruArsipDiagnostikPage({ session, onLogout }) {
                                     </tr>
                                 ) : diagnostics.data.length === 0 ? (
                                     <tr>
-                                        <td colSpan="6" className="px-6 py-12 text-center text-slate-500">
+                                        <td colSpan="7" className="px-6 py-12 text-center text-slate-500">
                                             {searchQuery ? 'Tidak ditemukan laporan untuk nama siswa tersebut.' : 'Belum ada arsip laporan diagnostik.'}
                                         </td>
                                     </tr>
                                 ) : (
-                                    diagnostics.data.map((item) => (
+                                    diagnostics.data.map((item, index) => (
                                         <tr key={item.id_analisis} className="hover:bg-slate-50 transition-colors">
+                                            <td className="px-6 py-4 text-center text-sm font-medium text-slate-500">
+                                                {((diagnostics.current_page || 1) - 1) * 15 + index + 1}
+                                            </td>
                                             <td className="px-6 py-4 font-semibold text-slate-900">
                                                 {item.siswa?.nama_lengkap || 'Tidak diketahui'}
                                                 <div className="text-xs font-normal text-slate-500 mt-0.5">{item.siswa?.nisn}</div>
@@ -124,7 +128,7 @@ export default function GuruArsipDiagnostikPage({ session, onLogout }) {
                                             <td className="px-6 py-4 text-slate-600 font-medium">
                                                 {item.sesi_asesmen?.mata_pelajaran?.nama_mapel || '-'}
                                             </td>
-                                            <td className="px-6 py-4">
+                                            <td className="px-6 py-4 text-center">
                                                 <span className={`inline-flex rounded-lg px-2.5 py-1 text-xs font-black tracking-wide ${item.skor_total >= 80 ? 'bg-emerald-100 text-emerald-700' : item.skor_total >= 60 ? 'bg-amber-100 text-amber-700' : 'bg-rose-100 text-rose-700'}`}>
                                                     {item.skor_total} Pts
                                                 </span>
@@ -132,7 +136,7 @@ export default function GuruArsipDiagnostikPage({ session, onLogout }) {
                                             <td className="px-6 py-4 text-slate-500 text-xs">
                                                 {formatDateTimeLabel(item.tanggal_generate)}
                                             </td>
-                                            <td className="px-6 py-4 text-right">
+                                            <td className="px-6 py-4 text-center">
                                                 <button 
                                                     onClick={() => window.location.href = `/guru/laporan-diagnostik/${item.id_analisis}`}
                                                     className="inline-flex items-center gap-1.5 rounded-xl bg-primary/5 px-3 py-2 text-xs font-bold text-primary transition-colors hover:bg-primary/10"

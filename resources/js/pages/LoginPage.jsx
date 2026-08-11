@@ -77,7 +77,6 @@ export default function LoginPage({ session, onLogin }) {
                                 </p>
 
                                 
-
                                 <form onSubmit={handleSubmit} className="mt-8 space-y-5">
                                     <label className="block">
                                         <span className="mb-2 block text-sm font-medium text-slate-700">Username (NISN/NIP)</span>

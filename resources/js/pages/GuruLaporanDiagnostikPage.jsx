@@ -78,6 +78,15 @@ export default function GuruLaporanDiagnostikPage({ session, onLogout, idAnalisi
         return 'from-rose-400 to-red-500';
     };
 
+    const handlePrint = () => {
+        const originalTitle = document.title;
+        document.title = `Evaluasi Diagnostik - ${laporan?.siswa?.nama_lengkap || 'Siswa'}`;
+        window.print();
+        setTimeout(() => {
+            document.title = originalTitle;
+        }, 1000);
+    };
+
     if (loading) {
         return (
             <DashboardLayout title="Laporan Diagnostik AI" user={session?.user} navigation={guruNavigation} onLogout={onLogout} profileHref="/guru/profil">
@@ -109,23 +118,23 @@ export default function GuruLaporanDiagnostikPage({ session, onLogout, idAnalisi
                 {/* Header Action */}
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div>
-                        <button onClick={() => window.location.href = '/guru/dashboard'} className="flex items-center gap-2 text-sm font-medium text-slate-500 hover:text-slate-900 transition mb-2">
+                        <button onClick={() => window.location.href = '/guru/dashboard'} className="flex items-center gap-2 text-sm font-medium text-slate-500 hover:text-slate-900 transition mb-2 print:hidden">
                             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
                             Kembali
                         </button>
                         <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">Evaluasi Diagnostik</h2>
                         <p className="text-slate-500 mt-1">Laporan komprehensif didukung oleh analitik AI.</p>
                     </div>
-                    <button onClick={() => window.print()} className="flex w-fit items-center gap-2 rounded-xl bg-white border border-border px-4 py-2 text-sm font-bold text-slate-700 shadow-sm transition hover:bg-slate-50 hover:border-slate-300">
+                    <button onClick={handlePrint} className="flex w-fit items-center gap-2 rounded-xl bg-white border border-border px-4 py-2 text-sm font-bold text-slate-700 shadow-sm transition hover:bg-slate-50 hover:border-slate-300 print:hidden">
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg>
                         Cetak Laporan
                     </button>
                 </div>
 
-                <div className="grid gap-6 lg:grid-cols-3">
+                <div className="grid gap-6 lg:grid-cols-3 print:block print:space-y-6">
                     {/* Kolom Kiri: Profil & Skor */}
                     <div className="space-y-6 lg:col-span-1">
-                        <div className="rounded-3xl border border-border bg-white p-6 shadow-sm relative overflow-hidden">
+                        <div className="rounded-3xl border border-border bg-white p-6 shadow-sm relative overflow-hidden print:break-inside-avoid print:shadow-none print:border-slate-300">
                             <div className="absolute top-0 right-0 p-4 opacity-10 pointer-events-none">
                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-24 w-24" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
                             </div>
@@ -151,7 +160,7 @@ export default function GuruLaporanDiagnostikPage({ session, onLogout, idAnalisi
                             </div>
                         </div>
 
-                        <div className="rounded-3xl border border-border bg-white p-6 shadow-sm text-center">
+                        <div className="rounded-3xl border border-border bg-white p-6 shadow-sm text-center print:break-inside-avoid print:shadow-none print:border-slate-300 print:mt-6">
                             <h3 className="text-sm font-bold uppercase tracking-widest text-slate-500 mb-2">Skor Akhir</h3>
                             <div className="relative inline-flex items-center justify-center p-6">
                                 <div className={`absolute inset-0 bg-gradient-to-tr ${getScoreGradient(laporan.skor_total)} opacity-20 blur-xl rounded-full`}></div>
@@ -164,9 +173,9 @@ export default function GuruLaporanDiagnostikPage({ session, onLogout, idAnalisi
                     </div>
 
                     {/* Kolom Kanan: Visual & Narasi */}
-                    <div className="space-y-6 lg:col-span-2">
+                    <div className="space-y-6 lg:col-span-2 print:mt-6">
                         {/* Radar Chart Visualisasi */}
-                        <div className="rounded-3xl border border-border bg-white p-6 shadow-sm h-[400px] flex flex-col">
+                        <div className="rounded-3xl border border-border bg-white p-6 shadow-sm h-[400px] flex flex-col print:break-inside-avoid print:shadow-none print:border-slate-300">
                             <div className="flex items-center gap-3 mb-2">
                                 <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/5 text-primary">
                                     <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
@@ -197,7 +206,7 @@ export default function GuruLaporanDiagnostikPage({ session, onLogout, idAnalisi
                         </div>
 
                         {/* Narasi AI Box */}
-                        <div className="rounded-3xl border border-primary/10 bg-gradient-to-b from-indigo-50/50 to-white p-6 shadow-sm">
+                        <div className="rounded-3xl border border-primary/10 bg-gradient-to-b from-indigo-50/50 to-white p-6 shadow-sm print:break-inside-avoid print:shadow-none print:border-slate-300">
                             <div className="flex items-center gap-3 mb-6">
                                 <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
                                     <span className="text-xl">🤖</span>
@@ -209,7 +218,7 @@ export default function GuruLaporanDiagnostikPage({ session, onLogout, idAnalisi
                             </div>
 
                             <div className="grid gap-4 md:grid-cols-2">
-                                <div className="rounded-2xl border border-emerald-200 bg-emerald-50/80 p-5 shadow-sm">
+                                <div className="rounded-2xl border border-emerald-200 bg-emerald-50/80 p-5 shadow-sm print:break-inside-avoid print:shadow-none">
                                     <div className="flex items-center gap-2 mb-3">
                                         <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-200/50 text-emerald-700">💪</span>
                                         <h4 className="font-bold text-emerald-900 tracking-tight">Kekuatan Siswa</h4>
@@ -219,7 +228,7 @@ export default function GuruLaporanDiagnostikPage({ session, onLogout, idAnalisi
                                     </p>
                                 </div>
                                 
-                                <div className="rounded-2xl border border-amber-200 bg-amber-50/80 p-5 shadow-sm">
+                                <div className="rounded-2xl border border-amber-200 bg-amber-50/80 p-5 shadow-sm print:break-inside-avoid print:shadow-none">
                                     <div className="flex items-center gap-2 mb-3">
                                         <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-amber-200/50 text-amber-700">🎯</span>
                                         <h4 className="font-bold text-amber-900 tracking-tight">Fokus Perbaikan</h4>

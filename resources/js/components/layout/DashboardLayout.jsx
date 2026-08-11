@@ -34,8 +34,8 @@ export default function DashboardLayout({ title, user, navigation, onLogout, pro
     );
 
     return (
-        <div className="min-h-screen bg-slate-100 text-slate-900">
-            <div className="flex min-h-screen flex-col lg:grid lg:h-screen lg:grid-cols-[280px_1fr] lg:overflow-hidden">
+        <div className="min-h-screen bg-slate-100 text-slate-900 print:bg-white">
+            <div className="flex min-h-screen flex-col lg:grid lg:h-screen lg:grid-cols-[280px_1fr] lg:overflow-hidden print:block print:h-auto">
                 
                 {/* Mobile Menu Overlay */}
                 {isMobileMenuOpen && (
@@ -46,7 +46,7 @@ export default function DashboardLayout({ title, user, navigation, onLogout, pro
                 )}
 
                 {/* Sidebar */}
-                <aside className={`fixed inset-y-0 left-0 z-50 flex w-72 flex-col bg-primary text-slate-100 shadow-2xl transition-transform duration-300 ease-in-out lg:static lg:w-auto lg:translate-x-0 ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'} lg:overflow-y-auto`}>
+                <aside className={`fixed inset-y-0 left-0 z-50 flex w-72 flex-col bg-primary text-slate-100 shadow-2xl transition-transform duration-300 ease-in-out lg:static lg:w-auto lg:translate-x-0 ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'} lg:overflow-y-auto print:hidden`}>
                     <div className="flex items-center justify-between gap-3 border-b border-white/10 px-6 py-5">
                         <div className="flex items-center gap-3">
                             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white p-1 shadow-sm overflow-hidden">
@@ -98,8 +98,8 @@ export default function DashboardLayout({ title, user, navigation, onLogout, pro
                     </div>
                 </aside>
 
-                <main className="flex min-h-screen flex-col bg-slate-100 lg:h-screen lg:overflow-y-auto w-full">
-                    <header className="sticky top-0 z-30 flex items-center justify-between border-b border-border/80 bg-secondary px-4 md:px-6 py-4 shadow-sm backdrop-blur w-full">
+                <main className="flex min-h-screen flex-col bg-slate-100 lg:h-screen lg:overflow-y-auto w-full print:bg-white print:h-auto print:block print:overflow-visible">
+                    <header className="sticky top-0 z-30 flex items-center justify-between border-b border-border/80 bg-secondary px-4 md:px-6 py-4 shadow-sm backdrop-blur w-full print:hidden">
                         <div className="flex items-center gap-3">
                             <button
                                 onClick={() => setIsMobileMenuOpen(true)}

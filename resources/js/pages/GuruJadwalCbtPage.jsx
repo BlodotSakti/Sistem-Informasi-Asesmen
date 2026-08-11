@@ -300,21 +300,23 @@ export default function GuruJadwalCbtPage({ session, onLogout }) {
                 {/* Detail Modal */}
                 {(sesiDetailData || sesiDetailLoading) && (
                     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4" onClick={() => !sesiDetailLoading && setSesiDetailData(null)}>
-                        <div className="w-full max-w-5xl max-h-[90vh] overflow-y-auto rounded-3xl bg-white shadow-xl" onClick={(e) => e.stopPropagation()}>
+                        <div className="w-full max-w-5xl max-h-[90vh] flex flex-col rounded-3xl bg-white shadow-xl" onClick={(e) => e.stopPropagation()}>
                             {sesiDetailLoading ? (
                                 <div className="flex items-center justify-center py-20">
                                     <div className="h-10 w-10 animate-spin rounded-full border-b-2 border-t-2 border-blue-600"></div>
                                 </div>
                             ) : sesiDetailData ? (
                                 <>
-                                    <div className="border-b border-border px-6 py-5 flex justify-between items-center">
+                                    <div className="border-b border-border px-6 py-5 flex justify-between items-center shrink-0">
                                         <div>
-                                            <h3 className="text-xl font-bold text-slate-900">Detail: {sesiDetailData.sesi.mata_pelajaran}</h3>
+                                            <h3 className="text-xl font-bold text-slate-900">
+                                                Detail: {sesiDetailData.sesi.tipe_soal?.toUpperCase()} - {sesiDetailData.sesi.mata_pelajaran} ({formatDateTimeLabel(sesiDetailData.sesi.waktu_mulai)})
+                                            </h3>
                                             <p className="text-sm text-slate-500 capitalize">{sesiDetailData.sesi.jenis_asesmen} — {sesiDetailData.sesi.kelas}</p>
                                         </div>
                                         <button onClick={() => setSesiDetailData(null)} className="text-2xl text-slate-400 hover:text-slate-600">&times;</button>
                                     </div>
-                                    <div className="p-6 space-y-6">
+                                    <div className="p-6 space-y-6 overflow-y-auto">
                                         {/* Statistik */}
                                         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
                                             <div className="rounded-2xl bg-primary/5 px-4 py-4 text-center">

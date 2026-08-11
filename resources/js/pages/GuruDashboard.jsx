@@ -104,12 +104,14 @@ export default function GuruDashboard({ session, onLogout }) {
                                                 <p className="font-bold text-white truncate">{item.siswa?.nama_lengkap || 'Siswa'}</p>
                                                 <span className={`shrink-0 rounded-lg px-2.5 py-1 text-xs font-black tracking-wide ${item.skor_total >= 80 ? 'bg-emerald-500/20 text-emerald-300' : item.skor_total >= 60 ? 'bg-amber-500/20 text-amber-300' : 'bg-rose-500/20 text-rose-300'}`}>{item.skor_total} Pts</span>
                                             </div>
-                                            <p className="mt-1.5 text-xs font-medium text-slate-400">{item.sesi_asesmen?.mata_pelajaran?.nama_mapel || 'Mapel'} • {item.tanggal_generate}</p>
+                                            <p className="mt-1.5 text-xs font-medium text-slate-400">
+                                                {item.sesi_asesmen?.mata_pelajaran?.nama_mapel || 'Mapel'} • {item.tanggal_generate ? new Date(item.tanggal_generate).toLocaleString('id-ID', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }).replace(/\./g, ':') + ' WIB' : ''}
+                                            </p>
                                         </div>
                                         <div className="mt-5 pt-4 border-t border-white/10">
                                             <p className="text-xs font-semibold text-slate-300 uppercase tracking-wider">Area Peningkatan:</p>
                                             <p className="mt-2 text-sm text-slate-400 line-clamp-3 leading-relaxed">
-                                                {item.area_peningkatan || 'Masih membutuhkan lebih banyak latihan untuk menemukan pola kelemahan yang spesifik.'}
+                                                {item.narasi_kelemahan || 'Masih membutuhkan lebih banyak latihan untuk menemukan pola kelemahan yang spesifik.'}
                                             </p>
                                         </div>
                                         <div className="mt-4 pt-4 border-t border-white/10 flex justify-end">
