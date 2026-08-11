@@ -82,7 +82,7 @@ export default function SiswaDashboard({ session, onLogout }) {
                             <div className="h-72 w-full flex-grow rounded-3xl border border-border/50 bg-white p-5 shadow-inner">
                                 {chartData.length > 0 ? (
                                     <ResponsiveContainer width="100%" height="100%">
-                                        <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                                        <AreaChart data={chartData} margin={{ top: 10, right: 40, left: -20, bottom: 0 }}>
                                             <defs>
                                                 <linearGradient id="colorNilai" x1="0" y1="0" x2="0" y2="1">
                                                     <stop offset="5%" stopColor="#1E3A5F" stopOpacity={0.4} />
@@ -96,6 +96,7 @@ export default function SiswaDashboard({ session, onLogout }) {
                                                 tickLine={false} 
                                                 tick={{ fill: '#64748b', fontSize: 12, fontWeight: 600 }} 
                                                 dy={10}
+                                                interval={0}
                                             />
                                             <YAxis 
                                                 axisLine={false} 
