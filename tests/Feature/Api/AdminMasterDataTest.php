@@ -101,11 +101,11 @@ class AdminMasterDataTest extends TestCase
         ]);
 
         $create->assertCreated();
-        $create->assertJsonPath('tahun_ajaran', '2026/2027');
+        $create->assertJsonPath('tahun_ajaran', '2026/2027 - Semester Ganjil');
 
         $this->assertDatabaseHas('kelas', [
             'nama_kelas' => 'XI IPA 9',
-            'tahun_ajaran' => '2026/2027',
+            'tahun_ajaran' => '2026/2027 - Semester Ganjil',
         ]);
     }
 
@@ -369,9 +369,9 @@ class AdminMasterDataTest extends TestCase
         ]);
 
         $filePath = $this->makeExcelFixture([
-            ['id_kelas', 'id_siswa', 'tahun_ajaran', 'is_aktif', 'tanggal_masuk', 'tanggal_keluar'],
-            [$kelas->id_kelas, $siswa->id_siswa, '2026/2027', true, '2026-07-10', ''],
-            [$kelas->id_kelas, $siswa->id_siswa, '2026/2027', false, '2026-07-10', '2026-12-20'],
+            ['nama_kelas', 'nama_siswa', 'tahun_ajaran', 'is_aktif', 'tanggal_masuk', 'tanggal_keluar'],
+            [$kelas->nama_kelas, $siswa->nama_lengkap, '2026/2027', true, '2026-07-10', ''],
+            [$kelas->nama_kelas, $siswa->nama_lengkap, '2026/2027', false, '2026-07-10', '2026-12-20'],
         ]);
 
         $upload = UploadedFile::fake()->createWithContent('kelas-siswa.xlsx', file_get_contents($filePath));

@@ -1,6 +1,20 @@
 # CHANGELOG
 
 ## [Unreleased]
+
+### Added
+- **UI/UX (Admin)**: Form "Tahun Ajaran" pada halaman Penempatan Siswa dan Penugasan Guru sekarang menggunakan `dropdown (select)` yang secara otomatis menarik data dari master Tahun Ajaran.
+- **Fitur (Otomatisasi)**: Pada halaman Penempatan Siswa dan Penugasan Guru, ketika Admin memilih suatu Kelas dari dropdown, maka kolom "Tahun Ajaran" di bawahnya akan secara otomatis terisi dan menyesuaikan dengan tahun ajaran milik kelas tersebut.
+- **Testing**: Menambahkan skenario test pada file `AdminMasterDataTest.php` untuk memvalidasi pembuatan dan pembaruan kelas beserta fungsionalitas semesternya.
+
+### Fixed
+- **Backend (GuruController)**: Memperbaiki celah *scoping* pada `DashboardSummary` dan `AnalisisDiagnostikIndex`. Guru kini hanya bisa melihat Jadwal Ujian dan Analisis Diagnostik AI yang secara spesifik berasal dari kelas/mata pelajaran yang pernah atau sedang mereka ampu, maupun kelas di mana mereka menjadi Wali Kelas. Data historis akan dipertahankan.
+- **Backend & Frontend (AdminKelas)**: Memperbaiki *bug* pada antarmuka Form Kelas (`AdminKelasPage.jsx`) yang sebelumnya memotong keterangan semester secara otomatis saat akan dikirim ke *backend*. Form kini mengirimkan dan menyimpan data semester (Ganjil/Genap) secara utuh ke *database*.
+- **Backend (SiswaController)**: Memperbaiki logika `cbtHistory` dan ringkasan dasbor siswa (`workspaceData`). Riwayat CBT dan total skor kini diagregasi berdasarkan **seluruh riwayat kelas** yang pernah diduduki oleh siswa, bukan hanya kelas yang aktif saat ini. Hal ini mencegah hilangnya data riwayat ujian dan skor saat berganti semester atau tahun ajaran.
+- **Backend (AdminController)**: Memperbaiki *bug* pada fungsi `normalizeTahunAjaran()` yang sebelumnya memotong string setelah tanda strip (`-`), yang menyebabkan informasi semester hilang saat Kelas disimpan. Sekarang keterangan semester akan disimpan secara utuh.
+- **UI/UX (Visualisasi Data)**: Dengan tersimpannya informasi semester secara utuh pada `Kelas`, seluruh komponen yang merender atribut `tahun_ajaran` (seperti tabel pada Penempatan Siswa, Penugasan Guru, dan card pada Pemetaan Akademik) kini akan secara otomatis menampilkan keterangan semester (Ganjil/Genap).
+- **Testing (AdminMasterDataTest)**: Memperbaiki skenario pengujian `bulk-import` untuk relasi Kelas-Siswa agar menggunakan header `nama_kelas` dan `nama_siswa` sesuai ekspektasi controller.
+
 ### Changed
 - **Arsitektur Bank Soal (Shared Pool)**: Mengubah struktur kepemilikan tabel `bank_soal` dari spesifik milik Guru (`id_guru`) menjadi bersifat komunal/bersama. 
   - Admin kini dapat mengelola seluruh soal dari semua Mata Pelajaran dan Guru.

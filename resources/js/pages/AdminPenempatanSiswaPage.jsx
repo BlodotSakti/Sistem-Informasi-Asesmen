@@ -240,7 +240,19 @@ export default function AdminPenempatanSiswaPage({ session, onLogout }) {
                             <div className="grid gap-4">
                                 <label className="space-y-2 text-sm font-medium text-slate-700">
                                     <span>Kelas</span>
-                                    <select value={classStudentForm.id_kelas} onChange={(event) => setClassStudentForm((current) => ({ ...current, id_kelas: event.target.value }))} className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-slate-900">
+                                    <select 
+                                        value={classStudentForm.id_kelas} 
+                                        onChange={(event) => {
+                                            const selectedId = event.target.value;
+                                            const selectedKelas = (masterData.kelas || []).find(k => String(k.id_kelas) === String(selectedId));
+                                            setClassStudentForm((current) => ({ 
+                                                ...current, 
+                                                id_kelas: selectedId,
+                                                tahun_ajaran: selectedKelas ? selectedKelas.tahun_ajaran : current.tahun_ajaran 
+                                            }));
+                                        }} 
+                                        className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-slate-900"
+                                    >
                                         <option value="">Pilih kelas</option>
                                         {(masterData.kelas || []).map((kelas) => <option key={kelas.id_kelas} value={kelas.id_kelas}>{kelas.nama_kelas} • {kelas.tahun_ajaran}</option>)}
                                     </select>

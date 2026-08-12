@@ -130,16 +130,26 @@ export default function GuruSiswaPage({ session, onLogout }) {
                                         <button
                                             key={kelas.id_kelas}
                                             onClick={() => setActiveKelasId(kelas.id_kelas)}
-                                            className={`flex items-center justify-between rounded-xl px-4 py-3 text-left transition-all ${
+                                            className={`flex flex-col gap-1 rounded-xl px-4 py-3 text-left transition-all ${
                                                 isActive 
                                                     ? 'bg-primary text-white shadow-md' 
                                                     : 'bg-white text-slate-600 hover:bg-slate-100 hover:text-slate-900'
                                             }`}
                                         >
-                                            <span className="font-semibold">{kelas.nama_kelas}</span>
-                                            <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${isActive ? 'bg-primary/50 text-white' : 'bg-slate-100 text-slate-500'}`}>
-                                                {students_by_class[kelas.id_kelas]?.length || 0} Siswa
-                                            </span>
+                                            <div className="flex items-center justify-between w-full">
+                                                <span className="font-semibold">{kelas.nama_kelas}</span>
+                                                <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${isActive ? 'bg-primary/50 text-white' : 'bg-slate-100 text-slate-500'}`}>
+                                                    {students_by_class[kelas.id_kelas]?.length || 0} Siswa
+                                                </span>
+                                            </div>
+                                            {kelas.is_wali_kelas && (
+                                                <span className={`text-[10px] uppercase font-bold tracking-wider flex items-center gap-1 ${isActive ? 'text-amber-300' : 'text-amber-600'}`}>
+                                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
+                                                      <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
+                                                    </svg>
+                                                    Wali Kelas
+                                                </span>
+                                            )}
                                         </button>
                                     );
                                 })}

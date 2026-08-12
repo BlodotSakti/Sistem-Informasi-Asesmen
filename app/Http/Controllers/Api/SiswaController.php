@@ -142,9 +142,11 @@ class SiswaController extends Controller
             ->latest('tanggal_generate')
             ->get();
 
-        $pastSessionCount = $kelasAktif
+        $kelasIds = $siswa->kelasRiwayat()->pluck('id_kelas');
+
+        $pastSessionCount = $kelasIds->isNotEmpty()
             ? SesiAsesmen::query()
-                ->where('id_kelas', $kelasAktif->id_kelas)
+                ->whereIn('id_kelas', $kelasIds)
                 ->where('waktu_selesai', '<', now())
                 ->count()
             : 0;
@@ -153,7 +155,6 @@ class SiswaController extends Controller
             ->join('detail_sesi_soal', 'jawaban_siswa.id_detail', '=', 'detail_sesi_soal.id_detail')
             ->join('sesi_asesmen', 'detail_sesi_soal.id_sesi', '=', 'sesi_asesmen.id_sesi')
             ->where('jawaban_siswa.id_siswa', $idSiswa)
-            ->where('sesi_asesmen.id_kelas', $kelasAktif?->id_kelas ?? 0)
             ->sum('jawaban_siswa.skor_diperoleh');
 
         $latestScoreRecord = JawabanSiswa::query()
@@ -725,15 +726,15 @@ class SiswaController extends Controller
     {
         $siswa = $request->user()->siswa;
 
-        $idKelas = $siswa->kelasAktifAssignment?->id_kelas;
+        $kelasIds = $siswa->kelasRiwayat()->pluck('id_kelas');
 
-        if (!$idKelas) {
-            return response()->json([]);
+        if ($kelasIds->isEmpty()) {
+            return response()->json(['data' => []]);
         }
 
         $sessions = SesiAsesmen::query()
             ->with(['kelas', 'mataPelajaran', 'detailSesiSoal'])
-            ->where('id_kelas', $idKelas)
+            ->whereIn('id_kelas', $kelasIds)
             ->latest('waktu_mulai')
             ->get()
             ->map(function (SesiAsesmen $sesi) use ($siswa) {

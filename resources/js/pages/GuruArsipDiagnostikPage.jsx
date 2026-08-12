@@ -8,10 +8,28 @@ export default function GuruArsipDiagnostikPage({ session, onLogout }) {
     const [diagnostics, setDiagnostics] = useState({ data: [], current_page: 1, last_page: 1, total: 0 });
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
+    const [kelasFilter, setKelasFilter] = useState('all');
+    const [kelasOptions, setKelasOptions] = useState([]);
     const [currentPage, setCurrentPage] = useState(1);
     const [error, setError] = useState('');
 
-    const fetchDiagnostics = useCallback(async (page, search) => {
+    useEffect(() => {
+        let mounted = true;
+        const loadWorkspace = async () => {
+            try {
+                const response = await apiFetch('/api/guru/workspace-data', session);
+                if (mounted && response.kelas_options) {
+                    setKelasOptions(response.kelas_options);
+                }
+            } catch (err) {
+                console.error("Gagal memuat filter kelas", err);
+            }
+        };
+        if (session?.token) loadWorkspace();
+        return () => { mounted = false; };
+    }, [session]);
+
+    const fetchDiagnostics = useCallback(async (page, search, kelas) => {
         try {
             setLoading(true);
             setError('');
@@ -19,6 +37,9 @@ export default function GuruArsipDiagnostikPage({ session, onLogout }) {
             params.append('page', page);
             if (search) {
                 params.append('search', search);
+            }
+            if (kelas && kelas !== 'all') {
+                params.append('id_kelas', kelas);
             }
             
             const response = await apiFetch(`/api/guru/analisis-diagnostik?${params.toString()}`, session);
@@ -34,16 +55,16 @@ export default function GuruArsipDiagnostikPage({ session, onLogout }) {
     useEffect(() => {
         const timer = setTimeout(() => {
             setCurrentPage(1);
-            fetchDiagnostics(1, searchQuery);
+            fetchDiagnostics(1, searchQuery, kelasFilter);
         }, 300); // 300ms debounce untuk rasa pencarian lebih instan
 
         return () => clearTimeout(timer);
-    }, [searchQuery, fetchDiagnostics]);
+    }, [searchQuery, kelasFilter, fetchDiagnostics]);
 
     const handlePageChange = (newPage) => {
         if (newPage >= 1 && newPage <= diagnostics.last_page) {
             setCurrentPage(newPage);
-            fetchDiagnostics(newPage, searchQuery);
+            fetchDiagnostics(newPage, searchQuery, kelasFilter);
         }
     };
 
@@ -60,19 +81,31 @@ export default function GuruArsipDiagnostikPage({ session, onLogout }) {
                         <p className="mt-1 text-slate-500">Telusuri dan kelola seluruh riwayat analisis diagnostik AI siswa.</p>
                     </div>
 
-                    <div className="relative w-full md:w-80 shrink-0">
-                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <svg className="h-5 w-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                            </svg>
+                    <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto shrink-0">
+                        <select
+                            value={kelasFilter}
+                            onChange={(e) => setKelasFilter(e.target.value)}
+                            className="w-full sm:w-auto px-4 py-3 rounded-2xl border border-slate-300 bg-white text-sm outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all shadow-sm font-medium text-slate-700"
+                        >
+                            <option value="all">Semua Kelas</option>
+                            {kelasOptions.map((k) => (
+                                <option key={k.id_kelas} value={k.id_kelas}>{k.nama_kelas} {k.is_wali_kelas ? '(Wali Kelas)' : ''}</option>
+                            ))}
+                        </select>
+                        <div className="relative w-full sm:w-80">
+                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <svg className="h-5 w-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                </svg>
+                            </div>
+                            <input
+                                type="text"
+                                placeholder="Cari nama siswa..."
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                className="w-full pl-10 pr-4 py-3 rounded-2xl border border-slate-300 bg-white text-sm outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all shadow-sm"
+                            />
                         </div>
-                        <input
-                            type="text"
-                            placeholder="Cari nama siswa..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full pl-10 pr-4 py-3 rounded-2xl border border-slate-300 bg-white text-sm outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all shadow-sm"
-                        />
                     </div>
                 </div>
 

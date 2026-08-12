@@ -999,9 +999,7 @@ class AdminController extends Controller
             return $value;
         }
 
-        $shortValue = explode(' - ', $value, 2)[0] ?? $value;
-
-        return trim($shortValue);
+        return $value;
     }
 
     protected function deactivateOtherKelasSiswaAssignments(int $idSiswa, ?int $exceptId = null): void

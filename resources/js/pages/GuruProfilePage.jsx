@@ -20,7 +20,21 @@ export default function GuruProfilePage({ session, onLogout }) {
                             <div>
                                 <p className="text-xs uppercase tracking-[0.4em] text-accent font-bold">Profil Guru</p>
                                 <h3 className="mt-2 text-2xl sm:text-3xl font-extrabold tracking-tight text-[#EEDCC8]">{profile.nama_lengkap || session?.user?.nama_lengkap || '-'}</h3>
-                                <p className="mt-2 text-sm text-accent">NIP: {profile.nip || '-'}</p>
+                                <div className="mt-2 flex flex-col sm:flex-row sm:items-center gap-3">
+                                    <p className="text-sm text-accent">NIP: {profile.nip || '-'}</p>
+                                    {profile.kelas_wali && profile.kelas_wali.length > 0 && (
+                                        <div className="flex flex-wrap gap-2">
+                                            {profile.kelas_wali.map((k) => (
+                                                <span key={k.id_kelas} className="inline-flex items-center gap-1.5 rounded-full bg-amber-500/20 px-2.5 py-0.5 text-xs font-semibold text-amber-300 border border-amber-500/30">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
+                                                      <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
+                                                    </svg>
+                                                    Wali Kelas: {k.nama_kelas}
+                                                </span>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
                             </div>
                         </div>
 

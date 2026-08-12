@@ -79,7 +79,7 @@ export default function SiswaAppreciationPage({ session, onLogout }) {
                     <StatCard label="Total Lencana" value={loading ? '...' : summary?.cards?.apresiasi ?? 0} description="Badge pencapaian" tone="amber" />
                     <StatCard label="Catatan Privat" value={loading ? '...' : (summary?.highlight?.notes || []).length} description="Pesan khusus dari guru" tone="blue" />
                     <StatCard label="Skor Terbaru" value={loading ? '...' : summary?.highlight?.latest_score ?? 0} description="Dari ujian terakhir" tone="rose" />
-                    <StatCard label="Status" value={loading ? '...' : 'Aktif'} description="Belajar terus!" tone="slate" />
+                    <StatCard label="Status" value={loading ? '...' : (summary?.profile?.kelas_aktif ? 'Aktif' : 'Non-Aktif')} description={summary?.profile?.kelas_aktif ? "Belajar terus!" : "Histori tersimpan"} tone="slate" />
                 </div>
 
                 {error ? <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div> : null}

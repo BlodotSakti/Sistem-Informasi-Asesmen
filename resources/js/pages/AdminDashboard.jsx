@@ -148,9 +148,9 @@ export default function AdminDashboard({ session, onLogout }) {
                     tone="cyan" 
                 />
                 <StatCard 
-                    label="Status Server" 
-                    value="Online" 
-                    description="Sistem beroperasi optimal." 
+                    label="Total Mata Pelajaran" 
+                    value={loading ? '...' : data.summary.total_mapel} 
+                    description="Mata pelajaran yang terdaftar." 
                     tone="emerald" 
                 />
             </section>

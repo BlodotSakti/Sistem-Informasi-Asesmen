@@ -15,11 +15,6 @@ const TABLE_ACTION_WRAP_CLASS = 'flex flex-wrap gap-2 xl:justify-end';
 const TABLE_ACTION_PRIMARY_CLASS = 'rounded-full border border-slate-300 px-4 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-100';
 const TABLE_ACTION_DANGER_CLASS = 'rounded-full border border-rose-200 px-4 py-2 text-xs font-semibold text-rose-700 transition hover:bg-rose-50';
 
-function toTahunAjaranValue(value) {
-    if (!value) return '';
-    return String(value).split(' - ')[0].trim();
-}
-
 export default function AdminKelasPage({ session, onLogout }) {
     const { masterData, loading, reloadWorkspace } = useAdminWorkspace(session, { loadMasterData: true, loadSummary: false });
     
@@ -40,7 +35,7 @@ export default function AdminKelasPage({ session, onLogout }) {
             setClassForm(current => ({
                 ...current,
                 id_guru_wali: current.id_guru_wali || masterData.guru_options?.[0]?.id_guru || '',
-                tahun_ajaran: toTahunAjaranValue(current.tahun_ajaran) || masterData.tahun_ajaran?.[0]?.nama_tahun_ajaran || '',
+                tahun_ajaran: current.tahun_ajaran || masterData.tahun_ajaran?.[0]?.periode_label || masterData.tahun_ajaran?.[0]?.nama_tahun_ajaran || '',
             }));
         }
     }, [masterData, loading, classId, classForm.id_guru_wali, classForm.tahun_ajaran]);
@@ -69,7 +64,7 @@ export default function AdminKelasPage({ session, onLogout }) {
         setClassForm({
             id_guru_wali: masterData.guru_options?.[0]?.id_guru || '',
             nama_kelas: '',
-            tahun_ajaran: masterData.tahun_ajaran?.[0]?.nama_tahun_ajaran || '',
+            tahun_ajaran: masterData.tahun_ajaran?.[0]?.periode_label || masterData.tahun_ajaran?.[0]?.nama_tahun_ajaran || '',
         });
         setClassId(null);
     };
@@ -78,7 +73,6 @@ export default function AdminKelasPage({ session, onLogout }) {
         event.preventDefault();
         const payload = {
             ...classForm,
-            tahun_ajaran: toTahunAjaranValue(classForm.tahun_ajaran),
         };
 
         try {
@@ -178,9 +172,9 @@ export default function AdminKelasPage({ session, onLogout }) {
                                 </label>
                                 <label className="space-y-2 text-sm font-medium text-slate-700">
                                     <span>Tahun Ajaran</span>
-                                    <select value={toTahunAjaranValue(classForm.tahun_ajaran)} onChange={(event) => setClassForm((current) => ({ ...current, tahun_ajaran: event.target.value }))} className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-slate-900">
+                                    <select value={classForm.tahun_ajaran} onChange={(event) => setClassForm((current) => ({ ...current, tahun_ajaran: event.target.value }))} className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-slate-900">
                                         <option value="">Pilih tahun ajaran</option>
-                                        {(masterData.tahun_ajaran || []).map((item) => <option key={item.id_tahun_ajaran} value={item.nama_tahun_ajaran}>{item.periode_label || item.nama_tahun_ajaran}</option>)}
+                                        {(masterData.tahun_ajaran || []).map((item) => <option key={item.id_tahun_ajaran} value={item.periode_label || item.nama_tahun_ajaran}>{item.periode_label || item.nama_tahun_ajaran}</option>)}
                                     </select>
                                 </label>
                             </div>
@@ -229,7 +223,7 @@ export default function AdminKelasPage({ session, onLogout }) {
                                                     <div className={TABLE_ACTION_WRAP_CLASS}>
                                                         <button type="button" onClick={() => {
                                                             setClassId(item.id_kelas);
-                                                            setClassForm({ id_guru_wali: item.id_guru_wali || '', nama_kelas: item.nama_kelas || '', tahun_ajaran: toTahunAjaranValue(item.tahun_ajaran) || '' });
+                                                            setClassForm({ id_guru_wali: item.id_guru_wali || '', nama_kelas: item.nama_kelas || '', tahun_ajaran: item.tahun_ajaran || '' });
                                                         }} className={TABLE_ACTION_PRIMARY_CLASS}>Edit</button>
                                                         <button type="button" onClick={() => deleteMaster(`/api/admin/kelas/${item.id_kelas}`, 'Kelas')} className={TABLE_ACTION_DANGER_CLASS}>Hapus</button>
                                                     </div>

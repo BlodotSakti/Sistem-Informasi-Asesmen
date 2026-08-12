@@ -53,7 +53,7 @@ export default function AdminPenugasanGuruPage({ session, onLogout }) {
                 id_kelas: current.id_kelas || masterData.kelas?.[0]?.id_kelas || '',
                 id_mapel: current.id_mapel || masterData.mata_pelajaran?.[0]?.id_mapel || '',
                 id_guru: current.id_guru || masterData.guru_options?.[0]?.id_guru || '',
-                tahun_ajaran: current.tahun_ajaran || masterData.kelas?.[0]?.tahun_ajaran || masterData.tahun_ajaran?.[0]?.nama_tahun_ajaran || '',
+                tahun_ajaran: current.tahun_ajaran || masterData.tahun_ajaran?.[0]?.periode_label || masterData.kelas?.[0]?.tahun_ajaran || '',
             }));
         }
     }, [masterData, loading, teachingAssignmentId, teachingAssignmentForm.id_kelas, teachingAssignmentForm.id_mapel, teachingAssignmentForm.id_guru]);
@@ -80,7 +80,7 @@ export default function AdminPenugasanGuruPage({ session, onLogout }) {
             id_kelas: masterData.kelas?.[0]?.id_kelas || '',
             id_mapel: masterData.mata_pelajaran?.[0]?.id_mapel || '',
             id_guru: masterData.guru_options?.[0]?.id_guru || '',
-            tahun_ajaran: masterData.kelas?.[0]?.tahun_ajaran || masterData.tahun_ajaran?.[0]?.nama_tahun_ajaran || '',
+            tahun_ajaran: masterData.tahun_ajaran?.[0]?.periode_label || masterData.kelas?.[0]?.tahun_ajaran || '',
             is_aktif: true,
         });
         setTeachingAssignmentId(null);
@@ -233,7 +233,19 @@ export default function AdminPenugasanGuruPage({ session, onLogout }) {
                             <div className="grid gap-4">
                                 <label className="space-y-2 text-sm font-medium text-slate-700">
                                     <span>Kelas</span>
-                                    <select value={teachingAssignmentForm.id_kelas} onChange={(event) => setTeachingAssignmentForm((current) => ({ ...current, id_kelas: event.target.value }))} className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-slate-900">
+                                    <select 
+                                        value={teachingAssignmentForm.id_kelas} 
+                                        onChange={(event) => {
+                                            const selectedId = event.target.value;
+                                            const selectedKelas = (masterData.kelas || []).find(k => String(k.id_kelas) === String(selectedId));
+                                            setTeachingAssignmentForm((current) => ({ 
+                                                ...current, 
+                                                id_kelas: selectedId,
+                                                tahun_ajaran: selectedKelas ? selectedKelas.tahun_ajaran : current.tahun_ajaran 
+                                            }));
+                                        }} 
+                                        className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-slate-900"
+                                    >
                                         <option value="">Pilih kelas</option>
                                         {(masterData.kelas || []).map((kelas) => <option key={kelas.id_kelas} value={kelas.id_kelas}>{kelas.nama_kelas} • {kelas.tahun_ajaran}</option>)}
                                     </select>
@@ -254,7 +266,10 @@ export default function AdminPenugasanGuruPage({ session, onLogout }) {
                                 </label>
                                 <label className="space-y-2 text-sm font-medium text-slate-700">
                                     <span>Tahun Ajaran</span>
-                                    <input value={teachingAssignmentForm.tahun_ajaran} onChange={(event) => setTeachingAssignmentForm((current) => ({ ...current, tahun_ajaran: event.target.value }))} className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-slate-900" placeholder="2025/2026 - Semester Ganjil" />
+                                    <select value={teachingAssignmentForm.tahun_ajaran} onChange={(event) => setTeachingAssignmentForm((current) => ({ ...current, tahun_ajaran: event.target.value }))} className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-slate-900">
+                                        <option value="">Pilih tahun ajaran</option>
+                                        {(masterData.tahun_ajaran || []).map((item) => <option key={item.id_tahun_ajaran} value={item.periode_label || item.nama_tahun_ajaran}>{item.periode_label || item.nama_tahun_ajaran}</option>)}
+                                    </select>
                                 </label>
                                 <label className="flex items-center gap-3 rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-medium text-slate-700">
                                     <input type="checkbox" checked={Boolean(teachingAssignmentForm.is_aktif)} onChange={(event) => setTeachingAssignmentForm((current) => ({ ...current, is_aktif: event.target.checked }))} className="h-4 w-4 rounded border-slate-300 text-text-primary focus:ring-slate-900" />

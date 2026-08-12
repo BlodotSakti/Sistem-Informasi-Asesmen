@@ -8,6 +8,7 @@ use App\Models\Siswa;
 use App\Models\Kelas;
 use App\Models\TahunAjaran;
 use App\Models\Pengguna;
+use App\Models\MataPelajaran;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
@@ -24,6 +25,8 @@ class AdminDashboardController extends Controller
         $totalKelas = $tahunAjaranAktif 
             ? Kelas::where('tahun_ajaran', $tahunAjaranAktif->nama_tahun_ajaran)->count() 
             : Kelas::count();
+            
+        $totalMapel = MataPelajaran::count();
 
         // System Logs: 10 newest registered users
         $recentLogs = Pengguna::query()
@@ -79,6 +82,7 @@ class AdminDashboardController extends Controller
                 'total_guru' => $totalGuru,
                 'total_siswa' => $totalSiswa,
                 'total_kelas' => $totalKelas,
+                'total_mapel' => $totalMapel,
             ],
             'chart' => $chartData,
             'logs' => $recentLogs,

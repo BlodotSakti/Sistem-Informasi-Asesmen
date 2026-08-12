@@ -32,7 +32,30 @@ class GuruController extends Controller
             ->orderByDesc('id_penugasan_pembelajaran')
             ->get();
 
-        $kelasIds = $assignments->pluck('id_kelas')->unique()->values();
+        $waliKelas = Kelas::query()
+            ->where('id_guru_wali', $guruId)
+            ->get();
+
+        $kelasOptions = collect();
+        foreach ($waliKelas as $kelas) {
+            $kelasOptions->push([
+                'id_kelas' => $kelas->id_kelas,
+                'nama_kelas' => $kelas->nama_kelas,
+                'tahun_ajaran' => $kelas->tahun_ajaran,
+                'is_wali_kelas' => true,
+            ]);
+        }
+        foreach ($assignments as $item) {
+            $kelasOptions->push([
+                'id_kelas' => $item->id_kelas,
+                'nama_kelas' => $item->kelas?->nama_kelas,
+                'tahun_ajaran' => $item->tahun_ajaran,
+                'is_wali_kelas' => false,
+            ]);
+        }
+        
+        $kelasOptions = $kelasOptions->unique('id_kelas')->values();
+        $kelasIds = $kelasOptions->pluck('id_kelas');
 
         $activeClassStudents = KelasSiswa::query()
             ->with('siswa')
@@ -70,14 +93,7 @@ class GuruController extends Controller
 
         return response()->json([
             'teaching_assignments' => $assignments,
-            'kelas_options' => $assignments
-                ->map(fn (PenugasanPembelajaran $item): array => [
-                    'id_kelas' => $item->id_kelas,
-                    'nama_kelas' => $item->kelas?->nama_kelas,
-                    'tahun_ajaran' => $item->tahun_ajaran,
-                ])
-                ->unique('id_kelas')
-                ->values(),
+            'kelas_options' => $kelasOptions,
             'mapel_options' => $assignments
                 ->map(fn (PenugasanPembelajaran $item): array => [
                     'id_mapel' => $item->id_mapel,
@@ -498,16 +514,11 @@ class GuruController extends Controller
     {
         $guruId = $request->user()->guru->id_guru;
 
-        // Fetch penugasan untuk filter
-        $kelasIds = PenugasanPembelajaran::query()->where('id_guru', $guruId)->pluck('id_kelas');
-        $mapelIds = PenugasanPembelajaran::query()->where('id_guru', $guruId)->pluck('id_mapel');
+        $query = SesiAsesmen::query()->with(['kelas', 'mataPelajaran', 'detailSesiSoal']);
+        $this->scopeGuruSesiAsesmen($query, $guruId);
 
         return response()->json(
-            SesiAsesmen::query()
-                ->with(['kelas', 'mataPelajaran', 'detailSesiSoal'])
-                ->whereIn('id_kelas', $kelasIds)
-                ->whereIn('id_mapel', $mapelIds)
-                ->latest('waktu_mulai')
+            $query->latest('waktu_mulai')
                 ->latest('id_sesi')
                 ->paginate(15)
         );
@@ -817,6 +828,12 @@ class GuruController extends Controller
     {
         $query = AnalisisDiagnostik::query()->with(['siswa', 'sesiAsesmen.mataPelajaran', 'sesiAsesmen.kelas']);
 
+        // Scope to teacher's classes/mapel
+        $guruId = $request->user()->guru->id_guru;
+        $query->whereHas('sesiAsesmen', function ($q) use ($guruId) {
+            $this->scopeGuruSesiAsesmen($q, $guruId);
+        });
+
         if ($request->filled('id_sesi')) {
             $query->where('id_sesi', $request->integer('id_sesi'));
         }
@@ -825,6 +842,13 @@ class GuruController extends Controller
             $search = $request->input('search');
             $query->whereHas('siswa', function ($q) use ($search) {
                 $q->where('nama_lengkap', 'LIKE', "%{$search}%");
+            });
+        }
+
+        if ($request->filled('id_kelas') && $request->input('id_kelas') !== 'all') {
+            $idKelas = $request->integer('id_kelas');
+            $query->whereHas('sesiAsesmen', function ($q) use ($idKelas) {
+                $q->where('id_kelas', $idKelas);
             });
         }
 
@@ -870,8 +894,9 @@ class GuruController extends Controller
 
         $upcomingSchedules = SesiAsesmen::query()
             ->with(['kelas', 'mataPelajaran'])
-            ->when($kelasIds->isNotEmpty(), fn ($query) => $query->whereIn('id_kelas', $kelasIds))
-            ->when($mapelIds->isNotEmpty(), fn ($query) => $query->whereIn('id_mapel', $mapelIds))
+            ->where(function ($q) use ($guruId) {
+                $this->scopeGuruSesiAsesmen($q, $guruId);
+            })
             ->where('waktu_mulai', '>=', now())
             ->orderBy('waktu_mulai')
             ->limit(5)
@@ -882,16 +907,15 @@ class GuruController extends Controller
                 'note' => 'Mulai ' . optional($sesi->waktu_mulai)?->format('H:i') . ' WIB',
             ]);
 
+        $ujianAktifQuery = SesiAsesmen::query()->where('waktu_mulai', '>=', now());
+        $this->scopeGuruSesiAsesmen($ujianAktifQuery, $guruId);
+
         return response()->json([
             'cards' => [
                 'total_kelas' => $kelasIds->count(),
                 'total_bank_soal' => BankSoal::query()->where('created_by', $request->user()->id_pengguna)->count(),
                 'total_penugasan' => $penugasan->count(),
-                'ujian_aktif' => SesiAsesmen::query()
-                    ->when($kelasIds->isNotEmpty(), fn ($query) => $query->whereIn('id_kelas', $kelasIds))
-                    ->when($mapelIds->isNotEmpty(), fn ($query) => $query->whereIn('id_mapel', $mapelIds))
-                    ->where('waktu_mulai', '>=', now())
-                    ->count(),
+                'ujian_aktif' => $ujianAktifQuery->count(),
                 'total_berita_acara' => BeritaAcara::query()->where('id_guru', $guruId)->count(),
             ],
             'upcoming_schedules' => $upcomingSchedules,
@@ -981,5 +1005,28 @@ class GuruController extends Controller
                 'message' => 'Terdapat siswa yang tidak termasuk kelas aktif ini pada data kehadiran.',
             ], 422));
         }
+    }
+
+    protected function scopeGuruSesiAsesmen($query, int $guruId): void
+    {
+        $waliKelasIds = Kelas::where('id_guru_wali', $guruId)->pluck('id_kelas')->toArray();
+        $penugasan = PenugasanPembelajaran::where('id_guru', $guruId)->get(['id_kelas', 'id_mapel']);
+
+        $query->where(function ($q) use ($waliKelasIds, $penugasan) {
+            if (!empty($waliKelasIds)) {
+                $q->orWhereIn('id_kelas', $waliKelasIds);
+            }
+
+            foreach ($penugasan as $tugas) {
+                $q->orWhere(function ($sq) use ($tugas) {
+                    $sq->where('id_kelas', $tugas->id_kelas)
+                       ->where('id_mapel', $tugas->id_mapel);
+                });
+            }
+
+            if (empty($waliKelasIds) && $penugasan->isEmpty()) {
+                $q->whereRaw('1 = 0');
+            }
+        });
     }
 }

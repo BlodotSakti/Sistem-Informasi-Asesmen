@@ -95,6 +95,7 @@ class AuthController extends Controller
 
         if ($pengguna->role === 'guru') {
             $pengguna->loadMissing([
+                'guru.kelasWali',
                 'guru.penugasanPembelajaran.kelas',
                 'guru.penugasanPembelajaran.mataPelajaran',
             ]);
