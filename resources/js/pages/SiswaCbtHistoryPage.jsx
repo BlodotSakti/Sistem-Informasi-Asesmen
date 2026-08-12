@@ -159,7 +159,7 @@ export default function SiswaCbtHistoryPage({ session, onLogout }) {
                                 </div>
                             ) : reviewData ? (
                                 <>
-                                    <div className="border-b border-border px-6 py-5 flex justify-between items-center">
+                                    <div className="sticky top-0 z-20 bg-white border-b border-border px-6 py-5 flex justify-between items-center">
                                         <div>
                                             <h3 className="text-xl font-bold text-slate-900">Review: {reviewData.sesi.mata_pelajaran}</h3>
                                             <p className="text-sm text-slate-500 capitalize">{reviewData.sesi.jenis_asesmen} — {reviewData.sesi.kelas}</p>

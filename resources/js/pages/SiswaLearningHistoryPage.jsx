@@ -103,27 +103,6 @@ export default function SiswaLearningHistoryPage({ session, onLogout }) {
                 {error ? <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div> : null}
 
                 <section className="space-y-6">
-                    <div className="rounded-3xl border border-border bg-white p-6 shadow-sm">
-                        <p className="text-sm font-medium uppercase tracking-[0.3em] text-slate-500">Filter Mapel</p>
-                        <h3 className="mt-2 text-xl font-semibold text-slate-900">Saring riwayat per mata pelajaran</h3>
-
-                        <div className="mt-4 grid gap-3 md:grid-cols-2">
-                            <label className="block space-y-2 text-sm font-medium text-slate-700">
-                                <span>Cari riwayat</span>
-                                <input value={search} onChange={(event) => setSearch(event.target.value)} className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-slate-900" placeholder="Kelas, mapel, topik, status, atau catatan" />
-                            </label>
-
-                            <label className="block space-y-2 text-sm font-medium text-slate-700">
-                                <span>Mata pelajaran</span>
-                                <select value={subjectFilter} onChange={(event) => setSubjectFilter(event.target.value)} className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-slate-900">
-                                    <option value="">Semua mapel</option>
-                                    {subjects.map((item) => (
-                                        <option key={item.id_mapel} value={item.id_mapel}>{item.nama_lengkap || item.nama_mapel}</option>
-                                    ))}
-                                </select>
-                            </label>
-                        </div>
-                    </div>
 
                     <div className="rounded-3xl border border-border bg-white p-6 shadow-sm">
                         <p className="text-sm font-medium uppercase tracking-[0.3em] text-slate-500">Ringkasan Mapel</p>
@@ -162,8 +141,28 @@ export default function SiswaLearningHistoryPage({ session, onLogout }) {
                     </div>
 
                     <div className="rounded-3xl border border-border bg-white p-6 shadow-sm">
-                        <p className="text-sm font-medium uppercase tracking-[0.3em] text-slate-500">Daftar Pertemuan</p>
-                        <h3 className="mt-2 text-xl font-semibold text-slate-900">Topik, kehadiran, dan catatan per BAP</h3>
+                        <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4">
+                            <div>
+                                <p className="text-sm font-medium uppercase tracking-[0.3em] text-slate-500">Daftar Pertemuan</p>
+                                <h3 className="mt-2 text-xl font-semibold text-slate-900">Topik, kehadiran, dan catatan per BAP</h3>
+                            </div>
+                            <div className="flex flex-col sm:flex-row gap-3">
+                                <div className="relative">
+                                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                        <svg className="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                        </svg>
+                                    </div>
+                                    <input value={search} onChange={(event) => setSearch(event.target.value)} className="w-full sm:w-64 pl-9 pr-4 py-2.5 text-sm rounded-xl border border-slate-300 bg-white outline-none transition focus:border-slate-900" placeholder="Cari riwayat..." />
+                                </div>
+                                <select value={subjectFilter} onChange={(event) => setSubjectFilter(event.target.value)} className="w-full sm:w-auto px-4 py-2.5 text-sm rounded-xl border border-slate-300 bg-white outline-none transition focus:border-slate-900 font-medium text-slate-700">
+                                    <option value="">Semua Mapel</option>
+                                    {subjects.map((item) => (
+                                        <option key={item.id_mapel} value={item.id_mapel}>{item.nama_lengkap || item.nama_mapel}</option>
+                                    ))}
+                                </select>
+                            </div>
+                        </div>
 
                         <div className="mt-6 overflow-x-auto rounded-3xl border border-border">
                             <table className="min-w-full divide-y divide-slate-200 text-left text-sm">
