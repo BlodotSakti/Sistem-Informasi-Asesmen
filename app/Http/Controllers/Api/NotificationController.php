@@ -42,6 +42,7 @@ class NotificationController extends Controller
                 'title' => 'Lencana Apresiasi',
                 'message' => "Selamat! Guru {$namaGuru}{$mapel} memberimu lencana {$item->jenis_badge}",
                 'icon_data' => $item->jenis_badge,
+                'link' => '/siswa/apresiasi',
                 'timestamp' => Carbon::parse($item->tanggal ?? $item->created_at)->toIso8601String(),
                 'created_at' => Carbon::parse($item->tanggal ?? $item->created_at),
             ]);
@@ -64,37 +65,69 @@ class NotificationController extends Controller
                 'title' => 'Catatan Privat Baru',
                 'message' => "Guru {$namaGuru} meninggalkan catatan evaluasi privat untukmu",
                 'icon_data' => null,
+                'link' => '/siswa/apresiasi',
                 'timestamp' => Carbon::parse($item->tanggal ?? $item->created_at)->toIso8601String(),
                 'created_at' => Carbon::parse($item->tanggal ?? $item->created_at),
             ]);
         }
 
-        // 3. Ujian/Sesi Asesmen Terdekat (dalam 24 jam ke depan)
+        // 3. Ujian/Sesi Asesmen Terdekat (dalam 24 jam ke depan) atau Sedang Aktif
         if ($idKelas) {
             $now = now();
             $tomorrow = now()->addHours(24);
+            $yesterday = now()->subHours(24);
 
             $sesiAsesmen = SesiAsesmen::query()
                 ->with('mataPelajaran')
                 ->where('id_kelas', $idKelas)
-                ->where('waktu_mulai', '>', $now)
-                ->where('waktu_mulai', '<=', $tomorrow)
+                ->whereBetween('waktu_mulai', [$yesterday, $tomorrow])
                 ->orderBy('waktu_mulai')
                 ->get();
 
-            foreach ($sesiAsesmen as $item) {
-                $namaMapel = $item->mataPelajaran?->nama_mapel ?? 'Ujian';
-                $sisaWaktu = Carbon::parse($item->waktu_mulai)->diffForHumans(['parts' => 2, 'join' => ' ']);
+            $completedSesiIds = \App\Models\AnalisisDiagnostik::where('id_siswa', $idSiswa)
+                ->pluck('id_sesi')
+                ->toArray();
 
-                $notifications->push([
-                    'id' => 'ujian_' . $item->id_sesi,
-                    'type' => 'ujian',
-                    'title' => 'Pengingat Ujian',
-                    'message' => "Pengingat: Ujian CBT {$namaMapel} akan segera dimulai dalam {$sisaWaktu}",
-                    'icon_data' => null,
-                    'timestamp' => Carbon::parse($item->waktu_mulai)->toIso8601String(),
-                    'created_at' => Carbon::parse($item->waktu_mulai), // Urutkan seolah-olah terjadi di waktu ujian
-                ]);
+            foreach ($sesiAsesmen as $item) {
+                if (in_array($item->id_sesi, $completedSesiIds)) {
+                    continue; // Lewati yang sudah dikerjakan
+                }
+
+                $waktuMulai = Carbon::parse($item->waktu_mulai);
+                $waktuSelesai = $waktuMulai->copy()->addMinutes($item->durasi_menit);
+
+                if ($now->greaterThan($waktuSelesai)) {
+                    continue; // Lewati yang durasinya sudah habis
+                }
+
+                $namaMapel = $item->mataPelajaran?->nama_mapel ?? 'Ujian';
+                
+                if ($now->greaterThanOrEqualTo($waktuMulai)) {
+                    // Sedang Aktif
+                    $notifications->push([
+                        'id' => 'ujian_' . $item->id_sesi,
+                        'type' => 'ujian',
+                        'title' => 'Ujian Sedang Aktif',
+                        'message' => "Jadwal CBT {$namaMapel} ({$item->tipe_soal}) telah aktif. Segera mulai kerjakan!",
+                        'icon_data' => null,
+                        'link' => '/siswa/sesi-aktif',
+                        'timestamp' => $waktuMulai->toIso8601String(),
+                        'created_at' => $waktuMulai,
+                    ]);
+                } else {
+                    // Akan Datang
+                    $sisaWaktu = $waktuMulai->diffForHumans(['parts' => 2, 'join' => ' ']);
+                    $notifications->push([
+                        'id' => 'ujian_' . $item->id_sesi,
+                        'type' => 'ujian',
+                        'title' => 'Pengingat Ujian Baru',
+                        'message' => "Guru telah menjadwalkan CBT {$namaMapel} ({$item->tipe_soal}) yang akan dimulai {$sisaWaktu}.",
+                        'icon_data' => null,
+                        'link' => '/siswa/sesi-aktif',
+                        'timestamp' => $item->created_at ? $item->created_at->toIso8601String() : $waktuMulai->toIso8601String(),
+                        'created_at' => $item->created_at ?? $waktuMulai,
+                    ]);
+                }
             }
         }
 

@@ -139,23 +139,35 @@ class SiswaController extends Controller
 
         $analisis = AnalisisDiagnostik::query()
             ->where('id_siswa', $idSiswa)
+            ->with(['sesiAsesmen.mataPelajaran', 'sesiAsesmen.kelas'])
             ->latest('tanggal_generate')
             ->get();
 
-        $kelasIds = $siswa->kelasRiwayat()->pluck('id_kelas');
+        $allKelasIds = $siswa->kelasRiwayat()->pluck('id_kelas');
+        $activeKelasId = $kelasAktif ? $kelasAktif->id_kelas : null;
 
-        $pastSessionCount = $kelasIds->isNotEmpty()
+        // Untuk mencocokkan dengan semester aktif: ambil sesi asesmen hanya dari kelas aktif saat ini
+        $allSessions = $activeKelasId 
             ? SesiAsesmen::query()
-                ->whereIn('id_kelas', $kelasIds)
-                ->where('waktu_selesai', '<', now())
-                ->count()
-            : 0;
+                ->with(['detailSesiSoal'])
+                ->where('id_kelas', $activeKelasId)
+                ->get()
+            : collect();
 
-        $totalSkorDiperoleh = JawabanSiswa::query()
-            ->join('detail_sesi_soal', 'jawaban_siswa.id_detail', '=', 'detail_sesi_soal.id_detail')
-            ->join('sesi_asesmen', 'detail_sesi_soal.id_sesi', '=', 'sesi_asesmen.id_sesi')
-            ->where('jawaban_siswa.id_siswa', $idSiswa)
-            ->sum('jawaban_siswa.skor_diperoleh');
+        $pastSessionCountActive = $allSessions->count();
+        $sumOfPercentages = 0;
+
+        foreach ($allSessions as $sesi) {
+            $detailIds = $sesi->detailSesiSoal->pluck('id_detail');
+            
+            $totalSkor = JawabanSiswa::where('id_siswa', $idSiswa)
+                ->whereIn('id_detail', $detailIds)
+                ->sum('skor_diperoleh');
+            $totalBobot = $sesi->detailSesiSoal->sum('bobot_nilai');
+            
+            $percentage = $totalBobot > 0 ? ($totalSkor / $totalBobot) * 100 : 0;
+            $sumOfPercentages += $percentage;
+        }
 
         $latestScoreRecord = JawabanSiswa::query()
             ->join('detail_sesi_soal', 'jawaban_siswa.id_detail', '=', 'detail_sesi_soal.id_detail')
@@ -167,7 +179,7 @@ class SiswaController extends Controller
             
         $latestScore = $latestScoreRecord ? round((float) $latestScoreRecord->total_skor, 2) : 0;
 
-        $averageScore = $pastSessionCount > 0 ? round((float) $totalSkorDiperoleh / $pastSessionCount, 2) : 0;
+        $averageScore = $pastSessionCountActive > 0 ? round((float) ($sumOfPercentages / $pastSessionCountActive), 2) : 0;
         
         $pendingSessionCount = $kelasAktif
             ? SesiAsesmen::query()
@@ -181,9 +193,23 @@ class SiswaController extends Controller
 
         // 1. Dari Analisis / Ujian Selesai
         foreach ($analisis as $item) {
+            $sesi = $item->sesiAsesmen;
+            $mapelName = $sesi?->mataPelajaran?->nama_mapel ?? 'Mapel';
+            
+            $guruName = null;
+            if ($sesi) {
+                $tugas = \App\Models\PenugasanPembelajaran::query()
+                    ->where('id_kelas', $sesi->id_kelas)
+                    ->where('id_mapel', $sesi->id_mapel)
+                    ->with('guru')
+                    ->first();
+                $guruName = $tugas?->guru?->nama_lengkap;
+            }
+            $guruInfo = $guruName ? ' (dari ' . $guruName . ')' : '';
+
             $timeline->push([
                 'id' => 'exam_' . $item->id_analisis,
-                'title' => 'Menyelesaikan Ujian ' . ($item->sesiAsesmen?->mataPelajaran?->nama_mapel ?? 'Mapel'),
+                'title' => 'Menyelesaikan Ujian ' . $mapelName . $guruInfo,
                 'date_raw' => clone $item->tanggal_generate,
                 'date' => \Carbon\Carbon::parse($item->tanggal_generate)->diffForHumans(),
                 'type' => 'exam',
@@ -192,11 +218,15 @@ class SiswaController extends Controller
         }
 
         // 2. Dari Apresiasi (Lencana)
-        $allBadges = Apresiasi::query()->where('id_siswa', $idSiswa)->with('guru')->latest('tanggal')->get();
+        $allBadges = Apresiasi::query()->where('id_siswa', $idSiswa)->with(['guru', 'beritaAcara.mataPelajaran'])->latest('tanggal')->get();
         foreach ($allBadges as $badge) {
+            $mapelName = $badge->beritaAcara?->mataPelajaran?->nama_mapel;
+            $mapelInfo = $mapelName ? ' pada mapel ' . $mapelName : '';
+            $guruName = $badge->guru?->nama_lengkap ?? 'Guru';
+
             $timeline->push([
                 'id' => 'badge_' . $badge->id_apresiasi,
-                'title' => 'Mendapat Lencana: ' . $badge->jenis_badge,
+                'title' => 'Mendapat Lencana: ' . $badge->jenis_badge . $mapelInfo . ' (dari ' . $guruName . ')',
                 'date_raw' => clone $badge->tanggal,
                 'date' => \Carbon\Carbon::parse($badge->tanggal)->diffForHumans(),
                 'type' => 'badge',
@@ -205,11 +235,15 @@ class SiswaController extends Controller
         }
 
         // 3. Dari Catatan Privat
-        $allNotes = CatatanPrivat::query()->where('id_siswa', $idSiswa)->with('guru')->latest('tanggal')->get();
+        $allNotes = CatatanPrivat::query()->where('id_siswa', $idSiswa)->with(['guru', 'beritaAcara.mataPelajaran'])->latest('tanggal')->get();
         foreach ($allNotes as $note) {
+            $mapelName = $note->beritaAcara?->mataPelajaran?->nama_mapel;
+            $mapelInfo = $mapelName ? ' pada mapel ' . $mapelName : '';
+            $guruName = $note->guru?->nama_lengkap ?? 'Guru';
+
             $timeline->push([
                 'id' => 'note_' . $note->id_catatan,
-                'title' => 'Mendapat Catatan dari ' . ($note->guru?->nama_lengkap ?? 'Guru'),
+                'title' => 'Mendapat Catatan dari ' . $guruName . $mapelInfo,
                 'date_raw' => clone $note->tanggal,
                 'date' => \Carbon\Carbon::parse($note->tanggal)->diffForHumans(),
                 'type' => 'note',
@@ -259,15 +293,22 @@ class SiswaController extends Controller
             'cards' => [
                 'rata_rata' => $averageScore,
                 'ujian_menunggu' => $pendingSessionCount,
-                'tugas_aktif' => $pastSessionCount,
+                'tugas_aktif' => $pastSessionCountActive, // Asumsi "Asesmen Selesai" juga dihitung untuk semester aktif
                 'apresiasi' => Apresiasi::query()->where('id_siswa', $idSiswa)->count(),
             ],
-            'trend' => $analisis->take(7)->reverse()->values()->map(function (AnalisisDiagnostik $item): array {
+            'trend_data' => $analisis->reverse()->values()->map(function (AnalisisDiagnostik $item): array {
                 return [
-                    'label' => optional($item->tanggal_generate)?->format('d/m'),
+                    'id_analisis' => $item->id_analisis,
                     'value' => (float) $item->skor_total,
+                    'tanggal_raw' => $item->tanggal_generate,
+                    'label' => optional($item->tanggal_generate)?->format('d/m'),
+                    'tipe_soal' => $item->sesiAsesmen?->tipe_soal,
+                    'id_mapel' => $item->sesiAsesmen?->id_mapel,
+                    'nama_mapel' => $item->sesiAsesmen?->mataPelajaran?->nama_mapel,
+                    'periode' => $item->sesiAsesmen?->kelas?->tahun_ajaran,
                 ];
             }),
+            'periode_options' => $riwayatKelas->pluck('tahun_ajaran')->unique()->values(),
             'highlight' => [
                 'latest_score' => $latestScore,
                 'badge' => $allBadges->first(),

@@ -155,29 +155,31 @@ export default function AdminBackupPage({ session, onLogout }) {
                         <table className="w-full text-left text-sm text-slate-600">
                             <thead className="bg-slate-50 text-xs uppercase text-slate-500">
                                 <tr>
+                                    <th className="px-6 py-4 font-medium w-16">No</th>
                                     <th className="px-6 py-4 font-medium">Nama File</th>
                                     <th className="px-6 py-4 font-medium">Ukuran</th>
                                     <th className="px-6 py-4 font-medium">Waktu Pembuatan</th>
-                                    <th className="px-6 py-4 font-medium text-right">Aksi</th>
+                                    <th className="px-6 py-4 font-medium text-center w-32">Aksi</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100">
                                 {loading ? (
                                     <tr>
-                                        <td colSpan="4" className="px-6 py-8 text-center text-slate-500">
+                                        <td colSpan="5" className="px-6 py-8 text-center text-slate-500">
                                             <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2" />
                                             Memuat daftar backup...
                                         </td>
                                     </tr>
                                 ) : backups.length === 0 ? (
                                     <tr>
-                                        <td colSpan="4" className="px-6 py-8 text-center text-slate-500">
+                                        <td colSpan="5" className="px-6 py-8 text-center text-slate-500">
                                             Belum ada file backup yang tersedia.
                                         </td>
                                     </tr>
                                 ) : (
                                     backups.map((backup, i) => (
                                         <tr key={i} className="hover:bg-slate-50/50 transition-colors">
+                                            <td className="px-6 py-4 font-medium text-slate-500">{i + 1}</td>
                                             <td className="px-6 py-4 font-medium text-slate-900 flex items-center gap-3">
                                                 <div className="p-2 bg-primary/5 text-primary rounded-lg">
                                                     <Database className="w-4 h-4" />
@@ -190,8 +192,8 @@ export default function AdminBackupPage({ session, onLogout }) {
                                             <td className="px-6 py-4">
                                                 {backup.last_modified}
                                             </td>
-                                            <td className="px-6 py-4 text-right">
-                                                <div className="flex items-center justify-end gap-2">
+                                            <td className="px-6 py-4">
+                                                <div className="flex items-center justify-center gap-2">
                                                     <button
                                                         onClick={() => handleDownloadBackup(backup.file_name)}
                                                         className="p-2 text-slate-400 hover:text-primary hover:bg-primary/5 rounded-xl transition-colors"

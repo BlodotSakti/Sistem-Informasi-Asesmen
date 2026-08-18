@@ -152,16 +152,32 @@ export default function NotificationPanel() {
                         ) : (
                             <ul className="divide-y divide-slate-100">
                                 {notifications.map((notif) => (
-                                    <li key={notif.id} className="group relative flex gap-4 p-4 hover:bg-slate-50 transition-colors">
-                                        {renderIcon(notif)}
-                                        <div className="flex-1 space-y-1">
-                                            <p className="text-sm text-slate-900 line-clamp-3 leading-snug">
-                                                {notif.message}
-                                            </p>
-                                            <p className="text-[11px] text-slate-500 font-medium">
-                                                {timeAgo(notif.timestamp)}
-                                            </p>
-                                        </div>
+                                    <li key={notif.id} className="group relative border-b border-slate-50 last:border-0 hover:bg-slate-50 transition-colors">
+                                        {notif.link ? (
+                                            <a href={notif.link} className="flex gap-4 p-4 w-full h-full cursor-pointer focus:outline-none focus:bg-slate-50">
+                                                {renderIcon(notif)}
+                                                <div className="flex-1 space-y-1 text-left">
+                                                    <p className="text-sm text-slate-900 line-clamp-3 leading-snug">
+                                                        {notif.message}
+                                                    </p>
+                                                    <p className="text-[11px] text-slate-500 font-medium">
+                                                        {timeAgo(notif.timestamp)}
+                                                    </p>
+                                                </div>
+                                            </a>
+                                        ) : (
+                                            <div className="flex gap-4 p-4">
+                                                {renderIcon(notif)}
+                                                <div className="flex-1 space-y-1">
+                                                    <p className="text-sm text-slate-900 line-clamp-3 leading-snug">
+                                                        {notif.message}
+                                                    </p>
+                                                    <p className="text-[11px] text-slate-500 font-medium">
+                                                        {timeAgo(notif.timestamp)}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        )}
                                     </li>
                                 ))}
                             </ul>

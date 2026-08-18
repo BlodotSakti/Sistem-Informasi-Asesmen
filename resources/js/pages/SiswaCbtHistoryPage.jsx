@@ -105,6 +105,7 @@ export default function SiswaCbtHistoryPage({ session, onLogout }) {
                                     <th className="px-4 py-3 font-semibold text-center w-12">No.</th>
                                     <th className="px-4 py-3 font-semibold">Mata Pelajaran</th>
                                     <th className="px-4 py-3 font-semibold">Kelas</th>
+                                    <th className="px-4 py-3 font-semibold">Tipe Soal</th>
                                     <th className="px-4 py-3 font-semibold">Jenis</th>
                                     <th className="px-4 py-3 font-semibold">Soal</th>
                                     <th className="px-4 py-3 font-semibold">Benar</th>
@@ -120,6 +121,7 @@ export default function SiswaCbtHistoryPage({ session, onLogout }) {
                                             <td className="px-4 py-3 font-semibold text-slate-500 text-center">{index + 1}</td>
                                             <td className="px-4 py-3 font-semibold text-slate-900">{item.mata_pelajaran || '-'}</td>
                                             <td className="px-4 py-3 text-slate-600">{item.kelas || '-'}</td>
+                                            <td className="px-4 py-3 text-slate-600">{item.tipe_soal || '-'}</td>
                                             <td className="px-4 py-3 text-slate-600 capitalize">{item.jenis_asesmen}</td>
                                             <td className="px-4 py-3 text-slate-600">{item.jumlah_dijawab}/{item.jumlah_soal}</td>
                                             <td className="px-4 py-3 text-slate-600">{item.jumlah_benar}</td>
@@ -141,7 +143,7 @@ export default function SiswaCbtHistoryPage({ session, onLogout }) {
                                 })}
                                 {!loading && filteredHistory.length === 0 && (
                                     <tr>
-                                        <td colSpan="8" className="px-4 py-8 text-center text-sm text-slate-500">Belum ada riwayat CBT.</td>
+                                        <td colSpan="9" className="px-4 py-8 text-center text-sm text-slate-500">Belum ada riwayat CBT.</td>
                                     </tr>
                                 )}
                             </tbody>
