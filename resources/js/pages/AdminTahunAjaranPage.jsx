@@ -25,6 +25,7 @@ export default function AdminTahunAjaranPage({ session, onLogout }) {
     
     const [toast, setToast] = useState(null);
     const toastTimer = useRef(null);
+    const formRef = useRef(null);
 
     const [yearForm, setYearForm] = useState({
         nama_tahun_ajaran: '',
@@ -158,7 +159,7 @@ export default function AdminTahunAjaranPage({ session, onLogout }) {
                     )}
 
                     <div className="space-y-6">
-                        <form onSubmit={submitYear} className="space-y-4 rounded-3xl bg-slate-50 p-5">
+                        <form ref={formRef} onSubmit={submitYear} className="space-y-4 rounded-3xl bg-slate-50 p-5 scroll-mt-24">
                             <div className="grid gap-4 md:grid-cols-2">
                                 <label className="space-y-2 text-sm font-medium text-slate-700 md:col-span-2">
                                     <span>Nama Tahun Ajaran</span>
@@ -247,6 +248,9 @@ export default function AdminTahunAjaranPage({ session, onLogout }) {
                                                                 is_aktif: Boolean(item.is_aktif),
                                                                 keterangan: item.keterangan || '',
                                                             });
+                                                            setTimeout(() => {
+                                                                formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                                            }, 50);
                                                         }} className={TABLE_ACTION_PRIMARY_CLASS}>Edit</button>
                                                         <button type="button" onClick={() => deleteMaster(`/api/admin/tahun-ajaran/${item.id_tahun_ajaran}`, 'Tahun ajaran')} className={TABLE_ACTION_DANGER_CLASS}>Hapus</button>
                                                     </div>

@@ -10,4 +10,14 @@ Artisan::command('inspire', function () {
 })->purpose('Display an inspiring quote');
 
 Schedule::command('backup:clean')->daily()->at('01:30');
-Schedule::command('backup:run')->daily()->at('02:00');
+
+Schedule::call(function () {
+    $activeTahunAjaran = \App\Models\TahunAjaran::where('is_aktif', true)->first();
+    if ($activeTahunAjaran) {
+        $namaTA = str_replace('/', '-', $activeTahunAjaran->nama_tahun_ajaran);
+        $semester = ucfirst($activeTahunAjaran->semester);
+        $prefix = "TA-{$namaTA}-Semester-{$semester}_";
+        config(['backup.backup.destination.filename_prefix' => $prefix]);
+    }
+    \Illuminate\Support\Facades\Artisan::call('backup:run');
+})->daily()->at('02:00')->name('backup_daily_with_prefix');

@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\File;
+use App\Models\TahunAjaran;
 
 class BackupController extends Controller
 {
@@ -42,6 +43,7 @@ class BackupController extends Controller
     public function create()
     {
         try {
+            $this->setBackupFilenamePrefix();
             // Run the backup command
             Artisan::call('backup:run', ['--only-db' => true]);
             
@@ -57,6 +59,7 @@ class BackupController extends Controller
     public function createFull()
     {
         try {
+            $this->setBackupFilenamePrefix();
             // Run full backup
             Artisan::call('backup:run');
             
@@ -95,5 +98,19 @@ class BackupController extends Controller
         }
 
         return response()->json(['error' => 'File tidak ditemukan.'], 404);
+    }
+
+    /**
+     * Set backup filename prefix based on active Tahun Ajaran.
+     */
+    private function setBackupFilenamePrefix()
+    {
+        $activeTahunAjaran = TahunAjaran::where('is_aktif', true)->first();
+        if ($activeTahunAjaran) {
+            $namaTA = str_replace('/', '-', $activeTahunAjaran->nama_tahun_ajaran);
+            $semester = ucfirst($activeTahunAjaran->semester);
+            $prefix = "TA-{$namaTA}-Semester-{$semester}_";
+            config(['backup.backup.destination.filename_prefix' => $prefix]);
+        }
     }
 }

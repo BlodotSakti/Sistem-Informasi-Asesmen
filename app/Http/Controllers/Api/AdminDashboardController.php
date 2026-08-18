@@ -21,33 +21,30 @@ class AdminDashboardController extends Controller
         $totalSiswa = Siswa::count();
         
         $tahunAjaranAktif = TahunAjaran::where('is_aktif', true)->first();
+        
         // Fallback to all classes if no active academic year is set
-        $totalKelas = $tahunAjaranAktif 
-            ? Kelas::where('tahun_ajaran', $tahunAjaranAktif->nama_tahun_ajaran)->count() 
-            : Kelas::count();
+        if ($tahunAjaranAktif) {
+            $periodeLabel = sprintf('%s - Semester %s', $tahunAjaranAktif->nama_tahun_ajaran, ucfirst($tahunAjaranAktif->semester));
+            $totalKelas = Kelas::where('tahun_ajaran', $periodeLabel)->count();
+        } else {
+            $totalKelas = Kelas::count();
+        }
             
         $totalMapel = MataPelajaran::count();
 
-        // System Logs: 10 newest registered users
-        $recentLogs = Pengguna::query()
-            ->with(['admin', 'guru', 'siswa'])
+        // System Logs: Fetch from LogAktivitas table
+        $recentLogs = \App\Models\LogAktivitas::with(['aktor.admin', 'aktor.guru', 'aktor.siswa'])
             ->latest('created_at')
             ->limit(10)
             ->get()
-            ->map(function (Pengguna $pengguna) {
-                $profile = $pengguna->admin ?? $pengguna->guru ?? $pengguna->siswa;
-
+            ->map(function ($log) {
+                $profile = $log->aktor?->admin ?? $log->aktor?->guru ?? $log->aktor?->siswa;
                 return [
-                    'id' => $pengguna->id_pengguna,
-                    'tanggal' => $pengguna->created_at?->format('Y-m-d H:i') ?? now()->format('Y-m-d H:i'),
-                    'deskripsi' => match ($pengguna->role) {
-                        'admin' => 'Penambahan akun admin baru',
-                        'guru' => 'Penambahan akun guru baru',
-                        'siswa' => 'Penambahan akun siswa baru',
-                        default => 'Penambahan pengguna baru',
-                    },
-                    'nama_lengkap' => $profile?->nama_lengkap ?? $pengguna->username,
-                    'role' => $pengguna->role,
+                    'id' => $log->id_log,
+                    'tanggal' => $log->created_at->format('Y-m-d H:i'),
+                    'deskripsi' => $log->deskripsi,
+                    'nama_lengkap' => $profile?->nama_lengkap ?? $log->aktor?->username ?? 'Sistem',
+                    'role' => $log->aktor?->role ?? 'admin',
                 ];
             });
 

@@ -20,6 +20,7 @@ export default function AdminKelasPage({ session, onLogout }) {
     
     const [toast, setToast] = useState(null);
     const toastTimer = useRef(null);
+    const formRef = useRef(null);
 
     const [classForm, setClassForm] = useState({
         id_guru_wali: '',
@@ -157,7 +158,7 @@ export default function AdminKelasPage({ session, onLogout }) {
                     )}
 
                     <div className="space-y-6">
-                        <form onSubmit={submitClass} className="space-y-4 rounded-3xl bg-slate-50 p-5">
+                        <form ref={formRef} onSubmit={submitClass} className="space-y-4 rounded-3xl bg-slate-50 p-5 scroll-mt-24">
                             <div className="grid gap-4">
                                 <label className="space-y-2 text-sm font-medium text-slate-700">
                                     <span>Nama Kelas</span>
@@ -224,6 +225,9 @@ export default function AdminKelasPage({ session, onLogout }) {
                                                         <button type="button" onClick={() => {
                                                             setClassId(item.id_kelas);
                                                             setClassForm({ id_guru_wali: item.id_guru_wali || '', nama_kelas: item.nama_kelas || '', tahun_ajaran: item.tahun_ajaran || '' });
+                                                            setTimeout(() => {
+                                                                formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                                            }, 50);
                                                         }} className={TABLE_ACTION_PRIMARY_CLASS}>Edit</button>
                                                         <button type="button" onClick={() => deleteMaster(`/api/admin/kelas/${item.id_kelas}`, 'Kelas')} className={TABLE_ACTION_DANGER_CLASS}>Hapus</button>
                                                     </div>

@@ -20,6 +20,7 @@ export default function AdminPenugasanGuruPage({ session, onLogout }) {
     
     const [toast, setToast] = useState(null);
     const toastTimer = useRef(null);
+    const formRef = useRef(null);
 
     const [teachingAssignmentForm, setTeachingAssignmentForm] = useState({
         id_kelas: '',
@@ -229,7 +230,7 @@ export default function AdminPenugasanGuruPage({ session, onLogout }) {
                     )}
 
                     <div className="space-y-6">
-                        <form onSubmit={submitTeachingAssignment} className="space-y-4 rounded-3xl bg-slate-50 p-5">
+                        <form ref={formRef} onSubmit={submitTeachingAssignment} className="space-y-4 rounded-3xl bg-slate-50 p-5 scroll-mt-24">
                             <div className="grid gap-4">
                                 <label className="space-y-2 text-sm font-medium text-slate-700">
                                     <span>Kelas</span>
@@ -380,6 +381,9 @@ export default function AdminPenugasanGuruPage({ session, onLogout }) {
                                                                 tahun_ajaran: item.tahun_ajaran || '',
                                                                 is_aktif: Boolean(item.is_aktif),
                                                             });
+                                                            setTimeout(() => {
+                                                                formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                                            }, 50);
                                                         }} className={TABLE_ACTION_PRIMARY_CLASS}>Edit</button>
                                                         <button type="button" onClick={() => deleteMaster(`/api/admin/penugasan-pembelajaran/${item.id_penugasan_pembelajaran}`, 'Penugasan pembelajaran')} className={TABLE_ACTION_DANGER_CLASS}>Hapus</button>
                                                     </div>

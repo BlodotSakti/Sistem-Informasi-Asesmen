@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import DashboardLayout from '../components/layout/DashboardLayout';
 import StatCard from '../components/ui/StatCard';
 import { apiFetch } from '../lib/api';
@@ -32,6 +32,7 @@ export default function GuruBeritaAcaraPage({ session, onLogout }) {
     const [error, setError] = useState('');
     const [toast, setToast] = useState('');
     const [successPopup, setSuccessPopup] = useState(null);
+    const formRef = useRef(null);
 
     const [beritaForm, setBeritaForm] = useState({
         id_kelas: '',
@@ -179,7 +180,10 @@ export default function GuruBeritaAcaraPage({ session, onLogout }) {
         }, { ...emptyStudentMap }));
 
         setError('');
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+        // Smooth scroll ke arah form
+        setTimeout(() => {
+            formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 50);
     };
 
     const submitBeritaAcara = async (event) => {
@@ -260,7 +264,7 @@ export default function GuruBeritaAcaraPage({ session, onLogout }) {
                     </div>
                 </section>
 
-                <form onSubmit={submitBeritaAcara} className="rounded-3xl border border-border bg-white p-6 shadow-sm">
+                <form ref={formRef} onSubmit={submitBeritaAcara} className="rounded-3xl border border-border bg-white p-6 shadow-sm scroll-mt-24">
                     <h3 className="text-xl font-semibold text-slate-900 border-b border-border pb-4">{editingBeritaId ? 'Ubah presensi dan evaluasi pertemuan kelas' : 'Input Presensi dan Evaluasi (BAP)'}</h3>
                     <p className="mt-4 text-sm text-slate-500">{editingBeritaId ? 'Mode edit aktif. Simpan perubahan untuk memperbarui BAP yang sudah ada.' : 'Isi data pertemuan, lalu tambahkan penguatan siswa jika diperlukan.'}</p>
                     
@@ -507,7 +511,7 @@ export default function GuruBeritaAcaraPage({ session, onLogout }) {
                                             <button
                                                 type="button"
                                                 onClick={() => openEditBeritaAcara(item)}
-                                                className="rounded-full border border-slate-300 px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-700 transition hover:bg-slate-50"
+                                                className="rounded-full bg-accent/40 px-4 py-2 text-xs font-bold uppercase tracking-[0.18em] text-primary transition-colors hover:bg-accent shadow-sm"
                                             >
                                                 Edit
                                             </button>

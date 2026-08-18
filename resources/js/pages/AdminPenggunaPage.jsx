@@ -24,6 +24,7 @@ export default function AdminPenggunaPage({ session, onLogout, mode = 'pengguna'
     const [error, setError] = useState('');
     const [toast, setToast] = useState(null);
     const toastTimer = useRef(null);
+    const formRef = useRef(null);
 
     const [userFilters, setUserFilters] = useState({
         search: '',
@@ -86,10 +87,14 @@ export default function AdminPenggunaPage({ session, onLogout, mode = 'pengguna'
     };
 
     useEffect(() => {
-        if (session?.token) {
-            loadUsers();
-        }
-    }, [session]);
+        if (!session?.token) return;
+        
+        const timer = setTimeout(() => {
+            loadUsers(userFilters);
+        }, 500);
+
+        return () => clearTimeout(timer);
+    }, [session, userFilters.search, userFilters.role, userFilters.status, userFilters.page]);
 
     const resetUserForm = () => {
         setUserForm({
@@ -131,17 +136,8 @@ export default function AdminPenggunaPage({ session, onLogout, mode = 'pengguna'
         }
     };
 
-    const applyUserFilters = async (event) => {
-        event.preventDefault();
-        const nextFilters = { ...userFilters, page: 1 };
-        setUserFilters(nextFilters);
-        await loadUsers(nextFilters);
-    };
-
-    const resetUserFilters = async () => {
-        const nextFilters = { search: '', role: 'all', status: 'all', page: 1 };
-        setUserFilters(nextFilters);
-        await loadUsers(nextFilters);
+    const resetUserFilters = () => {
+        setUserFilters({ search: '', role: 'all', status: 'all', page: 1 });
     };
 
     const archiveUser = async (idPengguna, reason = '') => {
@@ -165,6 +161,17 @@ export default function AdminPenggunaPage({ session, onLogout, mode = 'pengguna'
             await loadUsers();
         } catch (exception) {
             showToast(exception.message || 'Gagal mengaktifkan akun.', 'error');
+        }
+    };
+
+    const deleteUser = async (idPengguna) => {
+        if (!window.confirm('Hapus akun ini secara permanen? Data yang terkait juga akan dihapus dan tidak bisa dikembalikan.')) return;
+        try {
+            await apiFetch(`/api/admin/pengguna/${idPengguna}`, session, { method: 'DELETE' });
+            showToast('Akun berhasil dihapus permanen.');
+            await loadUsers();
+        } catch (exception) {
+            showToast(exception.message || 'Gagal menghapus akun.', 'error');
         }
     };
 
@@ -282,7 +289,7 @@ export default function AdminPenggunaPage({ session, onLogout, mode = 'pengguna'
                     )}
 
                     <div className="space-y-6">
-                        <div className="space-y-4 rounded-3xl bg-slate-50 p-5">
+                        <div ref={formRef} className="space-y-4 rounded-3xl bg-slate-50 p-5 scroll-mt-24">
                             <div className="flex gap-2 rounded-full bg-white p-1 text-sm font-medium text-slate-600">
                                 <button type="button" onClick={() => setUserTab('manual')} className={`flex-1 rounded-full px-4 py-2 ${userTab === 'manual' ? 'bg-primary text-white' : ''}`}>Manual</button>
                                 <button type="button" onClick={() => setUserTab('import')} className={`flex-1 rounded-full px-4 py-2 ${userTab === 'import' ? 'bg-primary text-white' : ''}`}>Import Excel</button>
@@ -399,12 +406,12 @@ export default function AdminPenggunaPage({ session, onLogout, mode = 'pengguna'
                                     </div>
                                 </div>
 
-                                <form onSubmit={applyUserFilters} className="mt-4 grid gap-3 lg:grid-cols-[1.3fr_0.8fr_0.8fr_auto]">
+                                <form onSubmit={(e) => e.preventDefault()} className="mt-4 grid gap-3 lg:grid-cols-[1.3fr_0.8fr_0.8fr_auto]">
                                     <label className="space-y-2 text-sm font-medium text-slate-700">
                                         <span>Cari pengguna</span>
                                         <input
                                             value={userFilters.search}
-                                            onChange={(event) => setUserFilters((current) => ({ ...current, search: event.target.value }))}
+                                            onChange={(event) => setUserFilters((current) => ({ ...current, search: event.target.value, page: 1 }))}
                                             className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-slate-900"
                                             placeholder="Nama, username, NIP, atau NISN"
                                         />
@@ -413,7 +420,7 @@ export default function AdminPenggunaPage({ session, onLogout, mode = 'pengguna'
                                         <span>Role</span>
                                         <select
                                             value={userFilters.role}
-                                            onChange={(event) => setUserFilters((current) => ({ ...current, role: event.target.value }))}
+                                            onChange={(event) => setUserFilters((current) => ({ ...current, role: event.target.value, page: 1 }))}
                                             className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-slate-900"
                                         >
                                             <option value="all">Semua role</option>
@@ -426,7 +433,7 @@ export default function AdminPenggunaPage({ session, onLogout, mode = 'pengguna'
                                         <span>Status</span>
                                         <select
                                             value={userFilters.status}
-                                            onChange={(event) => setUserFilters((current) => ({ ...current, status: event.target.value }))}
+                                            onChange={(event) => setUserFilters((current) => ({ ...current, status: event.target.value, page: 1 }))}
                                             className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-slate-900"
                                         >
                                             <option value="all">Semua status</option>
@@ -435,7 +442,6 @@ export default function AdminPenggunaPage({ session, onLogout, mode = 'pengguna'
                                         </select>
                                     </label>
                                     <div className="flex items-end gap-2">
-                                        <button type="submit" className="rounded-full bg-primary px-5 py-3 text-sm font-semibold text-white transition hover:bg-primary/85">Cari</button>
                                         <button type="button" onClick={resetUserFilters} className="rounded-full border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-100">Reset</button>
                                     </div>
                                 </form>
@@ -485,12 +491,18 @@ export default function AdminPenggunaPage({ session, onLogout, mode = 'pengguna'
                                                                     nisn: item.siswa?.nisn || '',
                                                                     is_aktif: Boolean(item.is_aktif),
                                                                 });
+                                                                setTimeout(() => {
+                                                                    formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                                                }, 50);
                                                                 }} className={TABLE_ACTION_PRIMARY_CLASS}>Edit</button>
                                                             {item.is_aktif ? (
                                                                     <button type="button" onClick={() => archiveUser(item.id_pengguna, 'Diarsipkan oleh admin.')} className="rounded-full border border-amber-200 px-4 py-2 text-xs font-semibold text-amber-700 transition hover:bg-amber-50">Arsipkan</button>
                                                             ) : (
                                                                     <button type="button" onClick={() => restoreUser(item.id_pengguna)} className="rounded-full border border-emerald-200 px-4 py-2 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-50">Aktifkan</button>
                                                             )}
+                                                            {item.id_pengguna !== session?.user?.id_pengguna ? (
+                                                                <button type="button" onClick={() => deleteUser(item.id_pengguna)} className="rounded-full border border-rose-200 px-4 py-2 text-xs font-semibold text-rose-700 transition hover:bg-rose-50">Hapus</button>
+                                                            ) : null}
                                                         </div>
                                                     </td>
                                                 </tr>

@@ -16,6 +16,11 @@ export async function apiFetch(path, session, options = {}) {
     const payload = contentType.includes('application/json') ? await response.json() : await response.text();
 
     if (!response.ok) {
+        if (response.status === 401) {
+            localStorage.removeItem('sia-session');
+            window.location.replace('/login');
+            return;
+        }
         const message = typeof payload === 'string' ? payload : payload?.message || 'Request gagal.';
         throw new Error(message);
     }

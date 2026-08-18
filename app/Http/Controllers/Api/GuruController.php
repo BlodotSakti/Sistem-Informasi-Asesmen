@@ -53,7 +53,7 @@ class GuruController extends Controller
                 'is_wali_kelas' => false,
             ]);
         }
-        
+
         $kelasOptions = $kelasOptions->unique('id_kelas')->values();
         $kelasIds = $kelasOptions->pluck('id_kelas');
 
@@ -66,8 +66,8 @@ class GuruController extends Controller
 
         $studentsByClass = $activeClassStudents
             ->groupBy('id_kelas')
-            ->map(fn (Collection $items): array => $items
-                ->map(fn (KelasSiswa $item): array => [
+            ->map(fn(Collection $items): array => $items
+                ->map(fn(KelasSiswa $item): array => [
                     'id_siswa' => $item->id_siswa,
                     'nama_lengkap' => $item->siswa?->nama_lengkap,
                     'nisn' => $item->siswa?->nisn,
@@ -91,11 +91,19 @@ class GuruController extends Controller
             ->limit(30)
             ->get();
 
+        $tipeSoalOptions = SesiAsesmen::query()
+            ->whereIn('id_kelas', $kelasIds)
+            ->whereIn('id_mapel', $assignments->pluck('id_mapel'))
+            ->whereNotNull('tipe_soal')
+            ->distinct()
+            ->pluck('tipe_soal');
+
         return response()->json([
             'teaching_assignments' => $assignments,
             'kelas_options' => $kelasOptions,
+            'tipe_soal_options' => $tipeSoalOptions,
             'mapel_options' => $assignments
-                ->map(fn (PenugasanPembelajaran $item): array => [
+                ->map(fn(PenugasanPembelajaran $item): array => [
                     'id_mapel' => $item->id_mapel,
                     'nama_mapel' => $item->mataPelajaran?->nama_mapel,
                     'nama_lengkap' => $item->mataPelajaran?->nama_lengkap,
@@ -139,7 +147,7 @@ class GuruController extends Controller
         $validator->after(function ($validator) use ($request): void {
             $jenisSoal = $request->input('jenis_soal');
             $opsi = collect($request->input('opsi_jawaban', []))
-                ->map(fn ($item) => trim((string) $item))
+                ->map(fn($item) => trim((string) $item))
                 ->filter()
                 ->values();
 
@@ -148,20 +156,20 @@ class GuruController extends Controller
                     $validator->errors()->add('opsi_jawaban', 'Minimal dua opsi jawaban diperlukan untuk soal pilihan ganda.');
                 }
 
-                if ($opsi->count() > 0 && ! $opsi->contains(trim((string) $request->input('kunci_jawaban')))) {
+                if ($opsi->count() > 0 && !$opsi->contains(trim((string) $request->input('kunci_jawaban')))) {
                     $validator->errors()->add('kunci_jawaban', 'Kunci jawaban harus sesuai salah satu opsi pilihan ganda.');
                 }
             } elseif ($jenisSoal === 'pilihan_ganda_kompleks') {
                 if ($opsi->count() < 2) {
                     $validator->errors()->add('opsi_jawaban', 'Minimal dua opsi jawaban diperlukan untuk soal pilihan ganda kompleks.');
                 }
-                
+
                 $kunciArr = $request->input('kunci_jawaban');
                 if (!is_array($kunciArr) || count($kunciArr) === 0) {
                     $validator->errors()->add('kunci_jawaban', 'Minimal satu kunci jawaban diperlukan.');
                 } else {
                     foreach ($kunciArr as $k) {
-                        if (! $opsi->contains(trim((string) $k))) {
+                        if (!$opsi->contains(trim((string) $k))) {
                             $validator->errors()->add('kunci_jawaban', 'Semua kunci jawaban harus terdapat pada opsi jawaban.');
                             break;
                         }
@@ -180,7 +188,7 @@ class GuruController extends Controller
         $this->ensureGuruMengampuMapel($guruId, (int) $data['id_mapel']);
 
         $cleanOptions = collect($data['opsi_jawaban'] ?? [])
-            ->map(fn ($item) => trim((string) $item))
+            ->map(fn($item) => trim((string) $item))
             ->filter()
             ->values()
             ->all();
@@ -221,7 +229,7 @@ class GuruController extends Controller
         $validator->after(function ($validator) use ($request): void {
             $jenisSoal = $request->input('jenis_soal');
             $opsi = collect($request->input('opsi_jawaban', []))
-                ->map(fn ($item) => trim((string) $item))
+                ->map(fn($item) => trim((string) $item))
                 ->filter()
                 ->values();
 
@@ -229,20 +237,20 @@ class GuruController extends Controller
                 if ($opsi->count() < 2) {
                     $validator->errors()->add('opsi_jawaban', 'Minimal dua opsi jawaban diperlukan untuk soal pilihan ganda.');
                 }
-                if ($opsi->count() > 0 && ! $opsi->contains(trim((string) $request->input('kunci_jawaban')))) {
+                if ($opsi->count() > 0 && !$opsi->contains(trim((string) $request->input('kunci_jawaban')))) {
                     $validator->errors()->add('kunci_jawaban', 'Kunci jawaban harus sesuai salah satu opsi pilihan ganda.');
                 }
             } elseif ($jenisSoal === 'pilihan_ganda_kompleks') {
                 if ($opsi->count() < 2) {
                     $validator->errors()->add('opsi_jawaban', 'Minimal dua opsi jawaban diperlukan untuk soal pilihan ganda kompleks.');
                 }
-                
+
                 $kunciArr = $request->input('kunci_jawaban');
                 if (!is_array($kunciArr) || count($kunciArr) === 0) {
                     $validator->errors()->add('kunci_jawaban', 'Minimal satu kunci jawaban diperlukan.');
                 } else {
                     foreach ($kunciArr as $k) {
-                        if (! $opsi->contains(trim((string) $k))) {
+                        if (!$opsi->contains(trim((string) $k))) {
                             $validator->errors()->add('kunci_jawaban', 'Semua kunci jawaban harus terdapat pada opsi jawaban.');
                             break;
                         }
@@ -267,7 +275,7 @@ class GuruController extends Controller
         $this->ensureGuruMengampuMapel($guruId, (int) $data['id_mapel']);
 
         $cleanOptions = collect($data['opsi_jawaban'] ?? [])
-            ->map(fn ($item) => trim((string) $item))
+            ->map(fn($item) => trim((string) $item))
             ->filter()
             ->values()
             ->all();
@@ -340,24 +348,24 @@ class GuruController extends Controller
 
         $created = [];
         $errors = [];
-        
+
         foreach ($data['soal'] as $index => $soal) {
             $soal['created_by'] = $penggunaId;
             $soal['id_mapel'] = $data['id_mapel'];
-            
+
             if ($soal['jenis_soal'] === 'esai') {
                 $soal['opsi_jawaban'] = [];
             } else {
-                $opsiJawaban = collect($soal['opsi_jawaban'] ?? [])->map(fn($val) => trim((string)$val));
-                
+                $opsiJawaban = collect($soal['opsi_jawaban'] ?? [])->map(fn($val) => trim((string) $val));
+
                 if ($soal['jenis_soal'] === 'pilihan_ganda_kompleks') {
-                    $kunciArr = is_string($soal['kunci_jawaban']) 
+                    $kunciArr = is_string($soal['kunci_jawaban'])
                         ? array_values(array_filter(array_map('trim', explode(',', $soal['kunci_jawaban']))))
                         : (array) $soal['kunci_jawaban'];
-                    
+
                     // Validate each kunci exists in opsi
                     foreach ($kunciArr as $k) {
-                        if (!$opsiJawaban->contains(trim((string)$k))) {
+                        if (!$opsiJawaban->contains(trim((string) $k))) {
                             $errors[] = "Baris " . ($index + 2) . ": Kunci '" . $k . "' tak ada di opsi.";
                         }
                     }
@@ -370,7 +378,7 @@ class GuruController extends Controller
                     $soal['kunci_jawaban'] = $kunci;
                 }
             }
-            
+
             $created[] = $soal;
         }
 
@@ -435,7 +443,8 @@ class GuruController extends Controller
 
         foreach ($siswaAssignments as $assignment) {
             $siswa = $assignment->siswa;
-            if (!$siswa) continue;
+            if (!$siswa)
+                continue;
 
             $jawabanSiswa = $allJawaban->get($siswa->id_siswa, collect());
             $sudahMengerjakan = $jawabanSiswa->isNotEmpty();
@@ -467,11 +476,13 @@ class GuruController extends Controller
                 'jumlah_dijawab' => $jawabanSiswa->count(),
                 'detail_jawaban' => $detailJawaban,
                 'analisis_diagnostik' => (function () use ($siswa, $id_sesi, $sudahMengerjakan) {
-                    if (!$sudahMengerjakan) return null;
+                    if (!$sudahMengerjakan)
+                        return null;
                     $analisis = AnalisisDiagnostik::where('id_siswa', $siswa->id_siswa)
                         ->where('id_sesi', $id_sesi)
                         ->first();
-                    if (!$analisis) return null;
+                    if (!$analisis)
+                        return null;
                     return [
                         'narasi_kekuatan' => $analisis->narasi_kekuatan,
                         'narasi_kelemahan' => $analisis->narasi_kelemahan,
@@ -615,7 +626,7 @@ class GuruController extends Controller
             ]);
 
             foreach ($kehadiranSiswa as $row) {
-                if (! empty($row['catatan_pribadi'])) {
+                if (!empty($row['catatan_pribadi'])) {
                     CatatanPrivat::create([
                         'id_guru' => $guruId,
                         'id_siswa' => $row['id_siswa'],
@@ -625,7 +636,7 @@ class GuruController extends Controller
                     ]);
                 }
 
-                if (! empty($row['jenis_badge'])) {
+                if (!empty($row['jenis_badge'])) {
                     Apresiasi::create([
                         'id_guru' => $guruId,
                         'id_siswa' => $row['id_siswa'],
@@ -691,7 +702,7 @@ class GuruController extends Controller
             $beritaAcara->apresiasi()->delete();
 
             foreach ($kehadiranSiswa as $row) {
-                if (! empty($row['catatan_pribadi'])) {
+                if (!empty($row['catatan_pribadi'])) {
                     CatatanPrivat::create([
                         'id_guru' => $guruId,
                         'id_siswa' => $row['id_siswa'],
@@ -701,7 +712,7 @@ class GuruController extends Controller
                     ]);
                 }
 
-                if (! empty($row['jenis_badge'])) {
+                if (!empty($row['jenis_badge'])) {
                     Apresiasi::create([
                         'id_guru' => $guruId,
                         'id_siswa' => $row['id_siswa'],
@@ -771,7 +782,7 @@ class GuruController extends Controller
     public function sesiAsesmenDestroy(int $id_sesi): JsonResponse
     {
         $sesi = SesiAsesmen::findOrFail($id_sesi);
-        
+
         try {
             $sesi->delete();
             return response()->json(null, 204);
@@ -852,6 +863,13 @@ class GuruController extends Controller
             });
         }
 
+        if ($request->filled('tipe_soal') && $request->input('tipe_soal') !== 'all') {
+            $tipeSoal = $request->input('tipe_soal');
+            $query->whereHas('sesiAsesmen', function ($q) use ($tipeSoal) {
+                $q->where('tipe_soal', $tipeSoal);
+            });
+        }
+
         return response()->json($query->latest('tanggal_generate')->paginate(15));
     }
 
@@ -901,7 +919,7 @@ class GuruController extends Controller
             ->orderBy('waktu_mulai')
             ->limit(5)
             ->get()
-            ->map(fn (SesiAsesmen $sesi): array => [
+            ->map(fn(SesiAsesmen $sesi): array => [
                 'title' => 'Jadwal Ujian - ' . $sesi->kelas?->nama_kelas,
                 'meta' => optional($sesi->waktu_mulai)?->format('d/m/Y') . ' - ' . ucfirst($sesi->jenis_asesmen) . ' | ' . ($sesi->mataPelajaran?->nama_mapel ?? '-'),
                 'note' => 'Mulai ' . optional($sesi->waktu_mulai)?->format('H:i') . ' WIB',
@@ -919,7 +937,7 @@ class GuruController extends Controller
                 'total_berita_acara' => BeritaAcara::query()->where('id_guru', $guruId)->count(),
             ],
             'upcoming_schedules' => $upcomingSchedules,
-            'teaching_assignments' => $penugasan->map(fn (PenugasanPembelajaran $assignment): array => [
+            'teaching_assignments' => $penugasan->map(fn(PenugasanPembelajaran $assignment): array => [
                 'id_penugasan_pembelajaran' => $assignment->id_penugasan_pembelajaran,
                 'nama_kelas' => $assignment->kelas?->nama_kelas,
                 'nama_mapel' => $assignment->mataPelajaran?->nama_mapel,
@@ -941,7 +959,7 @@ class GuruController extends Controller
             ->where('is_aktif', true)
             ->exists();
 
-        if (! $exists) {
+        if (!$exists) {
             abort(response()->json([
                 'message' => 'Guru belum ditugaskan untuk mengampu mata pelajaran ini.',
             ], 422));
@@ -957,7 +975,7 @@ class GuruController extends Controller
             ->where('is_aktif', true)
             ->exists();
 
-        if (! $exists) {
+        if (!$exists) {
             abort(response()->json([
                 'message' => 'Guru belum ditugaskan untuk kelas dan mata pelajaran tersebut.',
             ], 422));
@@ -970,7 +988,7 @@ class GuruController extends Controller
             ->where('id_kelas', $idKelas)
             ->where('is_aktif', true)
             ->pluck('id_siswa')
-            ->map(fn ($item) => (int) $item)
+            ->map(fn($item) => (int) $item)
             ->values();
 
         if ($aktifSiswaIds->isEmpty()) {
@@ -981,7 +999,7 @@ class GuruController extends Controller
 
         $submittedIds = collect($kehadiran)
             ->pluck('id_siswa')
-            ->map(fn ($item) => (int) $item)
+            ->map(fn($item) => (int) $item)
             ->values();
 
         if ($submittedIds->count() !== $submittedIds->unique()->count()) {
@@ -1020,7 +1038,7 @@ class GuruController extends Controller
             foreach ($penugasan as $tugas) {
                 $q->orWhere(function ($sq) use ($tugas) {
                     $sq->where('id_kelas', $tugas->id_kelas)
-                       ->where('id_mapel', $tugas->id_mapel);
+                        ->where('id_mapel', $tugas->id_mapel);
                 });
             }
 

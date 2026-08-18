@@ -12,6 +12,7 @@ use App\Models\MataPelajaran;
 use App\Models\PenugasanPembelajaran;
 use App\Models\Pengguna;
 use App\Models\Siswa;
+use App\Models\LogAktivitas;
 use App\Services\PenggunaBulkImportService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -83,6 +84,12 @@ class AdminController extends Controller
         $data = $this->validatePenggunaPayload($request);
         $pengguna = $this->createManualPengguna($data);
 
+        LogAktivitas::create([
+            'id_pengguna_aktor' => $request->user()->id_pengguna,
+            'tipe_aksi' => 'tambah',
+            'deskripsi' => 'Penambahan akun ' . $pengguna->role . ' baru: ' . ($data['nama_lengkap'] ?? $pengguna->username),
+        ]);
+
         return response()->json($pengguna->load(['admin', 'guru', 'siswa']), 201);
     }
 
@@ -95,6 +102,22 @@ class AdminController extends Controller
     {
         $data = $this->validatePenggunaPayload($request, $pengguna);
 
+        if ($request->user()->id_pengguna === $pengguna->id_pengguna) {
+            if (isset($data['role']) && $data['role'] !== $pengguna->role) {
+                return response()->json(['message' => 'Anda tidak dapat mengubah role Anda sendiri.'], 403);
+            }
+            if (isset($data['is_aktif']) && $data['is_aktif'] === false) {
+                return response()->json(['message' => 'Anda tidak dapat menonaktifkan akun Anda sendiri.'], 403);
+            }
+        }
+
+        if ($pengguna->role === 'admin' && ( (isset($data['role']) && $data['role'] !== 'admin') || (isset($data['is_aktif']) && $data['is_aktif'] === false) )) {
+            $activeAdminCount = Pengguna::where('role', 'admin')->where('is_aktif', true)->count();
+            if ($activeAdminCount <= 1) {
+                return response()->json(['message' => 'Tidak dapat mengubah atau menonaktifkan admin terakhir yang aktif.'], 403);
+            }
+        }
+
         $updateData = [
             'username' => $data['username'],
             'role' => $data['role'],
@@ -105,25 +128,58 @@ class AdminController extends Controller
             $updateData['password'] = $data['password'];
         }
 
+        if (
+            (! empty($data['password'])) ||
+            (isset($data['role']) && $data['role'] !== $pengguna->role) ||
+            (isset($data['is_aktif']) && (bool)$data['is_aktif'] === false && $pengguna->is_aktif === true)
+        ) {
+            $pengguna->tokens()->delete();
+        }
+
         $pengguna->update($updateData);
 
         $this->syncUserProfile($pengguna->fresh(), $data, true);
+
+        LogAktivitas::create([
+            'id_pengguna_aktor' => $request->user()->id_pengguna,
+            'tipe_aksi' => 'edit',
+            'deskripsi' => 'Pembaruan data akun ' . $pengguna->role . ': ' . ($data['nama_lengkap'] ?? $pengguna->username),
+        ]);
 
         return response()->json($pengguna->fresh(['admin', 'guru', 'siswa']));
     }
 
     public function penggunaArchive(Request $request, Pengguna $pengguna): JsonResponse
     {
+        if ($request->user()->id_pengguna === $pengguna->id_pengguna) {
+            return response()->json(['message' => 'Anda tidak dapat mengarsipkan akun Anda sendiri.'], 403);
+        }
+
+        if ($pengguna->role === 'admin') {
+            $activeAdminCount = Pengguna::where('role', 'admin')->where('is_aktif', true)->count();
+            if ($activeAdminCount <= 1) {
+                return response()->json(['message' => 'Tidak dapat mengarsipkan admin terakhir yang aktif.'], 403);
+            }
+        }
+
+        $pengguna->tokens()->delete();
+
         $pengguna->update([
             'is_aktif' => false,
             'diarsipkan_pada' => now(),
             'diarsipkan_alasan' => $request->input('alasan'),
         ]);
 
+        LogAktivitas::create([
+            'id_pengguna_aktor' => $request->user()->id_pengguna,
+            'tipe_aksi' => 'arsip',
+            'deskripsi' => 'Pengarsipan/Penonaktifan akun ' . $pengguna->role . ': ' . $pengguna->username,
+        ]);
+
         return response()->json($pengguna->fresh(['admin', 'guru', 'siswa']));
     }
 
-    public function penggunaRestore(Pengguna $pengguna): JsonResponse
+    public function penggunaRestore(Request $request, Pengguna $pengguna): JsonResponse
     {
         $pengguna->update([
             'is_aktif' => true,
@@ -131,15 +187,37 @@ class AdminController extends Controller
             'diarsipkan_alasan' => null,
         ]);
 
+        LogAktivitas::create([
+            'id_pengguna_aktor' => $request->user()->id_pengguna,
+            'tipe_aksi' => 'aktifkan',
+            'deskripsi' => 'Pengaktifan kembali akun ' . $pengguna->role . ': ' . $pengguna->username,
+        ]);
+
         return response()->json($pengguna->fresh(['admin', 'guru', 'siswa']));
     }
 
-    public function penggunaDestroy(Pengguna $pengguna): JsonResponse
+    public function penggunaDestroy(Request $request, Pengguna $pengguna): JsonResponse
     {
-        $pengguna->update([
-            'is_aktif' => false,
-            'diarsipkan_pada' => now(),
-            'diarsipkan_alasan' => 'Diarsipkan oleh admin.',
+        if ($request->user()->id_pengguna === $pengguna->id_pengguna) {
+            return response()->json(['message' => 'Anda tidak dapat menghapus akun Anda sendiri.'], 403);
+        }
+
+        if ($pengguna->role === 'admin') {
+            $activeAdminCount = Pengguna::where('role', 'admin')->where('is_aktif', true)->count();
+            if ($activeAdminCount <= 1) {
+                return response()->json(['message' => 'Tidak dapat menghapus admin terakhir yang aktif.'], 403);
+            }
+        }
+
+        $role = $pengguna->role;
+        $username = $pengguna->username;
+
+        $pengguna->delete();
+
+        LogAktivitas::create([
+            'id_pengguna_aktor' => $request->user()->id_pengguna,
+            'tipe_aksi' => 'hapus',
+            'deskripsi' => 'Penghapusan permanen akun ' . $role . ': ' . $username,
         ]);
 
         return response()->json(null, 204);

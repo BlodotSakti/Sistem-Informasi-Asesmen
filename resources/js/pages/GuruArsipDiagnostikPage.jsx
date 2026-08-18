@@ -9,7 +9,9 @@ export default function GuruArsipDiagnostikPage({ session, onLogout }) {
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [kelasFilter, setKelasFilter] = useState('all');
+    const [tipeSoalFilter, setTipeSoalFilter] = useState('all');
     const [kelasOptions, setKelasOptions] = useState([]);
+    const [tipeSoalOptions, setTipeSoalOptions] = useState([]);
     const [currentPage, setCurrentPage] = useState(1);
     const [error, setError] = useState('');
 
@@ -18,8 +20,9 @@ export default function GuruArsipDiagnostikPage({ session, onLogout }) {
         const loadWorkspace = async () => {
             try {
                 const response = await apiFetch('/api/guru/workspace-data', session);
-                if (mounted && response.kelas_options) {
-                    setKelasOptions(response.kelas_options);
+                if (mounted && response) {
+                    if (response.kelas_options) setKelasOptions(response.kelas_options);
+                    if (response.tipe_soal_options) setTipeSoalOptions(response.tipe_soal_options);
                 }
             } catch (err) {
                 console.error("Gagal memuat filter kelas", err);
@@ -29,7 +32,7 @@ export default function GuruArsipDiagnostikPage({ session, onLogout }) {
         return () => { mounted = false; };
     }, [session]);
 
-    const fetchDiagnostics = useCallback(async (page, search, kelas) => {
+    const fetchDiagnostics = useCallback(async (page, search, kelas, tipeSoal) => {
         try {
             setLoading(true);
             setError('');
@@ -40,6 +43,9 @@ export default function GuruArsipDiagnostikPage({ session, onLogout }) {
             }
             if (kelas && kelas !== 'all') {
                 params.append('id_kelas', kelas);
+            }
+            if (tipeSoal && tipeSoal !== 'all') {
+                params.append('tipe_soal', tipeSoal);
             }
             
             const response = await apiFetch(`/api/guru/analisis-diagnostik?${params.toString()}`, session);
@@ -55,16 +61,16 @@ export default function GuruArsipDiagnostikPage({ session, onLogout }) {
     useEffect(() => {
         const timer = setTimeout(() => {
             setCurrentPage(1);
-            fetchDiagnostics(1, searchQuery, kelasFilter);
+            fetchDiagnostics(1, searchQuery, kelasFilter, tipeSoalFilter);
         }, 300); // 300ms debounce untuk rasa pencarian lebih instan
 
         return () => clearTimeout(timer);
-    }, [searchQuery, kelasFilter, fetchDiagnostics]);
+    }, [searchQuery, kelasFilter, tipeSoalFilter, fetchDiagnostics]);
 
     const handlePageChange = (newPage) => {
         if (newPage >= 1 && newPage <= diagnostics.last_page) {
             setCurrentPage(newPage);
-            fetchDiagnostics(newPage, searchQuery, kelasFilter);
+            fetchDiagnostics(newPage, searchQuery, kelasFilter, tipeSoalFilter);
         }
     };
 
@@ -82,6 +88,16 @@ export default function GuruArsipDiagnostikPage({ session, onLogout }) {
                     </div>
 
                     <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto shrink-0">
+                        <select
+                            value={tipeSoalFilter}
+                            onChange={(e) => setTipeSoalFilter(e.target.value)}
+                            className="w-full sm:w-auto px-4 py-3 rounded-2xl border border-slate-300 bg-white text-sm outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all shadow-sm font-medium text-slate-700"
+                        >
+                            <option value="all">Semua Tipe Soal</option>
+                            {tipeSoalOptions.map((tipe, idx) => (
+                                <option key={idx} value={tipe}>{tipe}</option>
+                            ))}
+                        </select>
                         <select
                             value={kelasFilter}
                             onChange={(e) => setKelasFilter(e.target.value)}
@@ -124,6 +140,7 @@ export default function GuruArsipDiagnostikPage({ session, onLogout }) {
                                     <th className="px-6 py-4 font-semibold text-slate-500">Nama Siswa</th>
                                     <th className="px-6 py-4 font-semibold text-slate-500">Kelas</th>
                                     <th className="px-6 py-4 font-semibold text-slate-500">Mata Pelajaran</th>
+                                    <th className="px-6 py-4 font-semibold text-slate-500 text-center">Tipe Soal</th>
                                     <th className="px-6 py-4 font-semibold text-slate-500 text-center">Skor</th>
                                     <th className="px-6 py-4 font-semibold text-slate-500">Tanggal Generate</th>
                                     <th className="px-6 py-4 font-semibold text-slate-500 text-center">Aksi</th>
@@ -132,7 +149,7 @@ export default function GuruArsipDiagnostikPage({ session, onLogout }) {
                             <tbody className="divide-y divide-slate-100 bg-white">
                                 {loading && diagnostics.data.length === 0 ? (
                                     <tr>
-                                        <td colSpan="7" className="px-6 py-12 text-center text-slate-500">
+                                        <td colSpan="8" className="px-6 py-12 text-center text-slate-500">
                                             <div className="flex justify-center mb-4">
                                                 <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
                                             </div>
@@ -141,7 +158,7 @@ export default function GuruArsipDiagnostikPage({ session, onLogout }) {
                                     </tr>
                                 ) : diagnostics.data.length === 0 ? (
                                     <tr>
-                                        <td colSpan="7" className="px-6 py-12 text-center text-slate-500">
+                                        <td colSpan="8" className="px-6 py-12 text-center text-slate-500">
                                             {searchQuery ? 'Tidak ditemukan laporan untuk nama siswa tersebut.' : 'Belum ada arsip laporan diagnostik.'}
                                         </td>
                                     </tr>
@@ -162,6 +179,11 @@ export default function GuruArsipDiagnostikPage({ session, onLogout }) {
                                                 {item.sesi_asesmen?.mata_pelajaran?.nama_mapel || '-'}
                                             </td>
                                             <td className="px-6 py-4 text-center">
+                                                <span className="inline-flex rounded-md bg-slate-100 px-2 py-1 text-[10px] font-semibold text-slate-600 uppercase tracking-wider">
+                                                    {item.sesi_asesmen?.tipe_soal || '-'}
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-4 text-center">
                                                 <span className={`inline-flex rounded-lg px-2.5 py-1 text-xs font-black tracking-wide ${item.skor_total >= 80 ? 'bg-emerald-100 text-emerald-700' : item.skor_total >= 60 ? 'bg-amber-100 text-amber-700' : 'bg-rose-100 text-rose-700'}`}>
                                                     {item.skor_total} Pts
                                                 </span>
@@ -172,7 +194,7 @@ export default function GuruArsipDiagnostikPage({ session, onLogout }) {
                                             <td className="px-6 py-4 text-center">
                                                 <button 
                                                     onClick={() => window.location.href = `/guru/laporan-diagnostik/${item.id_analisis}`}
-                                                    className="inline-flex items-center gap-1.5 rounded-xl bg-primary/5 px-3 py-2 text-xs font-bold text-primary transition-colors hover:bg-primary/10"
+                                                    className="inline-flex items-center gap-1.5 rounded-xl bg-accent/60 px-3 py-2 text-xs font-bold text-primary transition-colors hover:bg-accent"
                                                 >
                                                     Lihat
                                                     <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
@@ -221,3 +243,4 @@ export default function GuruArsipDiagnostikPage({ session, onLogout }) {
         </DashboardLayout>
     );
 }
+

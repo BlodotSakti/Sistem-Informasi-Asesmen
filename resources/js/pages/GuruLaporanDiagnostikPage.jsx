@@ -153,6 +153,16 @@ export default function GuruLaporanDiagnostikPage({ session, onLogout, idAnalisi
                                     <p className="text-xs font-semibold text-slate-400 uppercase">Mata Pelajaran</p>
                                     <p className="text-md font-bold text-slate-700">{laporan.sesi_asesmen?.mata_pelajaran?.nama_mapel}</p>
                                 </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <p className="text-xs font-semibold text-slate-400 uppercase">Tipe Soal</p>
+                                        <p className="text-md font-bold text-slate-700">{laporan.sesi_asesmen?.tipe_soal || '-'}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-xs font-semibold text-slate-400 uppercase">Jenis Ujian</p>
+                                        <p className="text-md font-bold text-slate-700 capitalize">{laporan.sesi_asesmen?.jenis_asesmen || '-'}</p>
+                                    </div>
+                                </div>
                                 <div>
                                     <p className="text-xs font-semibold text-slate-400 uppercase">Waktu Analisis</p>
                                     <p className="text-md font-medium text-slate-600">{new Date(laporan.tanggal_generate).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' })}</p>

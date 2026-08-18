@@ -34,6 +34,7 @@ export default function GuruBankSoalPage({ session, onLogout }) {
     const [expandedBankFolders, setExpandedBankFolders] = useState({});
     
     const fileInputRef = useRef(null);
+    const formRef = useRef(null);
 
     const showSuccessPopup = (title, message) => setSuccessPopup({ title, message });
     const closeSuccessPopup = () => setSuccessPopup(null);
@@ -92,7 +93,11 @@ export default function GuruBankSoalPage({ session, onLogout }) {
             gambar_soal_url: item.gambar_soal ? `/storage/${item.gambar_soal}` : '',
             hapus_gambar: false,
         });
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+        
+        // Smooth scroll ke arah form
+        setTimeout(() => {
+            formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 50);
     };
 
     const resetBankForm = () => {
@@ -366,7 +371,7 @@ export default function GuruBankSoalPage({ session, onLogout }) {
                     </div>
                 </section>
 
-                <form onSubmit={submitBankSoal} className="rounded-3xl border border-border bg-white p-6 shadow-sm">
+                <form ref={formRef} onSubmit={submitBankSoal} className="rounded-3xl border border-border bg-white p-6 shadow-sm scroll-mt-24">
                     <h3 className="text-xl font-semibold text-slate-900 border-b border-border pb-4">Input soal digital terstruktur</h3>
                     <div className="mt-6 grid gap-4 md:grid-cols-2">
                         <label className="space-y-2 text-sm font-medium text-slate-700">
@@ -554,9 +559,13 @@ export default function GuruBankSoalPage({ session, onLogout }) {
                                                     {item.jenis_soal === 'pilihan_ganda_kompleks' && item.kunci_jawaban ? (() => { try { return JSON.parse(item.kunci_jawaban).join(', '); } catch { return item.kunci_jawaban; } })() : item.kunci_jawaban}
                                                 </td>
                                                 <td className="px-5 py-4 text-right">
-                                                    <div className="flex items-center justify-end gap-3">
-                                                        <button onClick={() => openEditBankSoal(item)} className="text-primary hover:text-primary/85 font-medium">Edit</button>
-                                                        <button onClick={() => handleDeleteBankSoal(item.id_soal)} className="text-rose-600 hover:text-rose-800 font-medium">Hapus</button>
+                                                    <div className="flex items-center justify-end gap-2">
+                                                        <button onClick={() => openEditBankSoal(item)} title="Edit" className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-100 text-slate-600 hover:bg-amber-100 hover:text-amber-700 transition-colors">
+                                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                                                        </button>
+                                                        <button onClick={() => handleDeleteBankSoal(item.id_soal)} title="Hapus" className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-100 text-slate-600 hover:bg-rose-100 hover:text-rose-700 transition-colors">
+                                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                                        </button>
                                                     </div>
                                                 </td>
                                             </tr>

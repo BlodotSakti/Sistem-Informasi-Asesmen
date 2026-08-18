@@ -20,6 +20,7 @@ export default function AdminMataPelajaranPage({ session, onLogout }) {
     
     const [toast, setToast] = useState(null);
     const toastTimer = useRef(null);
+    const formRef = useRef(null);
 
     const [mapelForm, setMapelForm] = useState({
         nama_mapel: '',
@@ -137,7 +138,7 @@ export default function AdminMataPelajaranPage({ session, onLogout }) {
                     )}
 
                     <div className="space-y-6">
-                        <form onSubmit={submitMapel} className="space-y-4 rounded-3xl bg-slate-50 p-5">
+                        <form ref={formRef} onSubmit={submitMapel} className="space-y-4 rounded-3xl bg-slate-50 p-5 scroll-mt-24">
                             <div className="grid gap-4">
                                 <label className="space-y-2 text-sm font-medium text-slate-700">
                                     <span>Nama Mata Pelajaran</span>
@@ -197,6 +198,9 @@ export default function AdminMataPelajaranPage({ session, onLogout }) {
                                                         <button type="button" onClick={() => {
                                                             setMapelId(item.id_mapel);
                                                             setMapelForm({ nama_mapel: item.nama_mapel || '', tingkat: item.tingkat || '' });
+                                                            setTimeout(() => {
+                                                                formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                                            }, 50);
                                                         }} className={TABLE_ACTION_PRIMARY_CLASS}>Edit</button>
                                                         <button type="button" onClick={() => deleteMaster(`/api/admin/mata-pelajaran/${item.id_mapel}`, 'Mata pelajaran')} className={TABLE_ACTION_DANGER_CLASS}>Hapus</button>
                                                     </div>

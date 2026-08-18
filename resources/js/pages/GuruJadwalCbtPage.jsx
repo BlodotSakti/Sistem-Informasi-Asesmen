@@ -11,6 +11,7 @@ export default function GuruJadwalCbtPage({ session, onLogout }) {
     
     const [successPopup, setSuccessPopup] = useState(null);
     const [cbtSearch, setCbtSearch] = useState('');
+    const [cbtFilterKelas, setCbtFilterKelas] = useState('');
     const [isSesiModalOpen, setIsSesiModalOpen] = useState(false);
     const [editingSesiId, setEditingSesiId] = useState(null);
     const [sesiDetailData, setSesiDetailData] = useState(null);
@@ -161,6 +162,8 @@ export default function GuruJadwalCbtPage({ session, onLogout }) {
 
     const filteredSesiHistory = useMemo(() => {
         return sesiAsesmenHistory.filter(item => {
+            if (cbtFilterKelas && String(item.id_kelas) !== String(cbtFilterKelas)) return false;
+
             const searchLower = cbtSearch.toLowerCase();
             const mapel = (item.mata_pelajaran?.nama_lengkap || item.mata_pelajaran?.nama_mapel || '').toLowerCase();
             const kelas = (item.kelas?.nama_kelas || '').toLowerCase();
@@ -169,7 +172,7 @@ export default function GuruJadwalCbtPage({ session, onLogout }) {
             
             return mapel.includes(searchLower) || kelas.includes(searchLower) || tipeSoal.includes(searchLower) || tipeAsesmen.includes(searchLower);
         });
-    }, [sesiAsesmenHistory, cbtSearch]);
+    }, [sesiAsesmenHistory, cbtSearch, cbtFilterKelas]);
 
     return (
         <DashboardLayout
@@ -215,7 +218,17 @@ export default function GuruJadwalCbtPage({ session, onLogout }) {
                             <h4 className="text-lg font-semibold text-slate-900">Daftar Jadwal CBT</h4>
                             <p className="text-sm text-slate-500">Daftar sesi asesmen yang telah dibuat.</p>
                         </div>
-                        <div className="flex items-center gap-3 w-full sm:w-auto">
+                        <div className="flex items-center gap-3 w-full sm:w-auto flex-wrap sm:flex-nowrap justify-end">
+                            <select
+                                value={cbtFilterKelas}
+                                onChange={(e) => setCbtFilterKelas(e.target.value)}
+                                className="w-full sm:w-auto rounded-full border border-slate-300 bg-slate-50 px-4 py-2 text-sm outline-none transition focus:border-primary focus:bg-white focus:ring-1 focus:ring-primary"
+                            >
+                                <option value="">Semua Kelas</option>
+                                {(workspace.kelas_options || []).map(k => (
+                                    <option key={k.id_kelas} value={k.id_kelas}>{k.nama_kelas}</option>
+                                ))}
+                            </select>
                             <div className="relative w-full sm:w-64">
                                 <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
                                     <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -239,6 +252,7 @@ export default function GuruJadwalCbtPage({ session, onLogout }) {
                         <table className="min-w-full divide-y divide-slate-200 text-left text-sm">
                             <thead className="border-b border-border bg-slate-50 text-xs uppercase tracking-[0.2em] text-slate-500">
                                 <tr>
+                                    <th className="px-5 py-4 font-semibold text-center w-16">No</th>
                                     <th className="px-5 py-4 font-semibold">Tipe Soal</th>
                                     <th className="px-5 py-4 font-semibold">Kelas</th>
                                     <th className="px-5 py-4 font-semibold">Mapel</th>
@@ -250,12 +264,13 @@ export default function GuruJadwalCbtPage({ session, onLogout }) {
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100 bg-white">
-                                {filteredSesiHistory.map((item) => {
+                                {filteredSesiHistory.map((item, index) => {
                                     const status = getSesiStatus(item.waktu_mulai, item.waktu_selesai);
                                     const isActiveRow = status.label === 'Aktif';
                                     
                                     return (
                                         <tr key={item.id_sesi} className={`align-top transition-colors ${isActiveRow ? 'bg-blue-50/80 hover:bg-blue-50/100' : 'hover:bg-slate-50/70'}`}>
+                                            <td className="px-5 py-4 text-center text-slate-500 font-medium">{index + 1}</td>
                                             <td className="px-5 py-4 font-semibold text-slate-900">{item.tipe_soal}</td>
                                             <td className="px-5 py-4 text-slate-600">{item.kelas?.nama_kelas}</td>
                                             <td className="px-5 py-4 text-slate-600">{item.mata_pelajaran?.nama_lengkap || item.mata_pelajaran?.nama_mapel}</td>
@@ -276,10 +291,16 @@ export default function GuruJadwalCbtPage({ session, onLogout }) {
                                             )}
                                         </td>
                                         <td className="px-5 py-4 text-right">
-                                            <div className="flex items-center justify-end gap-3">
-                                                <button onClick={() => fetchSesiDetail(item.id_sesi)} className="text-primary hover:text-primary/85 font-medium">Detail</button>
-                                                <button onClick={() => openEditSesiAsesmen(item)} className="text-primary hover:text-primary/85 font-medium">Edit</button>
-                                                <button onClick={() => handleDeleteSesiAsesmen(item.id_sesi)} className="text-rose-600 hover:text-rose-800 font-medium">Hapus</button>
+                                            <div className="flex items-center justify-end gap-2">
+                                                <button onClick={() => fetchSesiDetail(item.id_sesi)} title="Detail" className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-100 text-slate-600 hover:bg-primary/50 hover:text-primary transition-colors">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                                                </button>
+                                                <button onClick={() => openEditSesiAsesmen(item)} title="Edit" className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-100 text-slate-600 hover:bg-amber-100 hover:text-amber-700 transition-colors">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                                                </button>
+                                                <button onClick={() => handleDeleteSesiAsesmen(item.id_sesi)} title="Hapus" className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-100 text-slate-600 hover:bg-rose-100 hover:text-rose-700 transition-colors">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                                </button>
                                             </div>
                                         </td>
                                         </tr>
@@ -287,7 +308,7 @@ export default function GuruJadwalCbtPage({ session, onLogout }) {
                                 })}
                                 {!loading && filteredSesiHistory.length === 0 ? (
                                     <tr>
-                                        <td colSpan="8" className="px-5 py-8 text-center text-sm text-slate-500">
+                                        <td colSpan="9" className="px-5 py-8 text-center text-sm text-slate-500">
                                             {cbtSearch ? 'Tidak ada jadwal CBT yang cocok dengan pencarian.' : 'Belum ada riwayat jadwal CBT.'}
                                         </td>
                                     </tr>
