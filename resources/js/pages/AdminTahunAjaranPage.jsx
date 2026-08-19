@@ -9,9 +9,9 @@ const TABLE_BODY_ROW_CLASS = 'align-top hover:bg-slate-50/70';
 const TABLE_TITLE_CELL_CLASS = 'px-5 py-4 font-semibold text-slate-900';
 const TABLE_CELL_CLASS = 'px-5 py-4 text-slate-600';
 const TABLE_NUMBER_CELL_CLASS = 'px-5 py-4 font-semibold text-slate-500';
-const TABLE_ACTION_HEAD_CLASS = 'px-5 py-4 font-semibold xl:text-right';
-const TABLE_ACTION_CELL_CLASS = 'px-5 py-4 xl:text-right';
-const TABLE_ACTION_WRAP_CLASS = 'flex flex-wrap gap-2 xl:justify-end';
+const TABLE_ACTION_HEAD_CLASS = 'px-5 py-4 font-semibold text-center';
+const TABLE_ACTION_CELL_CLASS = 'px-5 py-4 text-center';
+const TABLE_ACTION_WRAP_CLASS = 'flex flex-wrap gap-2 justify-center';
 const TABLE_ACTION_PRIMARY_CLASS = 'rounded-full border border-slate-300 px-4 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-100';
 const TABLE_ACTION_DANGER_CLASS = 'rounded-full border border-rose-200 px-4 py-2 text-xs font-semibold text-rose-700 transition hover:bg-rose-50';
 
@@ -120,8 +120,8 @@ export default function AdminTahunAjaranPage({ session, onLogout }) {
                     <section className="mb-8 overflow-hidden rounded-2xl sm:rounded-[2.5rem] border border-[#8A2332]/30 bg-gradient-to-br from-[#8A2332] via-primary to-secondary px-4 py-6 sm:px-8 sm:py-10 shadow-lg backdrop-blur-xl relative">
                         <div className="relative z-10 flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4 sm:gap-8">
                             <div className="flex-1">
-                                <p className="text-xs font-bold uppercase tracking-[0.4em] text-accent">{title}</p>
-                                <h3 className="mt-4 text-xl sm:text-3xl font-semibold leading-tight text-[#EEDCC8] md:text-4xl">{title}</h3>
+                               {/*<p className="text-xs font-bold uppercase tracking-[0.4em] text-accent">{title}</p>*/}
+                                <h3 className="mt-2 text-xl sm:text-3xl font-semibold leading-tight text-[#EEDCC8] md:text-4xl">{title}</h3>
                                 <p className="mt-4 max-w-xl text-sm leading-7 text-accent md:text-base">
                                     Kelola tahun ajaran akademik yang aktif untuk referensi seluruh sistem ujian dan penjadwalan.
                                 </p>

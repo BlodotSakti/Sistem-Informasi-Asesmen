@@ -3,6 +3,7 @@ import DashboardLayout from '../components/layout/DashboardLayout';
 import { apiFetch } from '../lib/api';
 import { guruNavigation } from './guru/guruNavigation';
 import { formatDateTimeLabel } from '../lib/date';
+import FilterSelect from '../components/ui/FilterSelect';
 
 export default function GuruArsipDiagnostikPage({ session, onLogout }) {
     const [diagnostics, setDiagnostics] = useState({ data: [], current_page: 1, last_page: 1, total: 0 });
@@ -88,26 +89,31 @@ export default function GuruArsipDiagnostikPage({ session, onLogout }) {
                     </div>
 
                     <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto shrink-0">
-                        <select
+                        <FilterSelect
                             value={tipeSoalFilter}
-                            onChange={(e) => setTipeSoalFilter(e.target.value)}
-                            className="w-full sm:w-auto px-4 py-3 rounded-2xl border border-slate-300 bg-white text-sm outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all shadow-sm font-medium text-slate-700"
-                        >
-                            <option value="all">Semua Tipe Soal</option>
-                            {tipeSoalOptions.map((tipe, idx) => (
-                                <option key={idx} value={tipe}>{tipe}</option>
-                            ))}
-                        </select>
-                        <select
+                            onChange={setTipeSoalFilter}
+                            options={[
+                                { value: 'all', label: 'Semua Tipe Soal' },
+                                ...tipeSoalOptions.map((tipe) => ({ value: tipe, label: tipe }))
+                            ]}
+                            placeholder="Semua Tipe Soal"
+                            icon="📝"
+                        />
+                        <FilterSelect
                             value={kelasFilter}
-                            onChange={(e) => setKelasFilter(e.target.value)}
-                            className="w-full sm:w-auto px-4 py-3 rounded-2xl border border-slate-300 bg-white text-sm outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all shadow-sm font-medium text-slate-700"
-                        >
-                            <option value="all">Semua Kelas</option>
-                            {kelasOptions.map((k) => (
-                                <option key={k.id_kelas} value={k.id_kelas}>{k.nama_kelas} {k.is_wali_kelas ? '(Wali Kelas)' : ''}</option>
-                            ))}
-                        </select>
+                            onChange={setKelasFilter}
+                            options={[
+                                { value: 'all', label: 'Semua Kelas' },
+                                ...kelasOptions.map((k) => ({ value: k.id_kelas, label: `${k.nama_kelas}${k.is_wali_kelas ? ' (Wali Kelas)' : ''}` }))
+                            ]}
+                            placeholder="Semua Kelas"
+                            icon="🏫"
+                            // warna untuk tombol Utama filter aktif
+                            accentClass="bg-accent border-accent text-white shadow-md shadow-gold-900"
+
+                            // warna untuk item dropdown yang dipilih
+                            dropdownAccentClass="bg-accent border-accent text-white shadow-md shadow-gold-900"
+                        />
                         <div className="relative w-full sm:w-80">
                             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                                 <svg className="h-5 w-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">

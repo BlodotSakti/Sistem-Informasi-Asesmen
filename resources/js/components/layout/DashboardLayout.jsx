@@ -25,10 +25,15 @@ export default function DashboardLayout({ title, user, navigation, onLogout, pro
             <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full border border-white/15 bg-slate-800 text-sm font-semibold uppercase text-amber-300">
                 {user?.nama_lengkap ? user.nama_lengkap.slice(0, 2) : 'PR'}
             </div>
-            <div className="min-w-0">
+            <div className="min-w-0 flex-1">
                 <p className="text-xs uppercase tracking-[0.35em] text-slate-400">Profil</p>
-                <p className="mt-1 font-semibold text-white truncate">{user?.nama_lengkap || 'Pengguna Aktif'}</p>
-                <p className="text-sm text-slate-400 capitalize">{user?.role || 'Akses Terbatas'}</p>
+                <p 
+                    className="mt-1 font-semibold text-white break-words leading-snug"
+                    title={user?.nama_lengkap || 'Pengguna Aktif'}
+                >
+                    {user?.nama_lengkap || 'Pengguna Aktif'}
+                </p>
+                <p className="text-sm text-slate-400 capitalize mt-0.5">{user?.role || 'Akses Terbatas'}</p>
             </div>
         </div>
     );

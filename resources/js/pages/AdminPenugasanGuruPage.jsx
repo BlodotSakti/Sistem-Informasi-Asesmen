@@ -3,6 +3,7 @@ import DashboardLayout from '../components/layout/DashboardLayout';
 import { apiFetch } from '../lib/api';
 import { adminNavigation } from './adminNavigation';
 import useAdminWorkspace from '../hooks/useAdminWorkspace';
+import FilterSelect from '../components/ui/FilterSelect';
 
 const TABLE_HEAD_CLASS = 'border-b border-border bg-slate-50 text-xs uppercase tracking-[0.2em] text-slate-500';
 const TABLE_BODY_ROW_CLASS = 'align-top hover:bg-slate-50/70';
@@ -34,6 +35,8 @@ export default function AdminPenugasanGuruPage({ session, onLogout }) {
     const [teachingAssignmentFilters, setTeachingAssignmentFilters] = useState({
         search: '',
         status: 'all',
+        tingkat: '',
+        tahun_ajaran: '',
     });
     const [teachingAssignmentImport, setTeachingAssignmentImport] = useState({ file: null });
 
@@ -59,6 +62,14 @@ export default function AdminPenugasanGuruPage({ session, onLogout }) {
         }
     }, [masterData, loading, teachingAssignmentId, teachingAssignmentForm.id_kelas, teachingAssignmentForm.id_mapel, teachingAssignmentForm.id_guru]);
 
+    const uniqueTahunAjaran = useMemo(() => {
+        const years = new Set();
+        (masterData.penugasan_pembelajaran || []).forEach(item => {
+            if (item.tahun_ajaran) years.add(item.tahun_ajaran);
+        });
+        return Array.from(years).sort().reverse();
+    }, [masterData.penugasan_pembelajaran]);
+
     const filteredTeachingAssignments = useMemo(() => {
         const search = teachingAssignmentFilters.search.trim().toLowerCase();
         return (masterData.penugasan_pembelajaran || []).filter((item) => {
@@ -67,6 +78,18 @@ export default function AdminPenugasanGuruPage({ session, onLogout }) {
                 || (teachingAssignmentFilters.status === 'inactive' && !item.is_aktif);
 
             if (!matchesStatus) return false;
+
+            if (teachingAssignmentFilters.tingkat) {
+                const nameUpper = (item.kelas?.nama_kelas || '').toUpperCase();
+                if (nameUpper !== teachingAssignmentFilters.tingkat && !nameUpper.startsWith(teachingAssignmentFilters.tingkat + ' ')) {
+                    return false;
+                }
+            }
+
+            if (teachingAssignmentFilters.tahun_ajaran && item.tahun_ajaran !== teachingAssignmentFilters.tahun_ajaran) {
+                return false;
+            }
+
             if (search === '') return true;
 
             return [
@@ -312,18 +335,18 @@ export default function AdminPenugasanGuruPage({ session, onLogout }) {
                             </div>
                         </div>
 
-                        <div className="overflow-hidden rounded-3xl border border-border bg-white">
+                        <div className="rounded-3xl border border-border bg-white">
                             <div className="border-b border-border px-5 py-4">
                                 <h4 className="text-lg font-semibold text-slate-900">Daftar Penugasan Guru-Mapel</h4>
                                 <p className="text-sm text-slate-500">Penugasan ini menjadi dasar validasi guru saat membuat bank soal dan sesi asesmen.</p>
                             </div>
                             <div className="border-b border-border px-5 py-4">
-                                <div className="grid gap-3 lg:grid-cols-[1.3fr_0.8fr]">
-                                    <div className="rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-600 lg:col-span-2">
+                                <div className="flex flex-col sm:flex-row sm:items-end gap-3 flex-wrap xl:flex-nowrap">
+                                    <div className="rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-600 shrink-0 w-full sm:w-auto">
                                         <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Total Data</p>
                                         <p className="mt-1 font-semibold text-slate-900">{loading ? 'Memuat...' : `${filteredTeachingAssignments.length} data`}</p>
                                     </div>
-                                    <label className="space-y-2 text-sm font-medium text-slate-700">
+                                    <label className="flex-1 space-y-2 text-sm font-medium text-slate-700 w-full sm:w-auto min-w-[200px]">
                                         <span>Cari penugasan</span>
                                         <input
                                             value={teachingAssignmentFilters.search}
@@ -332,18 +355,57 @@ export default function AdminPenugasanGuruPage({ session, onLogout }) {
                                             placeholder="Nama mapel, kelas, guru, atau tahun ajaran"
                                         />
                                     </label>
-                                    <label className="space-y-2 text-sm font-medium text-slate-700">
-                                        <span>Status</span>
-                                        <select
+                                    <div className="shrink-0 flex flex-col gap-1 w-full sm:w-auto">
+                                        <span className="text-sm font-medium text-slate-700">Tingkat Kelas</span>
+                                        <FilterSelect
+                                            value={teachingAssignmentFilters.tingkat}
+                                            onChange={(val) => setTeachingAssignmentFilters((current) => ({ ...current, tingkat: val }))}
+                                            options={[
+                                                { value: '', label: 'Semua Tingkat' },
+                                                { value: 'X', label: 'Kelas X' },
+                                                { value: 'XI', label: 'Kelas XI' },
+                                                { value: 'XII', label: 'Kelas XII' },
+                                            ]}
+                                            placeholder="Semua Tingkat"
+                                            icon="🏫"
+                                            align="right"
+                                            accentClass="bg-primary border-primary text-white shadow-md shadow-blue-900"
+                                            dropdownAccentClass="bg-primary border-primary text-white shadow-md shadow-blue-900"
+                                        />
+                                    </div>
+                                    <div className="shrink-0 flex flex-col gap-1 w-full sm:w-auto">
+                                        <span className="text-sm font-medium text-slate-700">Tahun Ajaran</span>
+                                        <FilterSelect
+                                            value={teachingAssignmentFilters.tahun_ajaran}
+                                            onChange={(val) => setTeachingAssignmentFilters((current) => ({ ...current, tahun_ajaran: val }))}
+                                            options={[
+                                                { value: '', label: 'Semua Tahun' },
+                                                ...uniqueTahunAjaran.map(year => ({ value: year, label: year }))
+                                            ]}
+                                            placeholder="Semua Tahun"
+                                            icon="📅"
+                                            align="right"
+                                            accentClass="bg-secondary border-secondary text-white shadow-md shadow-red-900"
+                                            dropdownAccentClass="bg-secondary border-secondary text-white shadow-md shadow-red-900"
+                                        />
+                                    </div>
+                                    <div className="shrink-0 flex flex-col gap-1 w-full sm:w-auto">
+                                        <span className="text-sm font-medium text-slate-700">Status</span>
+                                        <FilterSelect
                                             value={teachingAssignmentFilters.status}
-                                            onChange={(event) => setTeachingAssignmentFilters((current) => ({ ...current, status: event.target.value }))}
-                                            className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-slate-900"
-                                        >
-                                            <option value="all">Semua status</option>
-                                            <option value="active">Aktif</option>
-                                            <option value="inactive">Nonaktif</option>
-                                        </select>
-                                    </label>
+                                            onChange={(val) => setTeachingAssignmentFilters((current) => ({ ...current, status: val }))}
+                                            options={[
+                                                { value: 'all', label: 'Semua status' },
+                                                { value: 'active', label: 'Aktif' },
+                                                { value: 'inactive', label: 'Nonaktif' },
+                                            ]}
+                                            placeholder="Semua status"
+                                            icon="📋"
+                                            align="right"
+                                            accentClass="bg-accent border-accent text-white shadow-md shadow-gold-900"
+                                            dropdownAccentClass="bg-accent border-accent text-white shadow-md shadow-gold-900"
+                                        />
+                                    </div>
                                 </div>
                             </div>
                             <div className="overflow-x-auto">

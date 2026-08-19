@@ -15,8 +15,8 @@ const MENU_META = {
 export default function AdminDashboard({ session, onLogout }) {
     const [data, setData] = useState({
         summary: {
-            total_guru: 0,
-            total_siswa: 0,
+            total_pengguna_aktif: 0,
+            total_pengguna_arsip: 0,
             total_kelas: 0,
         },
         chart: [],
@@ -130,15 +130,15 @@ export default function AdminDashboard({ session, onLogout }) {
 
             <section className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
                 <StatCard 
-                    label="Total Guru" 
-                    value={loading ? '...' : data.summary.total_guru} 
-                    description="Total akun guru yang terdaftar." 
+                    label="Total Pengguna Aktif" 
+                    value={loading ? '...' : data.summary.total_pengguna_aktif} 
+                    description="Total akun yang aktif dan bisa digunakan." 
                     tone="blue" 
                 />
                 <StatCard 
-                    label="Total Siswa" 
-                    value={loading ? '...' : data.summary.total_siswa} 
-                    description="Total data siswa terdaftar." 
+                    label="Total Pengguna Diarsipkan" 
+                    value={loading ? '...' : data.summary.total_pengguna_arsip} 
+                    description="Total akun yang telah dinonaktifkan." 
                     tone="indigo" 
                 />
                 <StatCard 

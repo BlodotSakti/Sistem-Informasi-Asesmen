@@ -3,15 +3,16 @@ import DashboardLayout from '../components/layout/DashboardLayout';
 import { apiFetch } from '../lib/api';
 import { adminNavigation } from './adminNavigation';
 import useAdminWorkspace from '../hooks/useAdminWorkspace';
+import FilterSelect from '../components/ui/FilterSelect';
 
 const TABLE_HEAD_CLASS = 'border-b border-border bg-slate-50 text-xs uppercase tracking-[0.2em] text-slate-500';
 const TABLE_BODY_ROW_CLASS = 'align-top hover:bg-slate-50/70';
 const TABLE_TITLE_CELL_CLASS = 'px-5 py-4 font-semibold text-slate-900';
 const TABLE_CELL_CLASS = 'px-5 py-4 text-slate-600';
 const TABLE_NUMBER_CELL_CLASS = 'px-5 py-4 font-semibold text-slate-500';
-const TABLE_ACTION_HEAD_CLASS = 'px-5 py-4 font-semibold xl:text-right';
-const TABLE_ACTION_CELL_CLASS = 'px-5 py-4 xl:text-right';
-const TABLE_ACTION_WRAP_CLASS = 'flex flex-wrap gap-2 xl:justify-end';
+const TABLE_ACTION_HEAD_CLASS = 'px-5 py-4 font-semibold text-center';
+const TABLE_ACTION_CELL_CLASS = 'px-5 py-4 text-center';
+const TABLE_ACTION_WRAP_CLASS = 'flex flex-wrap gap-2 justify-center';
 const TABLE_ACTION_PRIMARY_CLASS = 'rounded-full border border-slate-300 px-4 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-100';
 const TABLE_ACTION_DANGER_CLASS = 'rounded-full border border-rose-200 px-4 py-2 text-xs font-semibold text-rose-700 transition hover:bg-rose-50';
 
@@ -29,6 +30,7 @@ export default function AdminKelasPage({ session, onLogout }) {
     });
     const [classId, setClassId] = useState(null);
     const [classSearch, setClassSearch] = useState('');
+    const [classFilterLevel, setClassFilterLevel] = useState('');
 
     useEffect(() => {
         // Initialize form with defaults once masterData is loaded
@@ -54,12 +56,20 @@ export default function AdminKelasPage({ session, onLogout }) {
     const filteredClasses = useMemo(() => {
         const search = classSearch.trim().toLowerCase();
         return (masterData.kelas || []).filter((item) => {
+            if (classFilterLevel) {
+                const nameUpper = (item.nama_kelas || '').toUpperCase();
+                // Filter matches exactly the level or starts with "Level " (e.g., "X IPA 1")
+                if (nameUpper !== classFilterLevel && !nameUpper.startsWith(classFilterLevel + ' ')) {
+                    return false;
+                }
+            }
+
             if (search === '') return true;
             return [item.nama_kelas, item.guru_wali?.nama_lengkap, item.tahun_ajaran]
                 .filter(Boolean)
                 .some((value) => String(value).toLowerCase().includes(search));
         });
-    }, [classSearch, masterData.kelas]);
+    }, [masterData.kelas, classSearch, classFilterLevel]);
 
     const resetClassForm = () => {
         setClassForm({
@@ -119,8 +129,8 @@ export default function AdminKelasPage({ session, onLogout }) {
                     <section className="mb-8 overflow-hidden rounded-2xl sm:rounded-[2.5rem] border border-[#8A2332]/30 bg-gradient-to-br from-[#8A2332] via-primary to-secondary px-4 py-6 sm:px-8 sm:py-10 shadow-lg backdrop-blur-xl relative">
                         <div className="relative z-10 flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4 sm:gap-8">
                             <div className="flex-1">
-                                <p className="text-xs font-bold uppercase tracking-[0.4em] text-accent">{title}</p>
-                                <h3 className="mt-4 text-xl sm:text-3xl font-semibold leading-tight text-[#EEDCC8] md:text-4xl">{title}</h3>
+                                {/*<p className="text-xs font-bold uppercase tracking-[0.4em] text-accent">{title}</p>*/}
+                                <h3 className="mt-2 text-xl sm:text-3xl font-semibold leading-tight text-[#EEDCC8] md:text-5xl">{title}</h3>
                                 <p className="mt-4 max-w-xl text-sm leading-7 text-accent md:text-base">
                                     Kelola daftar kelas dan tentukan wali kelas untuk masing-masing kelas.
                                 </p>
@@ -185,21 +195,39 @@ export default function AdminKelasPage({ session, onLogout }) {
                             </div>
                         </form>
 
-                        <div className="overflow-hidden rounded-3xl border border-border bg-white">
+                        <div className="rounded-3xl border border-border bg-white">
                             <div className="border-b border-border px-5 py-4">
                                 <h4 className="text-lg font-semibold text-slate-900">Daftar Kelas</h4>
                                 <p className="text-sm text-slate-500">Gunakan daftar ini untuk melihat relasi guru wali dan periode kelas.</p>
                             </div>
                             <div className="border-b border-border px-5 py-4">
-                                <div className="grid gap-3 lg:grid-cols-[0.8fr_1.2fr] lg:items-end">
-                                    <div className="rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-600">
+                                <div className="flex flex-col sm:flex-row sm:items-end gap-3">
+                                    <div className="rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-600 shrink-0">
                                         <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Total Data</p>
                                         <p className="mt-1 font-semibold text-slate-900">{loading ? 'Memuat...' : `${filteredClasses.length} data`}</p>
                                     </div>
-                                    <label className="space-y-2 text-sm font-medium text-slate-700">
+                                    <label className="flex-1 space-y-2 text-sm font-medium text-slate-700">
                                         <span>Cari kelas</span>
                                         <input value={classSearch} onChange={(event) => setClassSearch(event.target.value)} className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-slate-900" placeholder="Nama kelas, guru wali, atau tahun ajaran" />
                                     </label>
+                                    <div className="shrink-0 flex flex-col gap-1">
+                                        <span className="text-sm font-medium text-slate-700">Tingkat Kelas</span>
+                                        <FilterSelect
+                                            value={classFilterLevel}
+                                            onChange={setClassFilterLevel}
+                                            options={[
+                                                { value: '', label: 'Semua Tingkat' },
+                                                { value: 'X', label: 'Kelas X' },
+                                                { value: 'XI', label: 'Kelas XI' },
+                                                { value: 'XII', label: 'Kelas XII' },
+                                            ]}
+                                            placeholder="Semua Tingkat"
+                                            icon="🏫"
+                                            align="right"
+                                            accentClass="bg-primary border-primary text-white shadow-md shadow-blue-900"
+                                            dropdownAccentClass="bg-primary border-primary text-white shadow-md shadow-blue-900"
+                                        />
+                                    </div>
                                 </div>
                             </div>
                             <div className="overflow-x-auto">

@@ -4,6 +4,7 @@ import { apiFetch } from '../lib/api';
 import { adminNavigation } from './adminNavigation';
 import * as XLSX from 'xlsx';
 import BankSoalForm from '../components/ui/BankSoalForm';
+import FilterSelect from '../components/ui/FilterSelect';
 
 export default function AdminBankSoalPage({ session, onLogout }) {
     const [soalList, setSoalList] = useState([]);
@@ -408,12 +409,17 @@ export default function AdminBankSoalPage({ session, onLogout }) {
 
                 <div className="bg-white rounded-3xl shadow-sm border border-border overflow-hidden">
                     <div className="p-6 border-b border-slate-100 flex items-center justify-between">
-                        <select value={selectedMapel} onChange={(e) => setSelectedMapel(e.target.value)} className="bg-slate-50 border border-border text-slate-700 text-sm rounded-xl px-4 py-2 outline-none focus:border-primary focus:ring-1 focus:ring-primary transition">
-                            <option value="all">Semua Mata Pelajaran</option>
-                            {mapelOptions.map(([id, label]) => (
-                                <option key={id} value={id}>{label}</option>
-                            ))}
-                        </select>
+                        <FilterSelect
+                            value={selectedMapel}
+                            onChange={setSelectedMapel}
+                            options={[
+                                { value: 'all', label: 'Semua Mata Pelajaran' },
+                                ...mapelOptions.map(([id, label]) => ({ value: id, label }))
+                            ]}
+                            placeholder="Semua Mata Pelajaran"
+                            icon="📚"
+                            align="left"
+                        />
                         <span className="text-sm text-slate-500 font-medium">Total: {filteredSoal.length} Soal</span>
                     </div>
 

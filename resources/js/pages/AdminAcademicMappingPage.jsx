@@ -2,6 +2,7 @@ import React, { useEffect, useState, useMemo } from 'react';
 import DashboardLayout from '../components/layout/DashboardLayout';
 import { apiFetch } from '../lib/api';
 import { adminNavigation } from './adminNavigation';
+import FilterSelect from '../components/ui/FilterSelect';
 import StudentListModal from '../components/admin/StudentListModal';
 import { Network } from 'lucide-react';
 
@@ -72,23 +73,29 @@ export default function AdminAcademicMappingPage({ session, onLogout }) {
                 </section>
 
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                    <div className="flex flex-1 items-center gap-4">
-                        <select 
-                            value={selectedYear} 
-                            onChange={e => setSelectedYear(e.target.value)}
-                            className="rounded-2xl border border-slate-300 bg-white px-4 py-2.5 text-sm outline-none transition focus:border-slate-900"
-                        >
-                            <option value="all">Semua Tahun Ajaran</option>
-                            {filterOptions.years.map(y => <option key={y} value={y}>{y}</option>)}
-                        </select>
-                        <select 
-                            value={selectedTingkat} 
-                            onChange={e => setSelectedTingkat(e.target.value)}
-                            className="rounded-2xl border border-slate-300 bg-white px-4 py-2.5 text-sm outline-none transition focus:border-slate-900"
-                        >
-                            <option value="all">Semua Tingkat Kelas</option>
-                            {filterOptions.tingkats.map(t => <option key={t} value={t}>Tingkat {t}</option>)}
-                        </select>
+                    <div className="flex flex-1 items-center gap-3 flex-wrap">
+                        <FilterSelect
+                            value={selectedYear}
+                            onChange={setSelectedYear}
+                            options={[
+                                { value: 'all', label: 'Semua Tahun Ajaran' },
+                                ...filterOptions.years.map(y => ({ value: y, label: y }))
+                            ]}
+                            placeholder="Semua Tahun Ajaran"
+                            icon="📅"
+                            align="left"
+                        />
+                        <FilterSelect
+                            value={selectedTingkat}
+                            onChange={setSelectedTingkat}
+                            options={[
+                                { value: 'all', label: 'Semua Tingkat Kelas' },
+                                ...filterOptions.tingkats.map(t => ({ value: t, label: `Tingkat ${t}` }))
+                            ]}
+                            placeholder="Semua Tingkat Kelas"
+                            icon="🏫"
+                            align="left"
+                        />
                     </div>
                     <div className="text-sm font-medium text-slate-500">
                         Menampilkan {filteredData.length} kelas

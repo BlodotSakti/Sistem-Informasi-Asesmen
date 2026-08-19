@@ -993,6 +993,8 @@ class AdminController extends Controller
 
         return response()->json([
             'cards' => [
+                'total_pengguna_aktif' => Pengguna::where('is_aktif', true)->count(),
+                'total_pengguna_arsip' => Pengguna::where('is_aktif', false)->count(),
                 'total_guru' => Guru::count(),
                 'total_siswa' => Siswa::count(),
                 'total_kelas' => Kelas::count(),

@@ -4,6 +4,7 @@ import { apiFetch } from '../lib/api';
 import { adminNavigation } from './adminNavigation';
 import useAdminWorkspace from '../hooks/useAdminWorkspace';
 import * as XLSX from 'xlsx';
+import FilterSelect from '../components/ui/FilterSelect';
 
 const TABLE_HEAD_CLASS = 'border-b border-border bg-slate-50 text-xs uppercase tracking-[0.2em] text-slate-500';
 const TABLE_BODY_ROW_CLASS = 'align-top hover:bg-slate-50/70';
@@ -241,7 +242,7 @@ export default function AdminPenggunaPage({ session, onLogout, mode = 'pengguna'
                     <section className="mb-8 overflow-hidden rounded-2xl sm:rounded-[2.5rem] border border-[#8A2332]/30 bg-gradient-to-br from-[#8A2332] via-primary to-secondary px-4 py-6 sm:px-8 sm:py-10 shadow-lg backdrop-blur-xl relative">
                         <div className="relative z-10 flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4 sm:gap-8">
                             <div className="flex-1">
-                                <p className="text-xs font-bold uppercase tracking-[0.4em] text-accent">{title}</p>
+                                {/*<p className="text-xs font-bold uppercase tracking-[0.4em] text-accent">{title}</p>*/}
                                 <h3 className="mt-4 text-xl sm:text-3xl font-semibold leading-tight text-[#EEDCC8] md:text-4xl">{title}</h3>
                                 <p className="mt-4 max-w-xl text-sm leading-7 text-accent md:text-base">
                                     Kelola akun guru, siswa, dan admin, termasuk arsip akun yang sudah tidak aktif.
@@ -406,8 +407,8 @@ export default function AdminPenggunaPage({ session, onLogout, mode = 'pengguna'
                                     </div>
                                 </div>
 
-                                <form onSubmit={(e) => e.preventDefault()} className="mt-4 grid gap-3 lg:grid-cols-[1.3fr_0.8fr_0.8fr_auto]">
-                                    <label className="space-y-2 text-sm font-medium text-slate-700">
+                                <form onSubmit={(e) => e.preventDefault()} className="mt-4 grid gap-3 lg:grid-cols-[1fr_auto_auto_auto]">
+                                    <label className="space-y-2 text-sm font-medium text-slate-700 w-full">
                                         <span>Cari pengguna</span>
                                         <input
                                             value={userFilters.search}
@@ -418,28 +419,36 @@ export default function AdminPenggunaPage({ session, onLogout, mode = 'pengguna'
                                     </label>
                                     <label className="space-y-2 text-sm font-medium text-slate-700">
                                         <span>Role</span>
-                                        <select
+                                        <FilterSelect
                                             value={userFilters.role}
-                                            onChange={(event) => setUserFilters((current) => ({ ...current, role: event.target.value, page: 1 }))}
-                                            className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-slate-900"
-                                        >
-                                            <option value="all">Semua role</option>
-                                            <option value="admin">Admin</option>
-                                            <option value="guru">Guru</option>
-                                            <option value="siswa">Siswa</option>
-                                        </select>
+                                            onChange={(val) => setUserFilters((current) => ({ ...current, role: val, page: 1 }))}
+                                            options={[
+                                                { value: 'all', label: 'Semua role' },
+                                                { value: 'admin', label: 'Admin' },
+                                                { value: 'guru', label: 'Guru' },
+                                                { value: 'siswa', label: 'Siswa' }
+                                            ]}
+                                            placeholder="Semua role"
+                                            icon="🎭"
+                                            align="left"
+                                            className="w-full"
+                                        />
                                     </label>
                                     <label className="space-y-2 text-sm font-medium text-slate-700">
                                         <span>Status</span>
-                                        <select
+                                        <FilterSelect
                                             value={userFilters.status}
-                                            onChange={(event) => setUserFilters((current) => ({ ...current, status: event.target.value, page: 1 }))}
-                                            className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-slate-900"
-                                        >
-                                            <option value="all">Semua status</option>
-                                            <option value="active">Aktif</option>
-                                            <option value="archived">Diarsipkan</option>
-                                        </select>
+                                            onChange={(val) => setUserFilters((current) => ({ ...current, status: val, page: 1 }))}
+                                            options={[
+                                                { value: 'all', label: 'Semua status' },
+                                                { value: 'active', label: 'Aktif' },
+                                                { value: 'archived', label: 'Diarsipkan' }
+                                            ]}
+                                            placeholder="Semua status"
+                                            icon="🟢"
+                                            align="left"
+                                            className="w-full"
+                                        />
                                     </label>
                                     <div className="flex items-end gap-2">
                                         <button type="button" onClick={resetUserFilters} className="rounded-full border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-100">Reset</button>

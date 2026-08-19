@@ -5,6 +5,7 @@ import { apiFetch } from '../lib/api';
 import { formatDateTimeLabel } from '../lib/date';
 import useGuruWorkspace from '../hooks/useGuruWorkspace';
 import { guruNavigation } from './guru/guruNavigation';
+import FilterSelect from '../components/ui/FilterSelect';
 
 export default function GuruJadwalCbtPage({ session, onLogout }) {
     const { summary, workspace, sesiAsesmenHistory, loading, reloadWorkspace } = useGuruWorkspace(session);
@@ -219,16 +220,21 @@ export default function GuruJadwalCbtPage({ session, onLogout }) {
                             <p className="text-sm text-slate-500">Daftar sesi asesmen yang telah dibuat.</p>
                         </div>
                         <div className="flex items-center gap-3 w-full sm:w-auto flex-wrap sm:flex-nowrap justify-end">
-                            <select
+                            <FilterSelect
                                 value={cbtFilterKelas}
-                                onChange={(e) => setCbtFilterKelas(e.target.value)}
-                                className="w-full sm:w-auto rounded-full border border-slate-300 bg-slate-50 px-4 py-2 text-sm outline-none transition focus:border-primary focus:bg-white focus:ring-1 focus:ring-primary"
-                            >
-                                <option value="">Semua Kelas</option>
-                                {(workspace.kelas_options || []).map(k => (
-                                    <option key={k.id_kelas} value={k.id_kelas}>{k.nama_kelas}</option>
-                                ))}
-                            </select>
+                                onChange={setCbtFilterKelas}
+                                options={[
+                                    { value: '', label: 'Semua Kelas' },
+                                    ...(workspace.kelas_options || []).map(k => ({ value: k.id_kelas, label: k.nama_kelas }))
+                                ]}
+                                placeholder="Semua Kelas"
+                                icon="🏫"
+                                // warna untuk tombol Utama filter aktif
+                                accentClass="bg-accent border-accent text-white shadow-md shadow-gold-900"
+
+                                // warna untuk item dropdown yang dipilih
+                                dropdownAccentClass="bg-accent border-accent text-white shadow-md shadow-gold-900"
+                            />
                             <div className="relative w-full sm:w-64">
                                 <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
                                     <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">

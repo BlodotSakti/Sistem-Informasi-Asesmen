@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useRef } from 'react';
 import DashboardLayout from '../components/layout/DashboardLayout';
 import StatCard from '../components/ui/StatCard';
+import FilterSelect from '../components/ui/FilterSelect';
 import { apiFetch } from '../lib/api';
 import { formatDateLabel } from '../lib/date';
 import useGuruWorkspace from '../hooks/useGuruWorkspace';
@@ -48,6 +49,7 @@ export default function GuruBeritaAcaraPage({ session, onLogout }) {
     const [studentBadgeMap, setStudentBadgeMap] = useState({});
     const [beritaSearch, setBeritaSearch] = useState('');
     const [editingBeritaId, setEditingBeritaId] = useState(null);
+    const [beritaKelasFilter, setBeritaKelasFilter] = useState('');
 
     const showToast = (message) => {
         setToast(message);
@@ -72,7 +74,10 @@ export default function GuruBeritaAcaraPage({ session, onLogout }) {
     const beritaRows = useMemo(() => {
         const search = beritaSearch.trim().toLowerCase();
 
-        return (workspace.berita_acara || []).filter((item) => {
+        const filtered = (workspace.berita_acara || []).filter((item) => {
+            if (beritaKelasFilter && String(item.id_kelas) !== String(beritaKelasFilter)) {
+                return false;
+            }
             if (!search) {
                 return true;
             }
@@ -93,7 +98,9 @@ export default function GuruBeritaAcaraPage({ session, onLogout }) {
                 .filter(Boolean)
                 .some((value) => String(value).toLowerCase().includes(search));
         });
-    }, [beritaSearch, workspace.berita_acara]);
+
+        return filtered;
+    }, [beritaSearch, beritaKelasFilter, workspace.berita_acara]);
 
     const mapelBySelectedClass = useMemo(
         () =>
@@ -448,12 +455,12 @@ export default function GuruBeritaAcaraPage({ session, onLogout }) {
                         <p className="text-sm text-slate-500">Presensi harian dan evaluasi kelas yang sudah tersimpan.</p>
                     </div>
                     <div className="border-b border-border px-5 py-4">
-                        <div className="grid gap-3 lg:grid-cols-[0.8fr_1.2fr] lg:items-end">
-                            <div className="rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-600">
+                        <div className="flex flex-col sm:flex-row sm:items-end gap-3">
+                            <div className="rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-600 shrink-0">
                                 <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Total Data</p>
                                 <p className="mt-1 font-semibold text-slate-900">{loading ? 'Memuat...' : `${beritaRows.length} data`}</p>
                             </div>
-                            <label className="space-y-2 text-sm font-medium text-slate-700">
+                            <label className="flex-1 space-y-2 text-sm font-medium text-slate-700">
                                 <span>Cari berita acara</span>
                                 <input
                                     value={beritaSearch}
@@ -462,6 +469,28 @@ export default function GuruBeritaAcaraPage({ session, onLogout }) {
                                     placeholder="Kelas, mapel, topik, evaluasi, atau tanggal"
                                 />
                             </label>
+                            <div className="shrink-0 flex flex-col gap-1">
+                                <span className="text-sm font-medium text-slate-700">Filter Kelas</span>
+                                <FilterSelect
+                                    value={beritaKelasFilter}
+                                    onChange={setBeritaKelasFilter}
+                                    options={[
+                                        { value: '', label: 'Semua Kelas' },
+                                        ...(workspace.kelas_options || []).map((item) => ({
+                                            value: String(item.id_kelas),
+                                            label: item.nama_kelas,
+                                        }))
+                                    ]}
+                                    placeholder="Semua Kelas"
+                                    icon="🏫"
+                                    align="right"
+                                    // warna untuk tombol Utama filter aktif
+                                    accentClass="bg-primary border-primary text-white shadow-md shadow-blue-900"
+
+                                    // warna untuk item dropdown yang dipilih
+                                    dropdownAccentClass="bg-primary border-primary text-white shadow-md shadow-blue-900"
+                                />
+                            </div>
                         </div>
                     </div>
                     <div className="overflow-x-auto">

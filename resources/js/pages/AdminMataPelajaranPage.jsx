@@ -3,6 +3,7 @@ import DashboardLayout from '../components/layout/DashboardLayout';
 import { apiFetch } from '../lib/api';
 import { adminNavigation } from './adminNavigation';
 import useAdminWorkspace from '../hooks/useAdminWorkspace';
+import FilterSelect from '../components/ui/FilterSelect';
 
 const TABLE_HEAD_CLASS = 'border-b border-border bg-slate-50 text-xs uppercase tracking-[0.2em] text-slate-500';
 const TABLE_BODY_ROW_CLASS = 'align-top hover:bg-slate-50/70';
@@ -28,6 +29,8 @@ export default function AdminMataPelajaranPage({ session, onLogout }) {
     });
     const [mapelId, setMapelId] = useState(null);
     const [mapelSearch, setMapelSearch] = useState('');
+    const [mapelFilterName, setMapelFilterName] = useState('');
+    const [mapelFilterLevel, setMapelFilterLevel] = useState('');
 
     const showToast = (message, type = 'success') => {
         setToast({ message, type });
@@ -39,15 +42,33 @@ export default function AdminMataPelajaranPage({ session, onLogout }) {
         if (toastTimer.current) window.clearTimeout(toastTimer.current);
     }, []);
 
+    const uniqueMapelNames = useMemo(() => {
+        const names = new Set();
+        (masterData.mata_pelajaran || []).forEach(item => {
+            if (item.nama_mapel) names.add(item.nama_mapel);
+        });
+        return Array.from(names).sort();
+    }, [masterData.mata_pelajaran]);
+
+    const uniqueTingkat = useMemo(() => {
+        const levels = new Set();
+        (masterData.mata_pelajaran || []).forEach(item => {
+            if (item.tingkat) levels.add(item.tingkat);
+        });
+        return Array.from(levels).sort();
+    }, [masterData.mata_pelajaran]);
+
     const filteredMapel = useMemo(() => {
         const search = mapelSearch.trim().toLowerCase();
         return (masterData.mata_pelajaran || []).filter((item) => {
+            if (mapelFilterName && item.nama_mapel !== mapelFilterName) return false;
+            if (mapelFilterLevel && item.tingkat !== mapelFilterLevel) return false;
             if (search === '') return true;
             return [item.nama_mapel, item.tingkat]
                 .filter(Boolean)
                 .some((value) => String(value).toLowerCase().includes(search));
         });
-    }, [mapelSearch, masterData.mata_pelajaran]);
+    }, [mapelSearch, mapelFilterName, mapelFilterLevel, masterData.mata_pelajaran]);
 
     const resetMapelForm = () => {
         setMapelForm({ nama_mapel: '', tingkat: '' });
@@ -160,21 +181,53 @@ export default function AdminMataPelajaranPage({ session, onLogout }) {
                             </div>
                         </form>
 
-                        <div className="overflow-hidden rounded-3xl border border-border bg-white">
+                        <div className="rounded-3xl border border-border bg-white">
                             <div className="border-b border-border px-5 py-4">
                                 <h4 className="text-lg font-semibold text-slate-900">Daftar Mata Pelajaran</h4>
                                 <p className="text-sm text-slate-500">Data mapel dipakai untuk bank soal dan jadwal sesi asesmen.</p>
                             </div>
                             <div className="border-b border-border px-5 py-4">
-                                <div className="grid gap-3 lg:grid-cols-[0.8fr_1.2fr] lg:items-end">
-                                    <div className="rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-600">
+                                <div className="flex flex-col sm:flex-row sm:items-end gap-3">
+                                    <div className="rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-600 shrink-0">
                                         <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Total Data</p>
                                         <p className="mt-1 font-semibold text-slate-900">{loading ? 'Memuat...' : `${filteredMapel.length} data`}</p>
                                     </div>
-                                    <label className="space-y-2 text-sm font-medium text-slate-700">
+                                    <label className="flex-1 space-y-2 text-sm font-medium text-slate-700">
                                         <span>Cari mapel</span>
                                         <input value={mapelSearch} onChange={(event) => setMapelSearch(event.target.value)} className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-slate-900" placeholder="Nama mapel atau tingkat" />
                                     </label>
+                                    <div className="shrink-0 flex flex-col gap-1">
+                                        <span className="text-sm font-medium text-slate-700">Mapel</span>
+                                        <FilterSelect
+                                            value={mapelFilterName}
+                                            onChange={setMapelFilterName}
+                                            options={[
+                                                { value: '', label: 'Semua Mapel' },
+                                                ...uniqueMapelNames.map(name => ({ value: name, label: name }))
+                                            ]}
+                                            placeholder="Semua Mapel"
+                                            icon="📚"
+                                            align="right"
+                                            accentClass="bg-primary border-primary text-white shadow-md shadow-blue-900"
+                                            dropdownAccentClass="bg-primary border-primary text-white shadow-md shadow-blue-900"
+                                        />
+                                    </div>
+                                    <div className="shrink-0 flex flex-col gap-1">
+                                        <span className="text-sm font-medium text-slate-700">Tingkat</span>
+                                        <FilterSelect
+                                            value={mapelFilterLevel}
+                                            onChange={setMapelFilterLevel}
+                                            options={[
+                                                { value: '', label: 'Semua Tingkat' },
+                                                ...uniqueTingkat.map(level => ({ value: level, label: `Tingkat ${level}` }))
+                                            ]}
+                                            placeholder="Semua Tingkat"
+                                            icon="🏫"
+                                            align="right"
+                                            accentClass="bg-accent border-accent text-white shadow-md shadow-gold-900"
+                                            dropdownAccentClass="bg-accent border-accent text-white shadow-md shadow-gold-900"
+                                        />
+                                    </div>
                                 </div>
                             </div>
                             <div className="overflow-x-auto">

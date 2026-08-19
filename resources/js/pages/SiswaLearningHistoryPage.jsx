@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import DashboardLayout from '../components/layout/DashboardLayout';
 import StatCard from '../components/ui/StatCard';
+import FilterSelect from '../components/ui/FilterSelect';
 import { apiFetch } from '../lib/api';
 import { formatDateLabel } from '../lib/date';
 import { siswaNavigation } from './siswa/siswaNavigation';
@@ -155,12 +156,17 @@ export default function SiswaLearningHistoryPage({ session, onLogout }) {
                                     </div>
                                     <input value={search} onChange={(event) => setSearch(event.target.value)} className="w-full sm:w-64 pl-9 pr-4 py-2.5 text-sm rounded-xl border border-slate-300 bg-white outline-none transition focus:border-slate-900" placeholder="Cari riwayat..." />
                                 </div>
-                                <select value={subjectFilter} onChange={(event) => setSubjectFilter(event.target.value)} className="w-full sm:w-auto px-4 py-2.5 text-sm rounded-xl border border-slate-300 bg-white outline-none transition focus:border-slate-900 font-medium text-slate-700">
-                                    <option value="">Semua Mapel</option>
-                                    {subjects.map((item) => (
-                                        <option key={item.id_mapel} value={item.id_mapel}>{item.nama_lengkap || item.nama_mapel}</option>
-                                    ))}
-                                </select>
+                                <FilterSelect
+                                    value={subjectFilter}
+                                    onChange={setSubjectFilter}
+                                    options={[
+                                        { value: '', label: 'Semua Mapel' },
+                                        ...subjects.map((item) => ({ value: String(item.id_mapel), label: item.nama_lengkap || item.nama_mapel }))
+                                    ]}
+                                    placeholder="Semua Mapel"
+                                    icon="📚"
+                                    align="right"
+                                />
                             </div>
                         </div>
 

@@ -19,6 +19,9 @@ class AdminDashboardController extends Controller
     {
         $totalGuru = Guru::count();
         $totalSiswa = Siswa::count();
+        $totalPenggunaAktif = Pengguna::where('is_aktif', true)->count();
+        $totalPenggunaArsip = Pengguna::where('is_aktif', false)->count();
+
         
         $tahunAjaranAktif = TahunAjaran::where('is_aktif', true)->first();
         
@@ -78,6 +81,8 @@ class AdminDashboardController extends Controller
             'summary' => [
                 'total_guru' => $totalGuru,
                 'total_siswa' => $totalSiswa,
+                'total_pengguna_aktif' => $totalPenggunaAktif,
+                'total_pengguna_arsip' => $totalPenggunaArsip,
                 'total_kelas' => $totalKelas,
                 'total_mapel' => $totalMapel,
             ],

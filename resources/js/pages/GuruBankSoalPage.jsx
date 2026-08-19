@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useRef } from 'react';
 import DashboardLayout from '../components/layout/DashboardLayout';
 import StatCard from '../components/ui/StatCard';
+import FilterSelect from '../components/ui/FilterSelect';
 import { apiFetch } from '../lib/api';
 import useGuruWorkspace from '../hooks/useGuruWorkspace';
 import { guruNavigation } from './guru/guruNavigation';
@@ -492,28 +493,65 @@ export default function GuruBankSoalPage({ session, onLogout }) {
                         <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4 lg:items-end">
                             <label className="space-y-2 text-sm font-medium text-slate-700">
                                 <span>Filter Mapel</span>
-                                <select value={bankFilterMapel} onChange={e => setBankFilterMapel(e.target.value)} className="w-full rounded-2xl border border-slate-300 px-4 py-2 outline-none transition focus:border-slate-900">
-                                    <option value="">Semua Mapel</option>
-                                    {(workspace.mapel_options || []).map(item => (
-                                        <option key={item.id_mapel} value={item.id_mapel}>{item.nama_lengkap || item.nama_mapel}</option>
-                                    ))}
-                                </select>
+                                <FilterSelect
+                                    value={bankFilterMapel}
+                                    onChange={setBankFilterMapel}
+                                    options={[
+                                        { value: '', label: 'Semua Mapel' },
+                                        ...(workspace.mapel_options || []).map(item => ({ value: String(item.id_mapel), label: item.nama_lengkap || item.nama_mapel }))
+                                    ]}
+                                    placeholder="Semua Mapel"
+                                    icon="📚"
+                                    align="left"
+                                    className="w-full"
+                                    // warna untuk tombol Utama filter aktif
+                                    accentClass="bg-primary border-primary text-white shadow-md shadow-blue-900"
+
+                                    // warna untuk item dropdown yang dipilih
+                                    dropdownAccentClass="bg-primary border-primary text-white shadow-md shadow-blue-900"
+                                />
                             </label>
                             <label className="space-y-2 text-sm font-medium text-slate-700">
                                 <span>Jenis Soal</span>
-                                <select value={bankFilterJenis} onChange={e => setBankFilterJenis(e.target.value)} className="w-full rounded-2xl border border-slate-300 px-4 py-2 outline-none transition focus:border-slate-900">
-                                    <option value="">Semua Jenis</option>
-                                    <option value="pilihan_ganda">Pilihan Ganda</option>
-                                    <option value="pilihan_ganda_kompleks">Pilihan Ganda Kompleks</option>
-                                    <option value="esai">Esai</option>
-                                </select>
+                                <FilterSelect
+                                    value={bankFilterJenis}
+                                    onChange={setBankFilterJenis}
+                                    options={[
+                                        { value: '', label: 'Semua Jenis' },
+                                        { value: 'pilihan_ganda', label: 'Pilihan Ganda' },
+                                        { value: 'pilihan_ganda_kompleks', label: 'Pilihan Ganda Kompleks' },
+                                        { value: 'esai', label: 'Esai' },
+                                    ]}
+                                    placeholder="Semua Jenis"
+                                    icon="❓"
+                                    align="left"
+                                    className="w-full"
+                                    // warna untuk tombol Utama filter aktif
+                                    accentClass="bg-accent border-accent text-white shadow-md shadow-gold-900"
+
+                                    // warna untuk item dropdown yang dipilih
+                                    dropdownAccentClass="bg-accent border-accent text-white shadow-md shadow-gold-900"
+                                />
                             </label>
                             <label className="space-y-2 text-sm font-medium text-slate-700">
                                 <span>Level Kognitif</span>
-                                <select value={bankFilterLevel} onChange={e => setBankFilterLevel(e.target.value)} className="w-full rounded-2xl border border-slate-300 px-4 py-2 outline-none transition focus:border-slate-900">
-                                    <option value="">Semua Level</option>
-                                    {BLOOM_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
-                                </select>
+                                <FilterSelect
+                                    value={bankFilterLevel}
+                                    onChange={setBankFilterLevel}
+                                    options={[
+                                        { value: '', label: 'Semua Level' },
+                                        ...BLOOM_OPTIONS.map(opt => ({ value: opt, label: opt }))
+                                    ]}
+                                    placeholder="Semua Level"
+                                    icon="🧠"
+                                    align="left"
+                                    className="w-full"
+                                    // warna untuk tombol Utama filter aktif
+                                    accentClass="bg-secondary border-secondary text-white shadow-md shadow-red-900"
+
+                                    // warna untuk item dropdown yang dipilih
+                                    dropdownAccentClass="bg-secondary border-secondary text-white shadow-md shadow-red-900"
+                                />
                             </label>
                             <label className="space-y-2 text-sm font-medium text-slate-700">
                                 <span>Cari soal</span>
