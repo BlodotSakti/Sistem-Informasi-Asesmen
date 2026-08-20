@@ -186,7 +186,7 @@ export default function NotificationPanel() {
                 </div>
             )}
 
-            <style jsx>{`
+            <style>{`
                 .custom-scrollbar::-webkit-scrollbar {
                     width: 4px;
                 }

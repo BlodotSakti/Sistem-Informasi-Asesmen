@@ -3,7 +3,27 @@ import DashboardLayout from '../components/layout/DashboardLayout';
 import StatCard from '../components/ui/StatCard';
 import { apiFetch } from '../lib/api';
 import { adminNavigation } from './adminNavigation';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { LineChart, Line, BarChart, Bar, AreaChart, Area, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+
+const CHART_COLORS = [
+    '#1E3A5F', '#D9A441', '#8A2332', '#2D9C6F', '#7C3AED',
+    '#E76F51', '#3B82F6', '#F59E0B', '#10B981', '#EC4899',
+    '#6366F1', '#14B8A6', '#F97316', '#06B6D4', '#8B5CF6',
+];
+
+const CustomXAxisTick = ({ x, y, payload }) => {
+    const value = payload.value || '';
+    const maxLen = 15;
+    const displayLabel = value.length > maxLen ? value.slice(0, maxLen) + '…' : value;
+    
+    return (
+        <g transform={`translate(${x},${y})`}>
+            <text x={0} y={0} dy={16} textAnchor="end" fill="#64748b" fontSize={10} fontWeight={600} transform="rotate(-25)">
+                {displayLabel}
+            </text>
+        </g>
+    );
+};
 
 const MENU_META = {
     dashboard: {
@@ -18,12 +38,63 @@ export default function AdminDashboard({ session, onLogout }) {
             total_pengguna_aktif: 0,
             total_pengguna_arsip: 0,
             total_kelas: 0,
+            total_mapel: 0,
         },
-        chart: [],
+        chart: {},
+        tahun_ajaran_options: [],
         logs: [],
     });
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
+
+    const [chartType, setChartType] = useState(() => localStorage.getItem('adminChartType') || 'bar');
+    const [dataType, setDataType] = useState(() => localStorage.getItem('adminDataType') || 'siswa_per_kelas');
+    const [selectedSemester, setSelectedSemester] = useState(() => localStorage.getItem('adminSelectedSemester') || 'all');
+    
+    useEffect(() => {
+        localStorage.setItem('adminChartType', chartType);
+        localStorage.setItem('adminDataType', dataType);
+        localStorage.setItem('adminSelectedSemester', selectedSemester);
+    }, [chartType, dataType, selectedSemester]);
+    
+    const [chartTypeOpen, setChartTypeOpen] = useState(false);
+    const [dataTypeOpen, setDataTypeOpen] = useState(false);
+    const [semesterOpen, setSemesterOpen] = useState(false);
+
+    const activeChartData = useMemo(() => {
+        if (!data.chart || Object.keys(data.chart).length === 0) return [];
+        let ds = data.chart[dataType] || [];
+        
+        if (dataType === 'siswa_per_kelas' || dataType === 'siswa_per_tingkat') {
+            if (selectedSemester === 'all') {
+                const agg = {};
+                Object.values(ds).flat().forEach(item => {
+                    if (!agg[item.name]) agg[item.name] = 0;
+                    agg[item.name] += item.value;
+                });
+                return Object.keys(agg).map(k => ({ name: k, value: agg[k] })).sort((a,b) => a.name.localeCompare(b.name));
+            } else {
+                return ds[selectedSemester] || [];
+            }
+        }
+        return ds;
+    }, [data.chart, dataType, selectedSemester]);
+
+    const activeChartDataColored = useMemo(() => {
+        return activeChartData.map((entry, index) => ({
+            ...entry,
+            fill: CHART_COLORS[index % CHART_COLORS.length]
+        }));
+    }, [activeChartData]);
+
+    const DATA_TYPE_LABELS = {
+        'siswa_per_kelas': 'Siswa per Kelas',
+        'siswa_per_tingkat': 'Siswa per Tingkat',
+        'soal_per_mapel': 'Soal per Mapel',
+        'soal_per_tingkat_kelas': 'Soal per Tingkat',
+        'soal_per_level_kognitif': 'Soal per Level Kognitif',
+        'kelas_per_semester': 'Kelas per Semester',
+    };
 
     const navigation = adminNavigation;
 
@@ -155,54 +226,154 @@ export default function AdminDashboard({ session, onLogout }) {
                 />
             </section>
 
-            <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
-                <section className="rounded-2xl sm:rounded-[2.5rem] border border-border bg-white/60 backdrop-blur-xl p-4 sm:p-8 shadow-sm">
-                    <div className="mb-6">
-                        <h4 className="text-lg font-semibold text-slate-900">Grafik Pendaftaran Pengguna</h4>
-                        <p className="text-sm text-slate-500">Jumlah akun baru yang ditambahkan dalam 7 hari terakhir.</p>
+            <div className="grid gap-6 lg:grid-cols-[2fr_1fr] w-full min-w-0">
+                <section className="rounded-2xl sm:rounded-[2.5rem] border border-border bg-white/60 backdrop-blur-xl p-4 sm:p-8 shadow-sm flex flex-col min-w-0">
+                    <div className="mb-6 flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+                        <div>
+                            <h4 className="text-[10px] sm:text-xs font-bold uppercase tracking-[0.3em] text-slate-500">GRAFIK ANALITIK</h4>
+                            <h3 className="mt-1 text-lg sm:text-xl lg:text-2xl font-extrabold text-slate-900 tracking-tight">Statistik Data</h3>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                            {/* Chart Type Dropdown */}
+                            <div className="relative">
+                                <button
+                                    onClick={() => { setChartTypeOpen(v => !v); setDataTypeOpen(false); setSemesterOpen(false); }}
+                                    className="flex items-center gap-2 rounded-2xl px-3.5 py-2 text-sm font-semibold bg-[#111827] text-white border border-[#111827] shadow-lg shadow-slate-900/20 transition-all duration-200"
+                                >
+                                    <span>{chartType === 'area' ? '📈' : '📊'}</span>
+                                    <span>{chartType === 'area' ? 'Grafik Area' : 'Grafik Batang'}</span>
+                                    <svg className={`w-3.5 h-3.5 flex-shrink-0 transition-transform duration-200 ${chartTypeOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" /></svg>
+                                </button>
+                                {chartTypeOpen && (
+                                    <div className="absolute left-0 sm:left-auto sm:right-0 top-full mt-2 w-48 z-50 rounded-2xl border border-slate-100 bg-white shadow-2xl overflow-hidden">
+                                        <div className="p-1.5">
+                                            {[
+                                                { value: 'area', label: 'Grafik Area', icon: '📈' },
+                                                { value: 'bar', label: 'Grafik Batang', icon: '📊' }
+                                            ].map((opt) => (
+                                                <button key={opt.value} onClick={() => { setChartType(opt.value); setChartTypeOpen(false); }} className={`w-full flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium transition-colors ${chartType === opt.value ? 'bg-[#111827] text-white' : 'text-slate-700 hover:bg-slate-50'}`}>
+                                                    <span>{opt.icon}</span>
+                                                    <span>{opt.label}</span>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Data Type Dropdown */}
+                            <div className="relative">
+                                <button
+                                    onClick={() => { setDataTypeOpen(v => !v); setChartTypeOpen(false); setSemesterOpen(false); }}
+                                    className="flex items-center gap-2 rounded-2xl px-3.5 py-2 text-sm font-semibold border transition-all duration-200 bg-white text-slate-700 border-slate-200 hover:border-primary/40 hover:bg-slate-50 shadow-sm"
+                                >
+                                    <span>📑</span>
+                                    <span>{DATA_TYPE_LABELS[dataType]}</span>
+                                    <svg className={`w-3.5 h-3.5 flex-shrink-0 transition-transform duration-200 ${dataTypeOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" /></svg>
+                                </button>
+                                {dataTypeOpen && (
+                                    <div className="absolute left-0 sm:left-auto sm:right-0 top-full mt-2 w-56 z-50 rounded-2xl border border-slate-100 bg-white shadow-2xl overflow-hidden">
+                                        <div className="p-1.5">
+                                            {Object.entries(DATA_TYPE_LABELS).map(([key, label]) => (
+                                                <button key={key} onClick={() => { setDataType(key); setDataTypeOpen(false); }} className={`w-full text-left rounded-xl px-3 py-2 text-sm font-medium transition-colors ${dataType === key ? 'bg-primary/10 text-primary' : 'text-slate-700 hover:bg-slate-50'}`}>
+                                                    {label}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Semester Dropdown (only for class/siswa) */}
+                            {(dataType === 'siswa_per_kelas' || dataType === 'siswa_per_tingkat') && (
+                                <div className="relative">
+                                    <button
+                                        onClick={() => { setSemesterOpen(v => !v); setChartTypeOpen(false); setDataTypeOpen(false); }}
+                                        className={`flex items-center gap-2 rounded-2xl px-3.5 py-2 text-sm font-semibold border transition-all duration-200 ${selectedSemester !== 'all' ? 'bg-primary text-white border-primary shadow-md shadow-primary/25' : 'bg-white text-slate-700 border-slate-200 hover:border-primary/40 hover:bg-slate-50 shadow-sm'}`}
+                                    >
+                                        <span>📅</span>
+                                        <span className="max-w-[110px] truncate">{selectedSemester === 'all' ? 'Semua Semester' : selectedSemester}</span>
+                                        <svg className={`w-3.5 h-3.5 flex-shrink-0 transition-transform duration-200 ${semesterOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" /></svg>
+                                    </button>
+                                    {semesterOpen && (
+                                        <div className="absolute left-0 sm:left-auto sm:right-0 top-full mt-2 w-64 z-50 rounded-2xl border border-slate-100 bg-white shadow-2xl overflow-hidden">
+                                            <div className="p-1.5 max-h-60 overflow-y-auto custom-scrollbar">
+                                                {[{ value: 'all', label: 'Semua Semester' }, ...data.tahun_ajaran_options.map(p => ({ value: p, label: p }))].map((opt) => (
+                                                    <button key={opt.value} onClick={() => { setSelectedSemester(opt.value); setSemesterOpen(false); }} className={`w-full text-left rounded-xl px-3 py-2 text-sm font-medium transition-colors ${selectedSemester === opt.value ? 'bg-primary text-white' : 'text-slate-700 hover:bg-slate-50'}`}>
+                                                        {opt.label}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </div>
                     </div>
-                    <div className="h-[300px] w-full">
+                    
+                    <div className="w-full flex-grow rounded-2xl border border-border/50 bg-white shadow-inner flex flex-col min-h-0 min-w-0 h-[340px] overflow-hidden">
                         {loading ? (
-                            <div className="flex h-full items-center justify-center rounded-xl bg-slate-50 border border-dashed border-border text-sm text-slate-400">
+                            <div className="flex-1 flex items-center justify-center rounded-xl bg-slate-50 text-sm text-slate-400">
                                 Memuat grafik...
                             </div>
+                        ) : activeChartDataColored.length > 0 ? (
+                            <div className="flex-1 w-full overflow-x-auto overflow-y-hidden custom-scrollbar p-3 sm:p-5">
+                                <div className="h-full min-w-[600px] sm:min-w-0 relative">
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        {chartType === 'area' ? (
+                                            <AreaChart data={activeChartDataColored} margin={{ top: 10, right: 10, left: -25, bottom: 20 }}>
+                                                <defs>
+                                                    <linearGradient id="colorArea" x1="0" y1="0" x2="0" y2="1">
+                                                        <stop offset="5%" stopColor="#8A2332" stopOpacity={0.4} />
+                                                        <stop offset="95%" stopColor="#8A2332" stopOpacity={0} />
+                                                    </linearGradient>
+                                                </defs>
+                                                <CartesianGrid strokeDasharray="4 4" vertical={false} stroke="#f1f5f9" />
+                                                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={<CustomXAxisTick />} interval={0} height={70} />
+                                                <YAxis allowDecimals={false} axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 11, fontWeight: 600 }} />
+                                                <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} cursor={{ stroke: '#cbd5e1', strokeWidth: 2, strokeDasharray: '4 4' }} />
+                                                <Area type="monotone" dataKey="value" stroke="#8A2332" strokeWidth={3} fillOpacity={1} fill="url(#colorArea)" dot={{ r: 5, fill: '#8A2332', stroke: '#fff', strokeWidth: 2 }} activeDot={{ r: 8, fill: '#8A2332', stroke: '#fff', strokeWidth: 3 }} />
+                                            </AreaChart>
+                                        ) : (
+                                            <BarChart data={activeChartDataColored} margin={{ top: 10, right: 10, left: -25, bottom: 20 }}>
+                                                <CartesianGrid strokeDasharray="4 4" vertical={false} stroke="#f1f5f9" />
+                                                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={<CustomXAxisTick />} interval={0} height={70} />
+                                                <YAxis allowDecimals={false} axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 11, fontWeight: 600 }} />
+                                                <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} cursor={{ fill: '#f8fafc' }} />
+                                                <Bar dataKey="value" radius={[6, 6, 0, 0]} barSize={32} animationDuration={600}>
+                                                    {activeChartDataColored.map((entry, index) => (
+                                                        <Cell key={`cell-${index}`} fill={entry.fill} />
+                                                    ))}
+                                                </Bar>
+                                            </BarChart>
+                                        )}
+                                    </ResponsiveContainer>
+                                </div>
+                            </div>
                         ) : (
-                            <ResponsiveContainer width="100%" height="100%">
-                                <LineChart data={data.chart} margin={{ top: 5, right: 20, bottom: 5, left: -20 }}>
-                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                                    <XAxis 
-                                        dataKey="tanggal" 
-                                        axisLine={false} 
-                                        tickLine={false} 
-                                        tick={{ fontSize: 12, fill: '#64748b' }} 
-                                        dy={10} 
-                                    />
-                                    <YAxis 
-                                        allowDecimals={false} 
-                                        axisLine={false} 
-                                        tickLine={false} 
-                                        tick={{ fontSize: 12, fill: '#64748b' }} 
-                                    />
-                                    <Tooltip 
-                                        contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)' }}
-                                        labelStyle={{ fontWeight: 'bold', color: '#0f172a', marginBottom: '4px' }}
-                                    />
-                                    <Line 
-                                        type="monotone" 
-                                        dataKey="total" 
-                                        name="Akun Baru"
-                                        stroke="#1E3A5F" 
-                                        strokeWidth={3} 
-                                        dot={{ r: 4, strokeWidth: 2, fill: '#fff' }} 
-                                        activeDot={{ r: 6, stroke: '#1E3A5F', strokeWidth: 2, fill: '#fff' }} 
-                                    />
-                                </LineChart>
-                            </ResponsiveContainer>
+                            <div className="flex-1 flex flex-col items-center justify-center text-sm text-slate-400 font-medium gap-3 p-5">
+                                <svg className="w-12 h-12 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" />
+                                </svg>
+                                <span>Belum ada data untuk filter yang dipilih</span>
+                            </div>
+                        )}
+                        
+                        {/* Legend for bar chart */}
+                        {chartType === 'bar' && activeChartDataColored.length > 0 && (
+                            <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 px-4 pb-4">
+                                {activeChartDataColored.map((item) => (
+                                    <div key={item.name} className="flex items-center gap-1.5">
+                                        <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: item.fill }} />
+                                        <span className="text-[10px] font-semibold text-slate-500">{item.name}</span>
+                                    </div>
+                                ))}
+                            </div>
                         )}
                     </div>
                 </section>
 
-                <section className="rounded-2xl sm:rounded-[2.5rem] border border-border bg-white/60 backdrop-blur-xl p-4 sm:p-8 shadow-sm">
+                <section className="rounded-2xl sm:rounded-[2.5rem] border border-border bg-white/60 backdrop-blur-xl p-4 sm:p-8 shadow-sm flex flex-col min-w-0">
                     <div className="mb-6 flex items-center justify-between">
                         <div>
                             <h4 className="text-lg font-semibold text-slate-900">Catatan Sistem</h4>

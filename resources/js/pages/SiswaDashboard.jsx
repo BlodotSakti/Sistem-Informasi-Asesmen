@@ -13,21 +13,59 @@ import {
     YAxis,
     CartesianGrid,
     Tooltip,
-    ResponsiveContainer
+    ResponsiveContainer,
+    Cell,
+    Legend
 } from 'recharts';
+
+const MAPEL_COLORS = [
+    '#1E3A5F', '#D9A441', '#8A2332', '#2D9C6F', '#7C3AED',
+    '#E76F51', '#3B82F6', '#F59E0B', '#10B981', '#EC4899',
+    '#6366F1', '#14B8A6', '#F97316', '#06B6D4', '#8B5CF6',
+];
 
 const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
+        const [mainLabel, subLabel] = (label || '').split(' | ');
         return (
-            <div className="rounded-2xl border border-border bg-white/80 backdrop-blur-md p-4 shadow-xl">
-                <p className="mb-1 text-sm font-semibold text-slate-500 uppercase tracking-wider">{label}</p>
-                <p className="text-2xl font-black text-primary">
-                    {payload[0].value} <span className="text-sm font-semibold text-slate-400">Pts</span>
+            <div className="rounded-2xl border border-border bg-white/80 backdrop-blur-md p-4 shadow-xl min-w-[140px]">
+                <p className="mb-1 text-sm font-semibold text-slate-500 uppercase tracking-wider">
+                    {mainLabel} {subLabel && <span className="block text-xs font-medium text-slate-400 normal-case mt-0.5">{subLabel}</span>}
                 </p>
+                {payload.map((entry, idx) => (
+                    <div key={idx} className="flex items-center gap-2 mt-1">
+                        <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: entry.color || entry.fill || '#1E3A5F' }} />
+                        <span className="text-lg font-black text-primary">
+                            {entry.value} <span className="text-xs font-semibold text-slate-400">Pts</span>
+                        </span>
+                    </div>
+                ))}
             </div>
         );
     }
     return null;
+};
+
+const CustomXAxisTick = ({ x, y, payload, chartMode }) => {
+    const value = payload.value || '';
+    // For bar chart, only show date/exam label (no mapel name) since colors distinguish them
+    const [label] = chartMode === 'bar' ? [value.split(' | ')[0]] : [value];
+    const parts = label.split(' | ');
+    const mainLabel = parts[0] || '';
+    const subLabel = chartMode !== 'bar' ? (parts[1] || '') : '';
+    
+    // With horizontal scrolling, we don't need to squash labels too much
+    const maxLen = 18;
+    const displayLabel = mainLabel.length > maxLen ? mainLabel.slice(0, maxLen) + '…' : mainLabel;
+    
+    return (
+        <g transform={`translate(${x},${y})`}>
+            <text x={0} y={0} dy={16} textAnchor="end" fill="#64748b" fontSize={10} fontWeight={600} transform="rotate(-25)">
+                <tspan x={0} dy="0em">{displayLabel}</tspan>
+                {subLabel && <tspan x={0} dy="1.2em" fill="#94a3b8" fontSize={9} fontWeight={500}>{subLabel}</tspan>}
+            </text>
+        </g>
+    );
 };
 
 export default function SiswaDashboard({ session, onLogout }) {
@@ -38,6 +76,8 @@ export default function SiswaDashboard({ session, onLogout }) {
     const [selectedMapel, setSelectedMapel] = useState('all');
     const [semesterOpen, setSemesterOpen] = useState(false);
     const [mapelOpen, setMapelOpen] = useState(false);
+    const [chartType, setChartType] = useState('area');
+    const [chartTypeOpen, setChartTypeOpen] = useState(false);
 
     const rawTrendPoints = summary?.trend_data || [];
     const periodeOptions = summary?.periode_options || [];
@@ -48,6 +88,7 @@ export default function SiswaDashboard({ session, onLogout }) {
         const handler = (e) => {
             if (!e.target.closest('#filter-semester')) setSemesterOpen(false);
             if (!e.target.closest('#filter-mapel')) setMapelOpen(false);
+            if (!e.target.closest('#filter-charttype')) setChartTypeOpen(false);
         };
         document.addEventListener('mousedown', handler);
         return () => document.removeEventListener('mousedown', handler);
@@ -66,20 +107,77 @@ export default function SiswaDashboard({ session, onLogout }) {
 
         filtered = filtered.slice(-10);
 
-        return filtered.map((point, index) => ({
-            id: index,
-            name: point.label ? `${point.label} (${point.tipe_soal || 'CBT'})` : `M${index + 1}`,
-            Nilai: Number(point.value || 0),
-        }));
-    }, [rawTrendPoints, selectedSemester, selectedMapel]);
+        return filtered.map((point, index) => {
+            let label = point.label ? `${point.label} (${point.tipe_soal || 'CBT'})` : `M${index + 1}`;
+            
+            if (selectedMapel === 'all' && point.id_mapel) {
+                const mapelObj = mapelOptions.find(m => String(m.id_mapel) === String(point.id_mapel));
+                if (mapelObj && mapelObj.nama_mapel) {
+                    label = `${label} | ${mapelObj.nama_mapel}`;
+                }
+            }
+
+            return {
+                id: index,
+                name: label,
+                Nilai: Number(point.value || 0),
+            };
+        });
+    }, [rawTrendPoints, selectedSemester, selectedMapel, mapelOptions]);
 
     const timelineData = summary?.timeline || [];
     const barChartData = summary?.bar_chart || [];
     const badgeData = summary?.badges || [];
 
+    // Build color map for mapel
+    const mapelColorMap = useMemo(() => {
+        const map = {};
+        mapelOptions.forEach((m, i) => {
+            map[String(m.id_mapel)] = MAPEL_COLORS[i % MAPEL_COLORS.length];
+        });
+        return map;
+    }, [mapelOptions]);
+
+    // Bar chart data with color per mapel
+    const barColoredData = useMemo(() => {
+        return chartData.map((d, idx) => {
+            const raw = (() => {
+                let filtered = rawTrendPoints;
+                if (selectedSemester && selectedSemester !== 'all') {
+                    filtered = filtered.filter(p => p.periode === selectedSemester);
+                }
+                if (selectedMapel && selectedMapel !== 'all') {
+                    filtered = filtered.filter(p => String(p.id_mapel) === String(selectedMapel));
+                }
+                return filtered.slice(-10);
+            })();
+            const point = raw[idx];
+            return {
+                ...d,
+                fill: point?.id_mapel ? (mapelColorMap[String(point.id_mapel)] || '#94a3b8') : '#1E3A5F',
+                mapelName: point?.nama_mapel || '',
+            };
+        });
+    }, [chartData, rawTrendPoints, selectedSemester, selectedMapel, mapelColorMap]);
+
+    const chartTypeOptions = [
+        { value: 'area', label: 'Grafik Area', icon: '📈' },
+        { value: 'bar', label: 'Grafik Batang', icon: '📊' },
+    ];
+    const activeChartType = chartTypeOptions.find(o => o.value === chartType) || chartTypeOptions[0];
+
     const selectedSemesterLabel = selectedSemester === 'all' ? 'Semua Semester' : selectedSemester;
     const selectedMapelLabel = selectedMapel === 'all' ? 'Semua Mapel' : (mapelOptions.find(m => String(m.id_mapel) === String(selectedMapel))?.nama_mapel || 'Mata Pelajaran');
     const hasActiveFilters = selectedSemester !== 'all' || selectedMapel !== 'all';
+
+    // Detect mobile for chart responsiveness
+    const [isMobile, setIsMobile] = useState(false);
+    useEffect(() => {
+        const check = () => setIsMobile(window.innerWidth < 640);
+        check();
+        window.addEventListener('resize', check);
+        return () => window.removeEventListener('resize', check);
+    }, []);
 
     return (
         <DashboardLayout title="Dashboard Siswa" user={session?.user} navigation={siswaNavigation} onLogout={onLogout} profileHref="/siswa/profil">
@@ -118,6 +216,40 @@ export default function SiswaDashboard({ session, onLogout }) {
                                     <h3 className="mt-1 text-lg sm:text-xl lg:text-2xl font-extrabold text-primary tracking-tight">Tren Perkembangan Nilai</h3>
                                 </div>
                                 <div className="flex items-center gap-2 flex-wrap">
+                                    {/* Chart Type Toggle */}
+                                    <div id="filter-charttype" className="relative">
+                                        <button
+                                            onClick={() => { setChartTypeOpen(v => !v); setSemesterOpen(false); setMapelOpen(false); }}
+                                            className="flex items-center gap-2 rounded-2xl px-3.5 py-2 text-sm font-semibold border transition-all duration-200 outline-none whitespace-nowrap bg-slate-900 text-white border-slate-700 shadow-md shadow-slate-900/25 hover:bg-slate-800"
+                                        >
+                                            <span>{activeChartType?.icon}</span>
+                                            <span className="max-w-[100px] truncate hidden sm:inline">{activeChartType?.label}</span>
+                                            <svg className={`w-3.5 h-3.5 flex-shrink-0 transition-transform duration-200 ${chartTypeOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
+                                            </svg>
+                                        </button>
+                                        {chartTypeOpen && (
+                                            <div className="absolute left-0 sm:right-0 sm:left-auto top-full mt-2 z-50 min-w-[180px] rounded-2xl border border-slate-100 bg-white shadow-2xl overflow-hidden">
+                                                <div className="p-1.5">
+                                                    {chartTypeOptions.map((opt) => {
+                                                        const isSelected = opt.value === chartType;
+                                                        return (
+                                                            <button key={opt.value} onClick={() => { setChartType(opt.value); setChartTypeOpen(false); }}
+                                                                className={`w-full flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-medium text-left transition-colors ${isSelected ? 'bg-slate-900 text-white' : 'text-slate-700 hover:bg-slate-50'}`}>
+                                                                <span className="text-base">{opt.icon}</span>
+                                                                <span>{opt.label}</span>
+                                                                {isSelected && <svg className="w-4 h-4 flex-shrink-0 ml-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7"/></svg>}
+                                                            </button>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Divider */}
+                                    <div className="hidden sm:block w-px h-6 bg-slate-200" />
+
                                     {/* Semester Filter */}
                                     <div id="filter-semester" className="relative">
                                         <button
@@ -194,29 +326,59 @@ export default function SiswaDashboard({ session, onLogout }) {
                             </div>
 
                             {/* Chart */}
-                            <div className="h-60 sm:h-72 w-full flex-grow rounded-2xl border border-border/50 bg-white p-3 sm:p-5 shadow-inner">
+                            <div className="w-full flex-grow rounded-2xl border border-border/50 bg-white shadow-inner flex flex-col min-h-0 min-w-0 h-[340px] overflow-hidden">
                                 {chartData.length > 0 ? (
-                                    <ResponsiveContainer width="100%" height="100%">
-                                        <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -25, bottom: 20 }}>
-                                            <defs>
-                                                <linearGradient id="colorNilai" x1="0" y1="0" x2="0" y2="1">
-                                                    <stop offset="5%" stopColor="#1E3A5F" stopOpacity={0.4} />
-                                                    <stop offset="95%" stopColor="#1E3A5F" stopOpacity={0} />
-                                                </linearGradient>
-                                            </defs>
-                                            <CartesianGrid strokeDasharray="4 4" vertical={false} stroke="#f1f5f9" />
-                                            <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 10, fontWeight: 600 }} dy={10} interval={0} angle={-25} textAnchor="end" height={55} />
-                                            <YAxis axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 11, fontWeight: 600 }} domain={[0, 100]} />
-                                            <Tooltip content={<CustomTooltip />} cursor={{ stroke: '#cbd5e1', strokeWidth: 2, strokeDasharray: '4 4' }} />
-                                            <Area type="monotone" dataKey="Nilai" stroke="#1E3A5F" strokeWidth={3} fillOpacity={1} fill="url(#colorNilai)" dot={{ r: 5, fill: '#1E3A5F', stroke: '#fff', strokeWidth: 2.5 }} activeDot={{ r: 8, fill: '#1E3A5F', stroke: '#fff', strokeWidth: 3 }} />
-                                        </AreaChart>
-                                    </ResponsiveContainer>
+                                    <div className="flex-1 w-full overflow-x-auto overflow-y-hidden custom-scrollbar p-3 sm:p-5">
+                                        <div className="h-full min-w-[600px] sm:min-w-0 relative">
+                                            <ResponsiveContainer width="100%" height="100%">
+                                                {chartType === 'area' ? (
+                                                    <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -25, bottom: 20 }}>
+                                                        <defs>
+                                                            <linearGradient id="colorNilai" x1="0" y1="0" x2="0" y2="1">
+                                                                <stop offset="5%" stopColor="#1E3A5F" stopOpacity={0.4} />
+                                                                <stop offset="95%" stopColor="#1E3A5F" stopOpacity={0} />
+                                                            </linearGradient>
+                                                        </defs>
+                                                        <CartesianGrid strokeDasharray="4 4" vertical={false} stroke="#f1f5f9" />
+                                                        <XAxis dataKey="name" axisLine={false} tickLine={false} tick={<CustomXAxisTick chartMode="area" />} interval={0} height={70} />
+                                                        <YAxis axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 11, fontWeight: 600 }} domain={[0, 100]} ticks={[0, 25, 50, 75, 100]} interval={0} />
+                                                        <Tooltip content={<CustomTooltip />} cursor={{ stroke: '#cbd5e1', strokeWidth: 2, strokeDasharray: '4 4' }} />
+                                                        <Area type="monotone" dataKey="Nilai" stroke="#1E3A5F" strokeWidth={3} fillOpacity={1} fill="url(#colorNilai)" dot={{ r: 5, fill: '#1E3A5F', stroke: '#fff', strokeWidth: 2 }} activeDot={{ r: 8, fill: '#1E3A5F', stroke: '#fff', strokeWidth: 3 }} />
+                                                    </AreaChart>
+                                                ) : (
+                                                    <BarChart data={barColoredData} margin={{ top: 10, right: 10, left: -25, bottom: 20 }}>
+                                                        <CartesianGrid strokeDasharray="4 4" vertical={false} stroke="#f1f5f9" />
+                                                        <XAxis dataKey="name" axisLine={false} tickLine={false} tick={<CustomXAxisTick chartMode="bar" />} interval={0} height={70} />
+                                                        <YAxis axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 11, fontWeight: 600 }} domain={[0, 100]} ticks={[0, 25, 50, 75, 100]} interval={0} />
+                                                        <Tooltip content={<CustomTooltip />} cursor={{ fill: '#f8fafc' }} />
+                                                        <Bar dataKey="Nilai" radius={[6, 6, 0, 0]} barSize={32} animationDuration={600}>
+                                                            {barColoredData.map((entry, index) => (
+                                                                <Cell key={`cell-${index}`} fill={entry.fill} />
+                                                            ))}
+                                                        </Bar>
+                                                    </BarChart>
+                                                )}
+                                            </ResponsiveContainer>
+                                        </div>
+                                    </div>
                                 ) : (
-                                    <div className="flex h-full flex-col items-center justify-center text-sm text-slate-400 font-medium gap-3">
+                                    <div className="flex-1 flex flex-col items-center justify-center text-sm text-slate-400 font-medium gap-3 p-5">
                                         <svg className="w-12 h-12 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" />
                                         </svg>
                                         <span>Belum ada data untuk filter yang dipilih</span>
+                                    </div>
+                                )}
+
+                                {/* Legend for bar chart */}
+                                {chartType === 'bar' && barColoredData.length > 0 && selectedMapel === 'all' && (
+                                    <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 px-4 pb-4 mt-auto">
+                                        {[...new Map(barColoredData.filter(d => d.mapelName).map(d => [d.mapelName, d.fill])).entries()].map(([name, color]) => (
+                                            <div key={name} className="flex items-center gap-1.5">
+                                                <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
+                                                <span className="text-[10px] font-semibold text-slate-500">{name}</span>
+                                            </div>
+                                        ))}
                                     </div>
                                 )}
                             </div>

@@ -51,31 +51,86 @@ class AdminDashboardController extends Controller
                 ];
             });
 
-        // Activity Chart: New users per day for the last 7 days
-        $chartData = [];
-        $startDate = Carbon::now()->subDays(6)->startOfDay();
-        
-        // Ensure proper dialect compatibility for dates based on database driver (SQLite vs MySQL)
-        // Since sqlite dates are stored as strings and DB::raw('DATE(...)') might differ, 
-        // a safer cross-database approach for recent small datasets is to just get the collection and group by.
-        $recentUsers = Pengguna::query()
-            ->where('created_at', '>=', $startDate)
-            ->get()
-            ->groupBy(function($user) {
-                return $user->created_at->format('Y-m-d');
-            })
-            ->map(function ($group) {
-                return $group->count();
-            });
+        // Chart Data Aggregations
+        $chartData = [
+            'siswa_per_kelas' => [],
+            'siswa_per_tingkat' => [],
+            'soal_per_mapel' => [],
+            'soal_per_tingkat_kelas' => [],
+            'soal_per_level_kognitif' => [],
+            'kelas_per_semester' => [],
+        ];
 
-        for ($i = 6; $i >= 0; $i--) {
-            $date = Carbon::now()->subDays($i);
-            $dateString = $date->format('Y-m-d');
-            $chartData[] = [
-                'tanggal' => $date->locale('id')->translatedFormat('d M'),
-                'total' => $recentUsers->get($dateString, 0),
-            ];
-        }
+        // 1. & 2. Siswa per Kelas & Siswa per Tingkat (grouped by tahun_ajaran)
+        $kelas = Kelas::withCount('kelasSiswa')->get();
+        $chartData['siswa_per_kelas'] = $kelas->groupBy('tahun_ajaran')->map(function($classes) {
+            return $classes->map(function($c) {
+                return ['name' => $c->nama_kelas, 'value' => $c->kelas_siswa_count];
+            })->values();
+        })->toArray();
+
+        $chartData['siswa_per_tingkat'] = $kelas->groupBy('tahun_ajaran')->map(function($classes) {
+            $tingkatMap = [];
+            foreach ($classes as $c) {
+                // Asumsi: Tingkat adalah kata pertama dari nama kelas (misal: "X IPA 1" -> "X")
+                $parts = explode(' ', trim($c->nama_kelas));
+                $tingkat = count($parts) > 0 ? $parts[0] : 'Lainnya';
+                if (!isset($tingkatMap[$tingkat])) $tingkatMap[$tingkat] = 0;
+                $tingkatMap[$tingkat] += $c->kelas_siswa_count;
+            }
+            $result = [];
+            foreach ($tingkatMap as $tingkat => $count) {
+                $result[] = ['name' => "Kelas $tingkat", 'value' => $count];
+            }
+            return collect($result)->sortBy('name')->values()->toArray();
+        })->toArray();
+
+        // 3. Soal per Mapel (Global, not bound to tahun_ajaran)
+        $chartData['soal_per_mapel'] = \App\Models\BankSoal::with('mataPelajaran')
+            ->select('id_mapel', DB::raw('count(*) as total'))
+            ->groupBy('id_mapel')
+            ->get()
+            ->map(function($s) {
+                $name = 'Tanpa Mapel';
+                if ($s->mataPelajaran) {
+                    $name = $s->mataPelajaran->nama_mapel . ' (' . $s->mataPelajaran->tingkat . ')';
+                }
+                return [
+                    'name' => $name,
+                    'value' => $s->total
+                ];
+            })->sortBy('name')->values()->toArray();
+
+        // 4. Soal per Tingkat Kelas (Global)
+        $chartData['soal_per_tingkat_kelas'] = DB::table('bank_soal')
+            ->join('mata_pelajaran', 'bank_soal.id_mapel', '=', 'mata_pelajaran.id_mapel')
+            ->select('mata_pelajaran.tingkat', DB::raw('count(*) as total'))
+            ->groupBy('mata_pelajaran.tingkat')
+            ->get()
+            ->map(function($item) {
+                return ['name' => "Tingkat " . $item->tingkat, 'value' => $item->total];
+            })->sortBy('name')->values()->toArray();
+
+        // 5. Soal per Level Kognitif (Global)
+        $chartData['soal_per_level_kognitif'] = \App\Models\BankSoal::select('level_kognitif', DB::raw('count(*) as total'))
+            ->groupBy('level_kognitif')
+            ->get()
+            ->map(function($item) {
+                return ['name' => $item->level_kognitif ?? 'N/A', 'value' => $item->total];
+            })->sortBy('name')->values()->toArray();
+
+        // 6. Kelas per Semester (Global history)
+        $chartData['kelas_per_semester'] = Kelas::select('tahun_ajaran', DB::raw('count(*) as total'))
+            ->groupBy('tahun_ajaran')
+            ->get()
+            ->map(function($item) {
+                return ['name' => $item->tahun_ajaran ?? 'N/A', 'value' => $item->total];
+            })->sortBy('name')->values()->toArray();
+
+        // Options for filter
+        $tahunAjaranOptions = TahunAjaran::orderBy('created_at', 'desc')->get()->map(function($t) {
+            return $t->nama_tahun_ajaran . ' - Semester ' . ucfirst($t->semester);
+        })->toArray();
 
         return response()->json([
             'summary' => [
@@ -87,6 +142,7 @@ class AdminDashboardController extends Controller
                 'total_mapel' => $totalMapel,
             ],
             'chart' => $chartData,
+            'tahun_ajaran_options' => $tahunAjaranOptions,
             'logs' => $recentLogs,
         ]);
     }
