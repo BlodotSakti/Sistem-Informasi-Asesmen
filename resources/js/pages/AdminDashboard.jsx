@@ -394,7 +394,7 @@ export default function AdminDashboard({ session, onLogout }) {
                             ))}
                         </div>
                     ) : (
-                        <div className="flex flex-col gap-4">
+                        <div className="flex flex-col gap-4 max-h-[380px] overflow-y-auto custom-scrollbar pr-2">
                             {data.logs.length === 0 ? (
                                 <p className="text-sm text-slate-500 py-4 text-center">Belum ada riwayat aktivitas.</p>
                             ) : (
