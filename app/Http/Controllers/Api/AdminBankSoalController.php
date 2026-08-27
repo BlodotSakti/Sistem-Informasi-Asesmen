@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\BankSoal;
+use App\Models\LogAktivitas;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -83,7 +84,15 @@ class AdminBankSoalController extends Controller
         $data['created_by'] = $request->user()->id_pengguna;
         $data['opsi_jawaban'] = $cleanOptions;
 
-        return response()->json(BankSoal::create($data), 201);
+        $soal = BankSoal::create($data);
+
+        LogAktivitas::create([
+            'id_pengguna_aktor' => request()->user()->id_pengguna,
+            'tipe_aksi' => 'Buat Soal',
+            'deskripsi' => "Admin membuat 1 soal baru secara manual untuk mata pelajaran dengan ID {$data['id_mapel']}.",
+        ]);
+
+        return response()->json($soal, 201);
     }
 
     public function update(Request $request, int $id_soal): JsonResponse
@@ -211,6 +220,12 @@ class AdminBankSoalController extends Controller
             
             $created[] = BankSoal::create($soal);
         }
+
+        LogAktivitas::create([
+            'id_pengguna_aktor' => $penggunaId,
+            'tipe_aksi' => 'Import Soal',
+            'deskripsi' => "Admin mengimpor " . count($created) . " soal baru dari file Excel/CSV untuk mata pelajaran dengan ID {$data['id_mapel']}.",
+        ]);
 
         return response()->json(['message' => count($created) . ' soal berhasil diimport.', 'data' => $created], 201);
     }

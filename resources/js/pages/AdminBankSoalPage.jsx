@@ -11,6 +11,8 @@ export default function AdminBankSoalPage({ session, onLogout }) {
     const [masterMapel, setMasterMapel] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
+    const [isImporting, setIsImporting] = useState(false);
+    const [importResult, setImportResult] = useState(null);
     const fileInputRef = useRef(null);
 
     // Filters
@@ -244,6 +246,9 @@ export default function AdminBankSoalPage({ session, onLogout }) {
         const reader = new FileReader();
         reader.onload = async (evt) => {
             try {
+                setIsImporting(true);
+                setImportResult(null);
+
                 const bstr = evt.target.result;
                 const wb = XLSX.read(bstr, { type: 'binary' });
                 const wsname = wb.SheetNames[0];
@@ -307,25 +312,35 @@ export default function AdminBankSoalPage({ session, onLogout }) {
                     });
                 });
 
+                let totalCreated = 0;
                 for (const [idMapel, soalArray] of Object.entries(mapelGroup)) {
-                    await apiFetch('/api/admin/bank-soal/bulk', session, {
+                    const res = await apiFetch('/api/admin/bank-soal/bulk', session, {
                         method: 'POST',
                         body: JSON.stringify({
                             id_mapel: parseInt(idMapel),
                             soal: soalArray
                         })
                     });
+                    totalCreated += res.data ? res.data.length : soalArray.length;
                 }
                 
-                let msg = 'Berhasil mengimpor soal dari Excel!';
-                if (skippedRows.length > 0) {
-                    msg += '\n\nBaris yang dilewati:\n' + skippedRows.join('\n');
-                }
-                alert(msg);
+                setImportResult({
+                    created: totalCreated,
+                    updated: 0,
+                    skipped: skippedRows.length,
+                    skipped_rows: skippedRows.map((msg, i) => {
+                        const match = msg.match(/^Baris (\d+):\s*(.+)$/);
+                        if (match) return { row: match[1], reason: match[2] };
+                        return { row: '?', reason: msg };
+                    })
+                });
+                
                 loadData();
             } catch (err) {
                 console.error(err);
                 alert('Terjadi kesalahan saat memproses file Excel: ' + (err.message || err));
+            } finally {
+                setIsImporting(false);
             }
         };
         reader.readAsBinaryString(file);
@@ -385,8 +400,13 @@ export default function AdminBankSoalPage({ session, onLogout }) {
                         }} className="px-6 py-3 bg-accent hover:scale-105 text-[#EEDCC8] rounded-full text-sm font-semibold transition-all shadow-md">
                             {isFormOpen ? 'Tutup Form' : '+ Tambah Manual'}
                         </button>
-                        <button onClick={() => fileInputRef.current?.click()} className="px-6 py-3 bg-[#EEDCC8] hover:scale-105 text-primary rounded-full text-sm font-semibold transition-all shadow-md">
-                            Import Excel
+                        <button onClick={() => fileInputRef.current?.click()} disabled={isImporting} className="px-6 py-3 bg-[#EEDCC8] hover:scale-105 text-primary rounded-full text-sm font-semibold transition-all shadow-md disabled:opacity-50 flex items-center gap-2">
+                            {isImporting ? (
+                                <>
+                                    <svg className="animate-spin h-4 w-4 text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                                    Mengimpor...
+                                </>
+                            ) : 'Import Excel'}
                         </button>
                         <button onClick={downloadTemplateExcel} className="px-6 py-3 bg-white/15 hover:bg-white/25 hover:scale-105 text-[#EEDCC8] rounded-full text-sm font-semibold transition-all shadow-md border border-white/20 backdrop-blur-sm">
                             ↓ Unduh Template
@@ -395,6 +415,51 @@ export default function AdminBankSoalPage({ session, onLogout }) {
                 </section>
 
                 {error && <div className="p-4 bg-red-50 text-red-600 rounded-2xl text-sm">{error}</div>}
+
+                {importResult && (
+                    <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+                        <h5 className="font-semibold text-slate-800 mb-3 flex items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-emerald-600" viewBox="0 0 20 20" fill="currentColor">
+                                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                            </svg>
+                            Ringkasan Import
+                        </h5>
+                        <div className="grid grid-cols-3 gap-4 mb-4">
+                            <div className="rounded-lg bg-emerald-50 p-3 text-center border border-emerald-100">
+                                <div className="text-2xl font-bold text-emerald-700">{importResult.created}</div>
+                                <div className="text-xs font-medium text-emerald-600 mt-1 uppercase tracking-wide">Baru</div>
+                            </div>
+                            <div className="rounded-lg bg-blue-50 p-3 text-center border border-blue-100">
+                                <div className="text-2xl font-bold text-blue-700">{importResult.updated}</div>
+                                <div className="text-xs font-medium text-blue-600 mt-1 uppercase tracking-wide">Diperbarui</div>
+                            </div>
+                            <div className="rounded-lg bg-rose-50 p-3 text-center border border-rose-100">
+                                <div className="text-2xl font-bold text-rose-700">{importResult.skipped}</div>
+                                <div className="text-xs font-medium text-rose-600 mt-1 uppercase tracking-wide">Dilewati</div>
+                            </div>
+                        </div>
+                        {importResult.skipped_rows && importResult.skipped_rows.length > 0 && (
+                            <div className="mt-4">
+                                <p className="text-sm font-semibold text-rose-700 mb-2 flex items-center gap-1.5">
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                                    </svg>
+                                    Detail Data Dilewati (Baris Excel):
+                                </p>
+                                <div className="max-h-40 overflow-y-auto rounded-lg border border-rose-100 bg-rose-50/50 p-2">
+                                    <ul className="space-y-1">
+                                        {importResult.skipped_rows.map((skip, idx) => (
+                                            <li key={idx} className="text-xs text-rose-600 flex items-start">
+                                                <span className="font-mono font-medium min-w-[60px] inline-block">Baris {skip.row}:</span>
+                                                <span className="flex-1">{skip.reason}</span>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                )}
 
                 {isFormOpen && (
                     <BankSoalForm 

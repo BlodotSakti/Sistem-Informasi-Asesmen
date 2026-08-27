@@ -3,9 +3,12 @@ export function apiBase(path) {
 }
 
 export async function apiFetch(path, session, options = {}) {
+    const isJsonBody = options.body && typeof options.body === 'string' && (options.body.startsWith('{') || options.body.startsWith('['));
+
     const response = await fetch(apiBase(path), {
         ...options,
         headers: {
+            ...(isJsonBody ? { 'Content-Type': 'application/json' } : {}),
             Accept: 'application/json',
             ...(options.headers || {}),
             ...(session?.token ? { Authorization: `Bearer ${session.token}` } : {}),

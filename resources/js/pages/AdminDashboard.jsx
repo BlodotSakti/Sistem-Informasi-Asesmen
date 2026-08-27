@@ -417,9 +417,9 @@ export default function AdminDashboard({ session, onLogout }) {
                                                 </svg>
                                             )}
                                         </div>
-                                        <div className="flex-1 overflow-hidden">
+                                        <div className="flex-1 min-w-0">
                                             <p className="truncate text-sm font-medium text-slate-900">{log.nama_lengkap}</p>
-                                            <p className="truncate text-xs text-slate-500">{log.deskripsi}</p>
+                                            <p className="text-xs text-slate-500 leading-relaxed">{log.deskripsi}</p>
                                         </div>
                                         <div className="shrink-0 text-right">
                                             <span className="text-xs font-medium text-slate-400">{log.tanggal}</span>

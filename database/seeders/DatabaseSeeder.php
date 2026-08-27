@@ -32,7 +32,7 @@ class DatabaseSeeder extends Seeder
                 'profile' => [
                     'relation' => 'guru',
                     'attributes' => [
-                        'nama_lengkap' => 'Guru Uji Coba',
+                        'nama_lengkap' => 'Dummy Guru',
                         'nip' => '198812312026010001',
                     ],
                 ],
@@ -43,7 +43,7 @@ class DatabaseSeeder extends Seeder
                 'profile' => [
                     'relation' => 'siswa',
                     'attributes' => [
-                        'nama_lengkap' => 'Siswa Uji Coba',
+                        'nama_lengkap' => 'Dummy Siswa',
                         'nisn' => '0012345678',
                     ],
                 ],

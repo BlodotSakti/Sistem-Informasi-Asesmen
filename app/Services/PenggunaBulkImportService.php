@@ -69,6 +69,16 @@ class PenggunaBulkImportService
                     continue;
                 }
 
+                if (! preg_match('/^[0-9]+$/', $identifier)) {
+                    $summary['skipped']++;
+                    $summary['skipped_rows'][] = [
+                        'row' => $rowNumber + 2,
+                        'reason' => 'NIP/NISN (' . $identifier . ') tidak valid, harus berupa angka.',
+                    ];
+
+                    continue;
+                }
+
                 if ($this->identifierAlreadyExists($role, $identifier)) {
                     $summary['skipped']++;
                     $summary['skipped_rows'][] = [

@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\File;
 use App\Models\TahunAjaran;
+use App\Models\LogAktivitas;
 
 class BackupController extends Controller
 {
@@ -47,6 +48,12 @@ class BackupController extends Controller
             // Run the backup command
             Artisan::call('backup:run', ['--only-db' => true]);
             
+            LogAktivitas::create([
+                'id_pengguna_aktor' => request()->user()->id_pengguna,
+                'tipe_aksi' => 'tambah',
+                'deskripsi' => 'Pembuatan Backup Database berhasil.',
+            ]);
+
             return response()->json(['message' => 'Database Backup berhasil dibuat.']);
         } catch (\Exception $e) {
             return response()->json(['error' => 'Gagal membuat backup: ' . $e->getMessage()], 500);
@@ -63,6 +70,12 @@ class BackupController extends Controller
             // Run full backup
             Artisan::call('backup:run');
             
+            LogAktivitas::create([
+                'id_pengguna_aktor' => request()->user()->id_pengguna,
+                'tipe_aksi' => 'tambah',
+                'deskripsi' => 'Pembuatan Full Backup berhasil.',
+            ]);
+
             return response()->json(['message' => 'Full Backup berhasil dibuat.']);
         } catch (\Exception $e) {
             return response()->json(['error' => 'Gagal membuat backup: ' . $e->getMessage()], 500);
@@ -94,6 +107,13 @@ class BackupController extends Controller
 
         if ($disk->exists($file)) {
             $disk->delete($file);
+
+            LogAktivitas::create([
+                'id_pengguna_aktor' => request()->user()->id_pengguna ?? 1,
+                'tipe_aksi' => 'hapus',
+                'deskripsi' => 'Penghapusan file backup: ' . $file_name,
+            ]);
+
             return response()->json(['message' => 'File backup berhasil dihapus.']);
         }
 

@@ -34,6 +34,9 @@ export default function GuruBankSoalPage({ session, onLogout }) {
     const [editingBankSoalId, setEditingBankSoalId] = useState(null);
     const [expandedBankFolders, setExpandedBankFolders] = useState({});
     
+    const [isImporting, setIsImporting] = useState(false);
+    const [importResult, setImportResult] = useState(null);
+
     const fileInputRef = useRef(null);
     const formRef = useRef(null);
 
@@ -195,6 +198,9 @@ export default function GuruBankSoalPage({ session, onLogout }) {
         const reader = new FileReader();
         reader.onload = async (evt) => {
             try {
+                setIsImporting(true);
+                setImportResult(null);
+
                 const bstr = evt.target.result;
                 const wb = XLSX.read(bstr, { type: 'binary' });
                 const wsname = wb.SheetNames[0];
@@ -253,25 +259,35 @@ export default function GuruBankSoalPage({ session, onLogout }) {
                     });
                 });
 
+                let totalCreated = 0;
                 for (const [idMapel, soalArray] of Object.entries(mapelGroup)) {
-                    await apiFetch('/api/guru/bank-soal/bulk', session, {
+                    const res = await apiFetch('/api/guru/bank-soal/bulk', session, {
                         method: 'POST',
                         body: JSON.stringify({
                             id_mapel: parseInt(idMapel),
                             soal: soalArray
                         })
                     });
+                    totalCreated += res.data ? res.data.length : soalArray.length;
                 }
                 
-                let msg = 'Berhasil mengimpor soal dari Excel!';
-                if (skippedRows.length > 0) {
-                    msg += '\n\nBaris yang dilewati:\n' + skippedRows.join('\n');
-                }
-                alert(msg);
+                setImportResult({
+                    created: totalCreated,
+                    updated: 0,
+                    skipped: skippedRows.length,
+                    skipped_rows: skippedRows.map((msg, i) => {
+                        const match = msg.match(/^Baris (\d+):\s*(.+)$/);
+                        if (match) return { row: match[1], reason: match[2] };
+                        return { row: '?', reason: msg };
+                    })
+                });
+                
                 await reloadWorkspace();
             } catch (err) {
                 console.error(err);
                 alert('Terjadi kesalahan saat memproses file Excel: ' + (err.message || err));
+            } finally {
+                setIsImporting(false);
             }
         };
         reader.readAsBinaryString(file);
@@ -466,23 +482,111 @@ export default function GuruBankSoalPage({ session, onLogout }) {
                     </div>
                 </form>
 
-                <div className="rounded-3xl border border-emerald-500/20 bg-emerald-50/40 p-6 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                    <div>
-                        <h4 className="text-lg font-semibold text-emerald-900">Import Bank Soal</h4>
-                        <p className="text-sm text-emerald-700 mt-1">Gunakan template Excel untuk mengunggah banyak soal sekaligus.</p>
+                <div className="relative overflow-hidden rounded-[2rem] border border-emerald-500/20 bg-gradient-to-br from-emerald-50 via-white to-emerald-50 p-6 sm:p-8 shadow-sm mt-6">
+                    <div className="absolute top-0 right-0 p-6 opacity-[0.03] pointer-events-none hidden md:block">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-40 w-40 text-emerald-900" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm-1 2.5L17.5 9H13V4.5zM6 20V4h5v7h7v9H6z"/>
+                        </svg>
                     </div>
-                    <div className="flex flex-wrap gap-3">
-                        <input type="file" accept=".xlsx, .xls" className="hidden" ref={fileInputRef} onChange={handleFileUpload} />
-                        <button type="button" onClick={downloadTemplateExcel} className="px-4 py-2.5 bg-white border border-emerald-200 hover:bg-emerald-50 hover:border-emerald-300 text-emerald-700 rounded-xl text-sm font-semibold transition shadow-sm flex items-center gap-2">
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-                            Unduh Template
-                        </button>
-                        <button type="button" onClick={() => fileInputRef.current?.click()} className="px-5 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-sm font-semibold transition shadow-sm flex items-center gap-2">
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /></svg>
-                            Import Excel
-                        </button>
+                    
+                    <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-8">
+                        <div className="flex-1 space-y-4">
+                            <div className="inline-flex items-center gap-2 rounded-full bg-emerald-100/80 px-3 py-1.5 text-xs font-semibold text-emerald-800 ring-1 ring-inset ring-emerald-600/20">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                                Jalur Cepat
+                            </div>
+                            
+                            <div>
+                                <h4 className="text-xl font-bold text-slate-900">Import Soal Massal (Excel)</h4>
+                                <p className="text-sm text-slate-600 mt-2 leading-relaxed max-w-xl">
+                                    Hemat waktu Anda! Tambahkan puluhan hingga ratusan soal sekaligus menggunakan file Excel. Pastikan nama kolom dan format isian sesuai dengan template yang disediakan agar proses import berjalan lancar.
+                                </p>
+                            </div>
+                            
+                            <div className="flex flex-col sm:flex-row gap-4 pt-2">
+                                <div className="flex items-center gap-2 text-xs font-medium text-slate-600">
+                                    <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-100 font-bold text-emerald-700">1</div>
+                                    Unduh template
+                                </div>
+                                <div className="flex items-center gap-2 text-xs font-medium text-slate-600">
+                                    <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-100 font-bold text-emerald-700">2</div>
+                                    Isi data soal
+                                </div>
+                                <div className="flex items-center gap-2 text-xs font-medium text-slate-600">
+                                    <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-100 font-bold text-emerald-700">3</div>
+                                    Upload & Selesai!
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="flex flex-col gap-3 min-w-[200px] w-full md:w-auto">
+                            <input type="file" accept=".xlsx, .xls" className="hidden" ref={fileInputRef} onChange={handleFileUpload} />
+                            <button type="button" onClick={downloadTemplateExcel} className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-emerald-200 bg-white px-5 py-3 text-sm font-bold text-emerald-700 transition-all hover:border-emerald-300 hover:bg-emerald-50 active:scale-95 shadow-sm">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                                Unduh Template
+                            </button>
+                            <button type="button" disabled={isImporting} onClick={() => fileInputRef.current?.click()} className="group flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 py-3 text-sm font-bold text-white transition-all hover:bg-emerald-700 active:scale-95 shadow-md shadow-emerald-500/20 disabled:opacity-70 disabled:pointer-events-none relative overflow-hidden">
+                                <div className="absolute inset-0 bg-white/20 translate-y-full transition-transform group-hover:translate-y-0 duration-300 ease-in-out"></div>
+                                {isImporting ? (
+                                    <>
+                                        <svg className="animate-spin h-5 w-5 text-white relative z-10" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                                        <span className="relative z-10">Mengimpor...</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 relative z-10" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /></svg>
+                                        <span className="relative z-10">Pilih & Import Excel</span>
+                                    </>
+                                )}
+                            </button>
+                        </div>
                     </div>
                 </div>
+
+                {importResult && (
+                    <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+                        <h5 className="font-semibold text-slate-800 mb-3 flex items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-emerald-600" viewBox="0 0 20 20" fill="currentColor">
+                                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                            </svg>
+                            Ringkasan Import
+                        </h5>
+                        <div className="grid grid-cols-3 gap-4 mb-4">
+                            <div className="rounded-lg bg-emerald-50 p-3 text-center border border-emerald-100">
+                                <div className="text-2xl font-bold text-emerald-700">{importResult.created}</div>
+                                <div className="text-xs font-medium text-emerald-600 mt-1 uppercase tracking-wide">Baru</div>
+                            </div>
+                            <div className="rounded-lg bg-blue-50 p-3 text-center border border-blue-100">
+                                <div className="text-2xl font-bold text-blue-700">{importResult.updated}</div>
+                                <div className="text-xs font-medium text-blue-600 mt-1 uppercase tracking-wide">Diperbarui</div>
+                            </div>
+                            <div className="rounded-lg bg-rose-50 p-3 text-center border border-rose-100">
+                                <div className="text-2xl font-bold text-rose-700">{importResult.skipped}</div>
+                                <div className="text-xs font-medium text-rose-600 mt-1 uppercase tracking-wide">Dilewati</div>
+                            </div>
+                        </div>
+                        {importResult.skipped_rows && importResult.skipped_rows.length > 0 && (
+                            <div className="mt-4">
+                                <p className="text-sm font-semibold text-rose-700 mb-2 flex items-center gap-1.5">
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                                    </svg>
+                                    Detail Data Dilewati (Baris Excel):
+                                </p>
+                                <div className="max-h-40 overflow-y-auto rounded-lg border border-rose-100 bg-rose-50/50 p-2">
+                                    <ul className="space-y-1">
+                                        {importResult.skipped_rows.map((skip, idx) => (
+                                            <li key={idx} className="text-xs text-rose-600 flex items-start">
+                                                <span className="font-mono font-medium min-w-[60px] inline-block">Baris {skip.row}:</span>
+                                                <span className="flex-1">{skip.reason}</span>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                )}
 
                 <div className="overflow-hidden rounded-3xl border border-border bg-white">
                     <div className="border-b border-border px-5 py-4">

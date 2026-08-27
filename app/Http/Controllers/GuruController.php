@@ -16,7 +16,7 @@ class GuruController extends CrudController
         return [
             'id_pengguna' => ['required', 'integer', 'exists:pengguna,id_pengguna'],
             'nama_lengkap' => ['required', 'string', 'max:255'],
-            'nip' => ['required', 'string', 'max:50', ...$this->uniqueRule('guru', 'nip', $ignoreId, 'id_guru')],
+            'nip' => ['required', 'string', 'regex:/^[0-9]+$/', 'max:50', ...$this->uniqueRule('guru', 'nip', $ignoreId, 'id_guru')],
         ];
     }
 }

@@ -16,7 +16,7 @@ class SiswaController extends CrudController
         return [
             'id_pengguna' => ['required', 'integer', 'exists:pengguna,id_pengguna'],
             'nama_lengkap' => ['required', 'string', 'max:255'],
-            'nisn' => ['required', 'string', 'max:30', ...$this->uniqueRule('siswa', 'nisn', $ignoreId, 'id_siswa')],
+            'nisn' => ['required', 'string', 'regex:/^[0-9]+$/', 'max:30', ...$this->uniqueRule('siswa', 'nisn', $ignoreId, 'id_siswa')],
         ];
     }
 }

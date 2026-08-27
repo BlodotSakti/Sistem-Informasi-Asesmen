@@ -118,6 +118,8 @@ class AdminController extends Controller
             }
         }
 
+        $roleChanged = isset($data['role']) && $data['role'] !== $pengguna->role;
+
         $updateData = [
             'username' => $data['username'],
             'role' => $data['role'],
@@ -130,7 +132,7 @@ class AdminController extends Controller
 
         if (
             (! empty($data['password'])) ||
-            (isset($data['role']) && $data['role'] !== $pengguna->role) ||
+            $roleChanged ||
             (isset($data['is_aktif']) && (bool)$data['is_aktif'] === false && $pengguna->is_aktif === true)
         ) {
             $pengguna->tokens()->delete();
@@ -138,7 +140,7 @@ class AdminController extends Controller
 
         $pengguna->update($updateData);
 
-        $this->syncUserProfile($pengguna->fresh(), $data, true);
+        $this->syncUserProfile($pengguna->fresh(), $data, $roleChanged);
 
         LogAktivitas::create([
             'id_pengguna_aktor' => $request->user()->id_pengguna,
@@ -289,8 +291,15 @@ class AdminController extends Controller
         }
 
         $record = KelasSiswa::query()->create($data);
+        $record->load(['kelas.guruWali', 'siswa']);
 
-        return response()->json($record->load(['kelas.guruWali', 'siswa']), 201);
+        LogAktivitas::create([
+            'id_pengguna_aktor' => $request->user()->id_pengguna,
+            'tipe_aksi' => 'tambah',
+            'deskripsi' => 'Penempatan siswa: ' . ($record->siswa->nama_lengkap ?? 'Tidak diketahui') . ' ke kelas ' . ($record->kelas->nama_kelas ?? 'Tidak diketahui'),
+        ]);
+
+        return response()->json($record, 201);
     }
 
     public function kelasSiswaShow(KelasSiswa $kelasSiswa): JsonResponse
@@ -325,13 +334,30 @@ class AdminController extends Controller
         }
 
         $kelasSiswa->update($data);
+        $kelasSiswa->load(['kelas.guruWali', 'siswa']);
 
-        return response()->json($kelasSiswa->fresh(['kelas.guruWali', 'siswa']));
+        LogAktivitas::create([
+            'id_pengguna_aktor' => $request->user()->id_pengguna,
+            'tipe_aksi' => 'ubah',
+            'deskripsi' => 'Pembaruan data penempatan siswa: ' . ($kelasSiswa->siswa->nama_lengkap ?? 'Tidak diketahui') . ' di kelas ' . ($kelasSiswa->kelas->nama_kelas ?? 'Tidak diketahui'),
+        ]);
+
+        return response()->json($kelasSiswa);
     }
 
-    public function kelasSiswaDestroy(KelasSiswa $kelasSiswa): JsonResponse
+    public function kelasSiswaDestroy(Request $request, KelasSiswa $kelasSiswa): JsonResponse
     {
+        $kelasSiswa->load(['kelas', 'siswa']);
+        $namaSiswa = $kelasSiswa->siswa->nama_lengkap ?? 'Siswa Terhapus';
+        $namaKelas = $kelasSiswa->kelas->nama_kelas ?? 'Kelas Terhapus';
+        
         $kelasSiswa->delete();
+
+        LogAktivitas::create([
+            'id_pengguna_aktor' => $request->user()->id_pengguna,
+            'tipe_aksi' => 'hapus',
+            'deskripsi' => 'Penghapusan penempatan siswa: ' . $namaSiswa . ' dari kelas ' . $namaKelas,
+        ]);
 
         return response()->json(null, 204);
     }
@@ -374,8 +400,15 @@ class AdminController extends Controller
         }
 
         $record = PenugasanPembelajaran::query()->create($data);
+        $record->load(['kelas', 'mataPelajaran', 'guru']);
 
-        return response()->json($record->load(['kelas', 'mataPelajaran', 'guru']), 201);
+        LogAktivitas::create([
+            'id_pengguna_aktor' => $request->user()->id_pengguna,
+            'tipe_aksi' => 'tambah',
+            'deskripsi' => 'Penugasan guru: ' . ($record->guru->nama_lengkap ?? 'Tidak diketahui') . ' mengajar ' . ($record->mataPelajaran->nama_mapel ?? 'Tidak diketahui') . ' di kelas ' . ($record->kelas->nama_kelas ?? 'Tidak diketahui'),
+        ]);
+
+        return response()->json($record, 201);
     }
 
     public function penugasanPembelajaranShow(PenugasanPembelajaran $penugasanPembelajaran): JsonResponse
@@ -418,13 +451,31 @@ class AdminController extends Controller
         }
 
         $penugasanPembelajaran->update($data);
+        $penugasanPembelajaran->load(['kelas', 'mataPelajaran', 'guru']);
 
-        return response()->json($penugasanPembelajaran->fresh(['kelas', 'mataPelajaran', 'guru']));
+        LogAktivitas::create([
+            'id_pengguna_aktor' => $request->user()->id_pengguna,
+            'tipe_aksi' => 'ubah',
+            'deskripsi' => 'Pembaruan penugasan guru: ' . ($penugasanPembelajaran->guru->nama_lengkap ?? 'Tidak diketahui') . ' mengajar ' . ($penugasanPembelajaran->mataPelajaran->nama_mapel ?? 'Tidak diketahui') . ' di kelas ' . ($penugasanPembelajaran->kelas->nama_kelas ?? 'Tidak diketahui'),
+        ]);
+
+        return response()->json($penugasanPembelajaran);
     }
 
-    public function penugasanPembelajaranDestroy(PenugasanPembelajaran $penugasanPembelajaran): JsonResponse
+    public function penugasanPembelajaranDestroy(Request $request, PenugasanPembelajaran $penugasanPembelajaran): JsonResponse
     {
+        $penugasanPembelajaran->load(['kelas', 'mataPelajaran', 'guru']);
+        $namaGuru = $penugasanPembelajaran->guru->nama_lengkap ?? 'Guru Terhapus';
+        $namaMapel = $penugasanPembelajaran->mataPelajaran->nama_mapel ?? 'Mapel Terhapus';
+        $namaKelas = $penugasanPembelajaran->kelas->nama_kelas ?? 'Kelas Terhapus';
+
         $penugasanPembelajaran->delete();
+
+        LogAktivitas::create([
+            'id_pengguna_aktor' => $request->user()->id_pengguna,
+            'tipe_aksi' => 'hapus',
+            'deskripsi' => 'Penghapusan penugasan guru: ' . $namaGuru . ' (' . $namaMapel . ') dari kelas ' . $namaKelas,
+        ]);
 
         return response()->json(null, 204);
     }
@@ -453,8 +504,8 @@ class AdminController extends Controller
                 continue;
             }
 
-            $kelas = Kelas::query()->where('nama_kelas', $namaKelas)->first();
-            $siswa = Siswa::query()->where('nama_lengkap', $namaSiswa)->first();
+            $kelas = Kelas::query()->where('nama_kelas', 'like', "%{$namaKelas}%")->first();
+            $siswa = Siswa::query()->where('nama_lengkap', 'like', "%{$namaSiswa}%")->first();
 
             if (! $kelas) {
                 $summary['skipped']++;
@@ -505,6 +556,12 @@ class AdminController extends Controller
             }
         }
 
+        LogAktivitas::create([
+            'id_pengguna_aktor' => auth()->id(),
+            'tipe_aksi' => 'Import Penempatan Siswa',
+            'deskripsi' => "Admin mengimpor data penempatan siswa ({$summary['created']} baru, {$summary['updated']} diperbarui, {$summary['skipped']} dilewati).",
+        ]);
+
         return response()->json([
             'message' => 'Import relasi siswa-kelas berhasil diproses.',
             ...$summary,
@@ -536,21 +593,21 @@ class AdminController extends Controller
                 continue;
             }
 
-            $kelas = Kelas::query()->where('nama_kelas', $namaKelas)->first();
+            $kelas = Kelas::query()->where('nama_kelas', 'like', "%{$namaKelas}%")->first();
 
             // Match mapel by "nama_mapel (tingkat)" format or exact nama_mapel
             $mapel = null;
             if (preg_match('/^(.+?)\s*\((\w+)\)$/', $namaMapel, $matches)) {
                 $mapel = MataPelajaran::query()
-                    ->where('nama_mapel', trim($matches[1]))
+                    ->where('nama_mapel', 'like', '%' . trim($matches[1]) . '%')
                     ->where('tingkat', trim($matches[2]))
                     ->first();
             }
             if (! $mapel) {
-                $mapel = MataPelajaran::query()->where('nama_mapel', $namaMapel)->first();
+                $mapel = MataPelajaran::query()->where('nama_mapel', 'like', "%{$namaMapel}%")->first();
             }
 
-            $guru = Guru::query()->where('nama_lengkap', $namaGuru)->first();
+            $guru = Guru::query()->where('nama_lengkap', 'like', "%{$namaGuru}%")->first();
 
             if (! $kelas) {
                 $summary['skipped']++;
@@ -607,6 +664,12 @@ class AdminController extends Controller
             }
         }
 
+        LogAktivitas::create([
+            'id_pengguna_aktor' => auth()->id(),
+            'tipe_aksi' => 'Import Penugasan Guru',
+            'deskripsi' => "Admin mengimpor data penugasan guru ({$summary['created']} baru, {$summary['updated']} diperbarui, {$summary['skipped']} dilewati).",
+        ]);
+
         return response()->json([
             'message' => 'Import penugasan pembelajaran berhasil diproses.',
             ...$summary,
@@ -618,12 +681,12 @@ class AdminController extends Controller
             'kelas-siswa' => [
                 'filename' => 'template-relasi-siswa-kelas',
                 'headers' => ['nama_kelas', 'nama_siswa', 'tahun_ajaran', 'is_aktif', 'tanggal_masuk', 'tanggal_keluar'],
-                'sample' => ['XI IPA 1', 'Rani Putri', '2026/2027', 'true', '2026-07-10', ''],
+                'sample' => ['XI IPA 1', 'Rani Putri', '2026/2027 - Semester Ganjil', 'true', '2026-07-10', ''],
             ],
             'penugasan-pembelajaran' => [
                 'filename' => 'template-penugasan-pembelajaran',
                 'headers' => ['nama_kelas', 'nama_mapel', 'nama_guru', 'tahun_ajaran', 'is_aktif'],
-                'sample' => ['XI IPA 1', 'Bahasa Indonesia (X)', 'Andi Pratama', '2026/2027', 'true'],
+                'sample' => ['XI IPA 1', 'Bahasa Indonesia (X)', 'Andi Pratama', '2026/2027 - Semester Ganjil', 'true'],
             ],
         ];
 
@@ -689,6 +752,12 @@ class AdminController extends Controller
 
         $tahunAjaran = TahunAjaran::create($data);
 
+        LogAktivitas::create([
+            'id_pengguna_aktor' => $request->user()->id_pengguna,
+            'tipe_aksi' => 'tambah',
+            'deskripsi' => 'Penambahan Tahun Ajaran baru: ' . $tahunAjaran->nama_tahun_ajaran . ' (' . ucfirst($tahunAjaran->semester) . ')',
+        ]);
+
         return response()->json($tahunAjaran, 201);
     }
 
@@ -719,12 +788,27 @@ class AdminController extends Controller
 
         $tahunAjaran->update($data);
 
+        LogAktivitas::create([
+            'id_pengguna_aktor' => $request->user()->id_pengguna,
+            'tipe_aksi' => 'ubah',
+            'deskripsi' => 'Pembaruan data Tahun Ajaran: ' . $tahunAjaran->nama_tahun_ajaran . ' (' . ucfirst($tahunAjaran->semester) . ')',
+        ]);
+
         return response()->json($tahunAjaran->fresh());
     }
 
-    public function tahunAjaranDestroy(TahunAjaran $tahunAjaran): JsonResponse
+    public function tahunAjaranDestroy(Request $request, TahunAjaran $tahunAjaran): JsonResponse
     {
+        $nama = $tahunAjaran->nama_tahun_ajaran;
+        $semester = ucfirst($tahunAjaran->semester);
+        
         $tahunAjaran->delete();
+
+        LogAktivitas::create([
+            'id_pengguna_aktor' => $request->user()->id_pengguna,
+            'tipe_aksi' => 'hapus',
+            'deskripsi' => 'Penghapusan Tahun Ajaran: ' . $nama . ' (' . $semester . ')',
+        ]);
 
         return response()->json(null, 204);
     }
@@ -744,7 +828,15 @@ class AdminController extends Controller
 
         $data['tahun_ajaran'] = $this->normalizeTahunAjaran($data['tahun_ajaran']);
 
-        return response()->json(Kelas::create($data), 201);
+        $kelas = Kelas::create($data);
+
+        LogAktivitas::create([
+            'id_pengguna_aktor' => $request->user()->id_pengguna,
+            'tipe_aksi' => 'tambah',
+            'deskripsi' => 'Pembuatan kelas baru: ' . $kelas->nama_kelas . ' (Wali: ' . ($kelas->guruWali->nama_lengkap ?? 'Tanpa Wali') . ')',
+        ]);
+
+        return response()->json($kelas, 201);
     }
 
     public function kelasShow(Kelas $kelas): JsonResponse
@@ -766,12 +858,25 @@ class AdminController extends Controller
 
         $kelas->update($data);
 
+        LogAktivitas::create([
+            'id_pengguna_aktor' => $request->user()->id_pengguna,
+            'tipe_aksi' => 'ubah',
+            'deskripsi' => 'Pembaruan data kelas: ' . $kelas->nama_kelas,
+        ]);
+
         return response()->json($kelas->fresh('guruWali'));
     }
 
-    public function kelasDestroy(Kelas $kelas): JsonResponse
+    public function kelasDestroy(Request $request, Kelas $kelas): JsonResponse
     {
+        $nama = $kelas->nama_kelas;
         $kelas->delete();
+
+        LogAktivitas::create([
+            'id_pengguna_aktor' => $request->user()->id_pengguna,
+            'tipe_aksi' => 'hapus',
+            'deskripsi' => 'Penghapusan kelas: ' . $nama,
+        ]);
 
         return response()->json(null, 204);
     }
@@ -788,7 +893,15 @@ class AdminController extends Controller
             'tingkat' => ['required', Rule::in(['X', 'XI', 'XII'])],
         ]);
 
-        return response()->json(MataPelajaran::create($data), 201);
+        $mapel = MataPelajaran::create($data);
+
+        LogAktivitas::create([
+            'id_pengguna_aktor' => $request->user()->id_pengguna,
+            'tipe_aksi' => 'tambah',
+            'deskripsi' => 'Penambahan mata pelajaran baru: ' . $mapel->nama_mapel . ' (Tingkat ' . $mapel->tingkat . ')',
+        ]);
+
+        return response()->json($mapel, 201);
     }
 
     public function mataPelajaranShow(MataPelajaran $mataPelajaran): JsonResponse
@@ -805,12 +918,25 @@ class AdminController extends Controller
 
         $mataPelajaran->update($data);
 
+        LogAktivitas::create([
+            'id_pengguna_aktor' => $request->user()->id_pengguna,
+            'tipe_aksi' => 'ubah',
+            'deskripsi' => 'Pembaruan data mata pelajaran: ' . $mataPelajaran->nama_mapel,
+        ]);
+
         return response()->json($mataPelajaran->fresh());
     }
 
-    public function mataPelajaranDestroy(MataPelajaran $mataPelajaran): JsonResponse
+    public function mataPelajaranDestroy(Request $request, MataPelajaran $mataPelajaran): JsonResponse
     {
+        $nama = $mataPelajaran->nama_mapel;
         $mataPelajaran->delete();
+
+        LogAktivitas::create([
+            'id_pengguna_aktor' => $request->user()->id_pengguna,
+            'tipe_aksi' => 'hapus',
+            'deskripsi' => 'Penghapusan mata pelajaran: ' . $nama,
+        ]);
 
         return response()->json(null, 204);
     }
@@ -832,6 +958,12 @@ class AdminController extends Controller
             ], 422);
         }
 
+        LogAktivitas::create([
+            'id_pengguna_aktor' => $request->user()->id_pengguna,
+            'tipe_aksi' => 'import',
+            'deskripsi' => 'Import massal akun pengguna dari Excel (Tersimpan: ' . $summary['created'] . ' akun)',
+        ]);
+
         return response()->json([
             'message' => 'Import akun berhasil diproses.',
             ...$summary,
@@ -850,8 +982,8 @@ class AdminController extends Controller
             ],
             'password' => [$pengguna ? 'nullable' : 'required', 'string', 'min:8'],
             'nama_lengkap' => ['required', 'string', 'max:255'],
-            'nip' => ['nullable', 'string', 'max:50'],
-            'nisn' => ['nullable', 'string', 'max:50'],
+            'nip' => ['nullable', 'string', 'regex:/^[0-9]+$/', 'max:50'],
+            'nisn' => ['nullable', 'string', 'regex:/^[0-9]+$/', 'max:50'],
             'is_aktif' => ['sometimes', 'boolean'],
         ]);
 

@@ -39,6 +39,10 @@ export default function AdminPenugasanGuruPage({ session, onLogout }) {
         tahun_ajaran: '',
     });
     const [teachingAssignmentImport, setTeachingAssignmentImport] = useState({ file: null });
+    const [isImporting, setIsImporting] = useState(false);
+    const [importResult, setImportResult] = useState(null);
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 15;
 
     const showToast = (message, type = 'success') => {
         setToast({ message, type });
@@ -99,6 +103,14 @@ export default function AdminPenugasanGuruPage({ session, onLogout }) {
         });
     }, [teachingAssignmentFilters, masterData.penugasan_pembelajaran]);
 
+    const totalItems = filteredTeachingAssignments.length;
+    const totalPages = Math.ceil(totalItems / itemsPerPage) || 1;
+    const paginatedTeachingAssignments = filteredTeachingAssignments.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [teachingAssignmentFilters]);
+
     const resetTeachingAssignmentForm = () => {
         setTeachingAssignmentForm({
             id_kelas: masterData.kelas?.[0]?.id_kelas || '',
@@ -150,6 +162,9 @@ export default function AdminPenugasanGuruPage({ session, onLogout }) {
             return;
         }
 
+        setIsImporting(true);
+        setImportResult(null);
+
         const formData = new FormData();
         formData.append('file', teachingAssignmentImport.file);
 
@@ -158,11 +173,14 @@ export default function AdminPenugasanGuruPage({ session, onLogout }) {
                 method: 'POST',
                 body: formData,
             });
-            showToast(`${payload.message || 'Import penugasan selesai.'} Created: ${payload.created || 0}, Updated: ${payload.updated || 0}, Skipped: ${payload.skipped || 0}.`);
+            showToast(`${payload.message || 'Import penugasan selesai.'}`);
+            setImportResult(payload);
             setTeachingAssignmentImport({ file: null });
             await reloadWorkspace();
         } catch (exception) {
             showToast(exception.message || 'Import penugasan gagal.', 'error');
+        } finally {
+            setIsImporting(false);
         }
     };
 
@@ -321,10 +339,61 @@ export default function AdminPenugasanGuruPage({ session, onLogout }) {
                                         className="w-full rounded-xl border border-dashed border-emerald-300 bg-emerald-50/30 px-4 py-3 text-sm text-slate-600 outline-none transition file:mr-4 file:rounded-full file:border-0 file:bg-emerald-500 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:bg-emerald-600"
                                     />
                                 </label>
-                                <button type="submit" className="rounded-xl bg-emerald-500 px-6 py-3.5 text-sm font-bold text-white transition hover:bg-emerald-600 shadow-sm whitespace-nowrap">
-                                    Import Penugasan
+                                <button type="submit" disabled={isImporting} className="rounded-xl bg-emerald-500 px-6 py-3.5 text-sm font-bold text-white transition hover:bg-emerald-600 shadow-sm whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center min-w-[160px]">
+                                    {isImporting ? (
+                                        <>
+                                            <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                                            Mengimpor...
+                                        </>
+                                    ) : (
+                                        'Import Penugasan'
+                                    )}
                                 </button>
                             </form>
+                            {importResult && (
+                                <div className="mt-4 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+                                    <h5 className="font-semibold text-slate-800 mb-3 flex items-center gap-2">
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-emerald-600" viewBox="0 0 20 20" fill="currentColor">
+                                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                                        </svg>
+                                        Ringkasan Import
+                                    </h5>
+                                    <div className="grid grid-cols-3 gap-4 mb-4">
+                                        <div className="rounded-lg bg-emerald-50 p-3 text-center border border-emerald-100">
+                                            <div className="text-2xl font-bold text-emerald-700">{importResult.created}</div>
+                                            <div className="text-xs font-medium text-emerald-600 mt-1 uppercase tracking-wide">Baru</div>
+                                        </div>
+                                        <div className="rounded-lg bg-blue-50 p-3 text-center border border-blue-100">
+                                            <div className="text-2xl font-bold text-blue-700">{importResult.updated}</div>
+                                            <div className="text-xs font-medium text-blue-600 mt-1 uppercase tracking-wide">Diperbarui</div>
+                                        </div>
+                                        <div className="rounded-lg bg-rose-50 p-3 text-center border border-rose-100">
+                                            <div className="text-2xl font-bold text-rose-700">{importResult.skipped}</div>
+                                            <div className="text-xs font-medium text-rose-600 mt-1 uppercase tracking-wide">Dilewati</div>
+                                        </div>
+                                    </div>
+                                    {importResult.skipped_rows && importResult.skipped_rows.length > 0 && (
+                                        <div className="mt-4">
+                                            <p className="text-sm font-semibold text-rose-700 mb-2 flex items-center gap-1.5">
+                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                                    <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                                                </svg>
+                                                Detail Data Dilewati (Baris Excel):
+                                            </p>
+                                            <div className="max-h-40 overflow-y-auto rounded-lg border border-rose-100 bg-rose-50/50 p-2">
+                                                <ul className="space-y-1">
+                                                    {importResult.skipped_rows.map((skip, idx) => (
+                                                        <li key={idx} className="text-xs text-rose-600 flex items-start">
+                                                            <span className="font-mono font-medium min-w-[60px] inline-block">Baris {skip.row}:</span>
+                                                            <span className="flex-1">{skip.reason}</span>
+                                                        </li>
+                                                    ))}
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
                             <div className="mt-4 flex flex-wrap gap-3">
                                 <button type="button" onClick={() => downloadImportTemplate('penugasan-pembelajaran', 'csv')} className="rounded-xl border border-emerald-200 bg-white px-4 py-2 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-50 hover:border-emerald-300 shadow-sm">
                                     Unduh Template CSV
@@ -422,9 +491,9 @@ export default function AdminPenugasanGuruPage({ session, onLogout }) {
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-slate-100 bg-white">
-                                        {filteredTeachingAssignments.map((item, index) => (
+                                        {paginatedTeachingAssignments.map((item, index) => (
                                             <tr key={item.id_penugasan_pembelajaran} className={TABLE_BODY_ROW_CLASS}>
-                                                <td className={TABLE_NUMBER_CELL_CLASS}>{index + 1}</td>
+                                                <td className={TABLE_NUMBER_CELL_CLASS}>{(currentPage - 1) * itemsPerPage + index + 1}</td>
                                                 <td className={TABLE_TITLE_CELL_CLASS}>{item.mata_pelajaran?.nama_lengkap || item.mata_pelajaran?.nama_mapel || '-'}</td>
                                                 <td className={TABLE_CELL_CLASS}>{item.kelas?.nama_kelas || '-'}</td>
                                                 <td className={TABLE_CELL_CLASS}>{item.guru?.nama_lengkap || '-'}</td>
@@ -452,13 +521,61 @@ export default function AdminPenugasanGuruPage({ session, onLogout }) {
                                                 </td>
                                             </tr>
                                         ))}
-                                        {!loading && filteredTeachingAssignments.length === 0 ? (
+                                        {!loading && paginatedTeachingAssignments.length === 0 ? (
                                             <tr>
-                                                <td colSpan="7" className="px-5 py-6 text-sm text-slate-500">Tidak ada penugasan pembelajaran yang cocok dengan filter saat ini.</td>
+                                                <td colSpan="7" className="px-5 py-6 text-sm text-slate-500 text-center">Tidak ada penugasan pembelajaran yang cocok dengan filter saat ini.</td>
                                             </tr>
                                         ) : null}
                                     </tbody>
                                 </table>
+
+                                {/* Pagination Controls */}
+                                {!loading && totalItems > itemsPerPage && (
+                                    <div className="flex items-center justify-between border-t border-slate-200 bg-white px-5 py-4">
+                                        <div className="flex flex-1 items-center justify-between">
+                                            <div>
+                                                <p className="text-sm text-slate-700">
+                                                    Menampilkan <span className="font-medium">{(currentPage - 1) * itemsPerPage + 1}</span> hingga <span className="font-medium">{Math.min(currentPage * itemsPerPage, totalItems)}</span> dari <span className="font-medium">{totalItems}</span> hasil
+                                                </p>
+                                            </div>
+                                            <div>
+                                                <nav className="isolate inline-flex -space-x-px rounded-md shadow-sm" aria-label="Pagination">
+                                                    <button
+                                                        onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                                                        disabled={currentPage === 1}
+                                                        className={`relative inline-flex items-center rounded-l-md px-3 py-2 text-sm font-semibold ring-1 ring-inset ring-slate-300 hover:bg-slate-50 focus:z-20 ${currentPage === 1 ? 'text-slate-400 cursor-not-allowed' : 'text-slate-900'}`}
+                                                    >
+                                                        &laquo; Previous
+                                                    </button>
+                                                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                                                        let pageNum;
+                                                        if (totalPages <= 5) pageNum = i + 1;
+                                                        else if (currentPage <= 3) pageNum = i + 1;
+                                                        else if (currentPage >= totalPages - 2) pageNum = totalPages - 4 + i;
+                                                        else pageNum = currentPage - 2 + i;
+                                                        
+                                                        return (
+                                                            <button
+                                                                key={pageNum}
+                                                                onClick={() => setCurrentPage(pageNum)}
+                                                                className={`relative inline-flex items-center px-4 py-2 text-sm font-semibold focus:z-20 ${currentPage === pageNum ? 'z-10 bg-[#1e2a3a] text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1e2a3a]' : 'text-slate-900 ring-1 ring-inset ring-slate-300 hover:bg-slate-50'}`}
+                                                            >
+                                                                {pageNum}
+                                                            </button>
+                                                        );
+                                                    })}
+                                                    <button
+                                                        onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                                                        disabled={currentPage === totalPages}
+                                                        className={`relative inline-flex items-center rounded-r-md px-3 py-2 text-sm font-semibold ring-1 ring-inset ring-slate-300 hover:bg-slate-50 focus:z-20 ${currentPage === totalPages ? 'text-slate-400 cursor-not-allowed' : 'text-slate-900'}`}
+                                                    >
+                                                        Next &raquo;
+                                                    </button>
+                                                </nav>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </div>
