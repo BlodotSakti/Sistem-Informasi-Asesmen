@@ -763,14 +763,19 @@ class GuruController extends Controller
                 'boleh_ulang' => $data['boleh_ulang'] ?? $sesi->boleh_ulang,
             ]);
 
-            \App\Models\DetailSesiSoal::where('id_sesi', $sesi->id_sesi)->delete();
+            $newSoalIds = collect($data['soal'])->pluck('id_soal')->toArray();
+            
+            // Hapus soal yang tidak dipilih lagi (jika ada)
+            \App\Models\DetailSesiSoal::where('id_sesi', $sesi->id_sesi)
+                ->whereNotIn('id_soal', $newSoalIds)
+                ->delete();
 
+            // Update bobot jika soal sudah ada, buat baru jika belum ada
             foreach ($data['soal'] as $soal) {
-                \App\Models\DetailSesiSoal::create([
-                    'id_sesi' => $sesi->id_sesi,
-                    'id_soal' => $soal['id_soal'],
-                    'bobot_nilai' => $soal['bobot_nilai'],
-                ]);
+                \App\Models\DetailSesiSoal::updateOrCreate(
+                    ['id_sesi' => $sesi->id_sesi, 'id_soal' => $soal['id_soal']],
+                    ['bobot_nilai' => $soal['bobot_nilai']]
+                );
             }
 
             return $sesi->load('bankSoal');
@@ -921,12 +926,74 @@ class GuruController extends Controller
             ->get()
             ->map(fn(SesiAsesmen $sesi): array => [
                 'title' => 'Jadwal Ujian - ' . $sesi->kelas?->nama_kelas,
-                'meta' => optional($sesi->waktu_mulai)?->format('d/m/Y') . ' - ' . ucfirst($sesi->jenis_asesmen) . ' | ' . ($sesi->mataPelajaran?->nama_mapel ?? '-'),
+                'meta' => optional($sesi->waktu_mulai)?->format('d/m/Y') . ' - ' . ucfirst($sesi->jenis_asesmen) . ' (' . $sesi->tipe_soal . ') | ' . ($sesi->mataPelajaran?->nama_mapel ?? '-'),
                 'note' => 'Mulai ' . optional($sesi->waktu_mulai)?->format('H:i') . ' WIB',
             ]);
 
         $ujianAktifQuery = SesiAsesmen::query()->where('waktu_mulai', '>=', now());
         $this->scopeGuruSesiAsesmen($ujianAktifQuery, $guruId);
+
+        $sesiIds = SesiAsesmen::query()->where(function ($q) use ($guruId) {
+            $this->scopeGuruSesiAsesmen($q, $guruId);
+        })->pluck('id_sesi');
+
+        $ujianPerBulanRaw = SesiAsesmen::query()
+            ->whereIn('id_sesi', $sesiIds)
+            ->whereNotNull('waktu_mulai')
+            ->whereYear('waktu_mulai', date('Y'))
+            ->selectRaw(DB::getDefaultConnection() === 'sqlite' || DB::connection()->getDriverName() === 'sqlite' ? "CAST(strftime('%m', waktu_mulai) AS INTEGER) as bulan, COUNT(*) as total" : 'MONTH(waktu_mulai) as bulan, COUNT(*) as total')
+            ->groupBy('bulan')
+            ->pluck('total', 'bulan')
+            ->toArray();
+        $ujianPerBulan = [];
+        $months = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+        for ($i = 1; $i <= 12; $i++) {
+            $ujianPerBulan[] = [
+                'name' => $months[$i - 1],
+                'value' => $ujianPerBulanRaw[$i] ?? 0
+            ];
+        }
+
+        $rataRataPerKelasRaw = \App\Models\AnalisisDiagnostik::query()
+            ->join('sesi_asesmen', 'analisis_diagnostik.id_sesi', '=', 'sesi_asesmen.id_sesi')
+            ->join('kelas', 'sesi_asesmen.id_kelas', '=', 'kelas.id_kelas')
+            ->whereIn('sesi_asesmen.id_sesi', $sesiIds)
+            ->selectRaw('kelas.nama_kelas, AVG(analisis_diagnostik.skor_total) as rata_rata')
+            ->groupBy('kelas.nama_kelas')
+            ->pluck('rata_rata', 'kelas.nama_kelas');
+            
+        $rataRataPerKelas = [];
+        foreach ($rataRataPerKelasRaw as $kelas => $rata) {
+            $rataRataPerKelas[] = ['name' => $kelas, 'value' => round((float)$rata, 2)];
+        }
+
+        $kognitifSoalRaw = BankSoal::query()
+            ->where('created_by', $request->user()->id_pengguna)
+            ->selectRaw('level_kognitif, COUNT(*) as total')
+            ->groupBy('level_kognitif')
+            ->pluck('total', 'level_kognitif');
+            
+        $kognitifSoal = collect(['C1', 'C2', 'C3', 'C4', 'C5', 'C6'])->map(function($c) use ($kognitifSoalRaw) {
+            return ['name' => $c, 'value' => $kognitifSoalRaw[$c] ?? 0];
+        })->filter(fn($v) => $v['value'] > 0)->values()->toArray();
+
+        $siswaPerKelasRaw = Kelas::query()
+            ->whereIn('id_kelas', $kelasIds)
+            ->withCount(['kelasSiswa as total_siswa' => function($q) {
+                $q->where('kelas_siswa.is_aktif', true);
+            }])
+            ->get();
+            
+        $siswaPerKelas = $siswaPerKelasRaw->map(function($k) {
+            return ['name' => $k->nama_kelas, 'value' => $k->total_siswa];
+        })->toArray();
+
+        $apresiasiRaw = Apresiasi::query()->where('id_guru', $guruId)->count();
+        $catatanRaw = CatatanPrivat::query()->where('id_guru', $guruId)->count();
+        $apresiasi = [
+            ['name' => 'Lencana/Apresiasi', 'value' => $apresiasiRaw],
+            ['name' => 'Catatan Pribadi', 'value' => $catatanRaw],
+        ];
 
         return response()->json([
             'cards' => [
@@ -935,6 +1002,13 @@ class GuruController extends Controller
                 'total_penugasan' => $penugasan->count(),
                 'ujian_aktif' => $ujianAktifQuery->count(),
                 'total_berita_acara' => BeritaAcara::query()->where('id_guru', $guruId)->count(),
+            ],
+            'chart' => [
+                'ujian_per_bulan' => $ujianPerBulan,
+                'rata_rata_per_kelas' => $rataRataPerKelas,
+                'kognitif_soal' => $kognitifSoal,
+                'siswa_per_kelas' => $siswaPerKelas,
+                'apresiasi' => $apresiasi,
             ],
             'upcoming_schedules' => $upcomingSchedules,
             'teaching_assignments' => $penugasan->map(fn(PenugasanPembelajaran $assignment): array => [
@@ -948,6 +1022,119 @@ class GuruController extends Controller
                 'Gunakan berita acara untuk dokumentasi kelas harian.',
                 'Pantau analisis diagnostik untuk melihat kelemahan siswa.',
             ],
+        ]);
+    }
+
+    public function analyticsData(Request $request): JsonResponse
+    {
+        $guruId = $request->user()->guru->id_guru;
+        $id_kelas = $request->query('id_kelas');
+        $id_siswa = $request->query('id_siswa');
+        
+        // 1. Tren Nilai Individu (jika id_siswa & id_kelas ada)
+        $trenNilai = [];
+        if ($id_siswa && $id_kelas) {
+            $analisisSiswa = AnalisisDiagnostik::query()
+                ->join('sesi_asesmen', 'analisis_diagnostik.id_sesi', '=', 'sesi_asesmen.id_sesi')
+                ->join('mata_pelajaran', 'sesi_asesmen.id_mapel', '=', 'mata_pelajaran.id_mapel')
+                ->where('analisis_diagnostik.id_siswa', $id_siswa)
+                ->where('sesi_asesmen.id_kelas', $id_kelas)
+                ->where(function ($q) use ($guruId) {
+                    $this->scopeGuruSesiAsesmen($q, $guruId);
+                })
+                ->orderBy('sesi_asesmen.waktu_mulai', 'asc')
+                ->get([
+                    'analisis_diagnostik.skor_total', 
+                    'sesi_asesmen.jenis_asesmen',
+                    'mata_pelajaran.nama_mapel',
+                    'sesi_asesmen.waktu_mulai'
+                ]);
+
+            foreach ($analisisSiswa as $js) {
+                $trenNilai[] = [
+                    'name' => date('d/m/y', strtotime($js->waktu_mulai)) . ' - ' . $js->nama_mapel,
+                    'value' => (float) $js->skor_total,
+                    'full_name' => ucfirst($js->jenis_asesmen)
+                ];
+            }
+        }
+
+        // 2. Ketuntasan Belajar per Kelas (semua Mapel yang diampu guru di kelas tersebut)
+        $ketuntasan = [];
+        if ($id_kelas) {
+            // Hitung total siswa aktif di kelas ini
+            $totalSiswa = \App\Models\KelasSiswa::where('id_kelas', $id_kelas)->where('is_aktif', true)->count();
+
+            // Dapatkan KKM untuk tiap penugasan di kelas ini
+            $penugasan = PenugasanPembelajaran::query()
+                ->with('mataPelajaran')
+                ->where('id_kelas', $id_kelas)
+                ->where('id_guru', $guruId)
+                ->where('is_aktif', true)
+                ->get();
+                
+            foreach ($penugasan as $p) {
+                $kkm = $p->nilai_kkm ?? 75; // Default 75
+                
+                // Ambil nilai terbaru tiap siswa untuk mapel ini di kelas ini
+                $nilaiSiswa = AnalisisDiagnostik::query()
+                    ->join('sesi_asesmen', 'analisis_diagnostik.id_sesi', '=', 'sesi_asesmen.id_sesi')
+                    ->where('sesi_asesmen.id_kelas', $id_kelas)
+                    ->where('sesi_asesmen.id_mapel', $p->id_mapel)
+                    ->select('analisis_diagnostik.id_siswa')
+                    // Mengambil rata-rata nilai per mapel untuk setiap siswa
+                    ->selectRaw('AVG(analisis_diagnostik.skor_total) as rata_rata')
+                    ->groupBy('analisis_diagnostik.id_siswa')
+                    ->get();
+                    
+                $lulus = 0;
+                $remedial = 0;
+                
+                foreach ($nilaiSiswa as $n) {
+                    if ($n->rata_rata >= $kkm) {
+                        $lulus++;
+                    } else {
+                        $remedial++;
+                    }
+                }
+                
+                $belumMengerjakan = max(0, $totalSiswa - ($lulus + $remedial));
+                
+                if ($totalSiswa > 0) {
+                    $ketuntasan[] = [
+                        'name' => $p->mataPelajaran->nama_mapel,
+                        'Tuntas' => $lulus,
+                        'Remedial' => $remedial,
+                        'Belum Mengerjakan' => $belumMengerjakan,
+                        'KKM' => $kkm
+                    ];
+                }
+            }
+        }
+
+        return response()->json([
+            'tren_nilai' => $trenNilai,
+            'ketuntasan' => $ketuntasan
+        ]);
+    }
+
+    public function updateKkm(Request $request, int $id_penugasan): JsonResponse
+    {
+        $guruId = $request->user()->guru->id_guru;
+        
+        $penugasan = PenugasanPembelajaran::query()
+            ->where('id_guru', $guruId)
+            ->findOrFail($id_penugasan);
+            
+        $data = $request->validate([
+            'nilai_kkm' => ['required', 'integer', 'min:0', 'max:100']
+        ]);
+        
+        $penugasan->update(['nilai_kkm' => $data['nilai_kkm']]);
+        
+        return response()->json([
+            'message' => 'Nilai KKM berhasil diperbarui.',
+            'penugasan' => $penugasan
         ]);
     }
 
@@ -1032,13 +1219,13 @@ class GuruController extends Controller
 
         $query->where(function ($q) use ($waliKelasIds, $penugasan) {
             if (!empty($waliKelasIds)) {
-                $q->orWhereIn('id_kelas', $waliKelasIds);
+                $q->orWhereIn('sesi_asesmen.id_kelas', $waliKelasIds);
             }
 
             foreach ($penugasan as $tugas) {
                 $q->orWhere(function ($sq) use ($tugas) {
-                    $sq->where('id_kelas', $tugas->id_kelas)
-                        ->where('id_mapel', $tugas->id_mapel);
+                    $sq->where('sesi_asesmen.id_kelas', $tugas->id_kelas)
+                        ->where('sesi_asesmen.id_mapel', $tugas->id_mapel);
                 });
             }
 

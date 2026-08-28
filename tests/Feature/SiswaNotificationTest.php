@@ -28,75 +28,115 @@ class SiswaNotificationTest extends TestCase
     {
         parent::setUp();
 
-        $this->siswaUser = Pengguna::factory()->create(['role' => 'siswa']);
-        $this->siswa = Siswa::factory()->create([
+        $this->siswaUser = Pengguna::create([
+            'username' => 'siswa' . uniqid(),
+            'password' => 'secret',
+            'role' => 'siswa',
+        ]);
+        
+        $this->siswa = Siswa::create([
             'id_pengguna' => $this->siswaUser->id_pengguna,
+            'nisn' => '123456789' . rand(10, 99),
+            'nama_lengkap' => 'Siswa Test',
         ]);
 
-        $guruUser = Pengguna::factory()->create(['role' => 'guru']);
-        $this->guru = Guru::factory()->create([
+        $guruUser = Pengguna::create([
+            'username' => 'guru' . uniqid(),
+            'password' => 'secret',
+            'role' => 'guru',
+        ]);
+        
+        $this->guru = Guru::create([
             'id_pengguna' => $guruUser->id_pengguna,
+            'nip' => '19880101' . rand(100, 999),
             'nama_lengkap' => 'Guru Test'
         ]);
 
-        $kelas = Kelas::factory()->create();
-        KelasSiswa::factory()->create([
-            'id_kelas' => $kelas->id_kelas,
-            'id_siswa' => $this->siswa->id_siswa,
+        \App\Models\TahunAjaran::create([
+            'nama_tahun_ajaran' => '2023/2024',
+            'semester' => 'ganjil',
+            'tanggal_mulai' => now()->startOfMonth()->toDateString(),
+            'tanggal_selesai' => now()->addMonths(10)->toDateString(),
             'is_aktif' => true,
         ]);
 
-        $mapel = MataPelajaran::factory()->create(['nama_mapel' => 'Matematika']);
+        $kelas = Kelas::create([
+            'id_guru_wali' => $this->guru->id_guru,
+            'nama_kelas' => 'XII IPA 1',
+            'tahun_ajaran' => '2023/2024',
+        ]);
+        
+        KelasSiswa::create([
+            'id_kelas' => $kelas->id_kelas,
+            'id_siswa' => $this->siswa->id_siswa,
+            'tahun_ajaran' => '2023/2024',
+            'is_aktif' => true,
+            'tanggal_masuk' => now()->toDateString(),
+        ]);
+
+        $mapel = MataPelajaran::create([
+            'nama_mapel' => 'Matematika',
+            'tingkat' => 'XII',
+        ]);
 
         // Create Berita Acara for Apresiasi and Catatan
-        $bap = BeritaAcara::factory()->create([
+        $bap = BeritaAcara::create([
             'id_guru' => $this->guru->id_guru,
             'id_kelas' => $kelas->id_kelas,
-            'id_mapel' => $mapel->id_mapel,
+            'pertemuan_ke' => 1,
+            'tanggal' => now()->toDateString(),
+            'materi_bahasan' => 'Materi',
+            'catatan_kelas' => 'Tidak ada catatan khusus.',
         ]);
 
         // 1. Apresiasi
-        Apresiasi::factory()->create([
+        Apresiasi::create([
             'id_siswa' => $this->siswa->id_siswa,
             'id_guru' => $this->guru->id_guru,
             'id_berita_acara' => $bap->id_berita_acara,
             'jenis_badge' => 'Bintang Sains',
             'topik_materi' => 'Aljabar',
-            'tanggal' => now()->subHours(2),
+            'tanggal' => now()->subHours(2)->toDateString(),
         ]);
 
         // 2. Catatan Privat
-        CatatanPrivat::factory()->create([
+        CatatanPrivat::create([
             'id_siswa' => $this->siswa->id_siswa,
             'id_guru' => $this->guru->id_guru,
             'id_berita_acara' => $bap->id_berita_acara,
             'isi_pesan' => 'Tingkatkan lagi belajarnya.',
-            'tanggal' => now()->subHour(),
+            'tanggal' => now()->subHour()->toDateString(),
         ]);
 
         // 3. Sesi Asesmen
-        SesiAsesmen::factory()->create([
+        SesiAsesmen::create([
             'id_guru' => $this->guru->id_guru,
             'id_kelas' => $kelas->id_kelas,
             'id_mapel' => $mapel->id_mapel,
             'waktu_mulai' => now()->addHours(5), // Dalam 24 jam ke depan
             'waktu_selesai' => now()->addHours(7),
+            'durasi_menit' => 120,
+            'tipe_soal' => 'CBT',
+            'jenis_asesmen' => 'ujian',
         ]);
         
         // Sesi Asesmen di luar 24 jam (seharusnya tidak masuk)
-        SesiAsesmen::factory()->create([
+        SesiAsesmen::create([
             'id_guru' => $this->guru->id_guru,
             'id_kelas' => $kelas->id_kelas,
             'id_mapel' => $mapel->id_mapel,
             'waktu_mulai' => now()->addHours(48),
             'waktu_selesai' => now()->addHours(50),
+            'durasi_menit' => 120,
+            'tipe_soal' => 'CBT',
+            'jenis_asesmen' => 'ujian',
         ]);
     }
 
     public function test_can_fetch_unified_notifications()
     {
-        $response = $this->actingAs($this->siswaUser)
-            ->getJson('/api/siswa/notifications');
+        $token = $this->siswaUser->createToken('test')->plainTextToken;
+        $response = $this->withToken($token)->getJson('/api/siswa/notifications');
 
         $response->assertStatus(200);
 
@@ -116,7 +156,7 @@ class SiswaNotificationTest extends TestCase
 
         $response->assertJsonFragment([
             'type' => 'ujian',
-            'title' => 'Pengingat Ujian',
+            'title' => 'Pengingat Ujian Baru',
         ]);
     }
 }

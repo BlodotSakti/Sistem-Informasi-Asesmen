@@ -146,40 +146,15 @@ class SiswaController extends Controller
         $allKelasIds = $siswa->kelasRiwayat()->pluck('id_kelas');
         $activeKelasId = $kelasAktif ? $kelasAktif->id_kelas : null;
 
-        // Untuk mencocokkan dengan semester aktif: ambil sesi asesmen hanya dari kelas aktif saat ini
-        $allSessions = $activeKelasId 
-            ? SesiAsesmen::query()
-                ->with(['detailSesiSoal'])
-                ->where('id_kelas', $activeKelasId)
-                ->get()
-            : collect();
+        // Untuk mencocokkan dengan semester aktif: ambil asesmen yang SUDAH SELESAI (ada di AnalisisDiagnostik) untuk kelas ini
+        $analisisAktif = $analisis->filter(function($a) use ($activeKelasId) {
+            return $a->sesiAsesmen && $a->sesiAsesmen->id_kelas == $activeKelasId;
+        });
 
-        $pastSessionCountActive = $allSessions->count();
-        $sumOfPercentages = 0;
-
-        foreach ($allSessions as $sesi) {
-            $detailIds = $sesi->detailSesiSoal->pluck('id_detail');
-            
-            $totalSkor = JawabanSiswa::where('id_siswa', $idSiswa)
-                ->whereIn('id_detail', $detailIds)
-                ->sum('skor_diperoleh');
-            $totalBobot = $sesi->detailSesiSoal->sum('bobot_nilai');
-            
-            $percentage = $totalBobot > 0 ? ($totalSkor / $totalBobot) * 100 : 0;
-            $sumOfPercentages += $percentage;
-        }
-
-        $latestScoreRecord = JawabanSiswa::query()
-            ->join('detail_sesi_soal', 'jawaban_siswa.id_detail', '=', 'detail_sesi_soal.id_detail')
-            ->where('jawaban_siswa.id_siswa', $idSiswa)
-            ->selectRaw('detail_sesi_soal.id_sesi, sum(jawaban_siswa.skor_diperoleh) as total_skor, max(jawaban_siswa.created_at) as last_answered')
-            ->groupBy('detail_sesi_soal.id_sesi')
-            ->orderByDesc('last_answered')
-            ->first();
-            
-        $latestScore = $latestScoreRecord ? round((float) $latestScoreRecord->total_skor, 2) : 0;
-
-        $averageScore = $pastSessionCountActive > 0 ? round((float) ($sumOfPercentages / $pastSessionCountActive), 2) : 0;
+        $pastSessionCountActive = $analisisAktif->count();
+        $averageScore = $pastSessionCountActive > 0 ? round((float) $analisisAktif->avg('skor_total'), 2) : 0;
+        
+        $latestScore = $analisis->first() ? round((float) $analisis->first()->skor_total, 2) : 0;
         
         $pendingSessionCount = $kelasAktif
             ? SesiAsesmen::query()
@@ -218,7 +193,7 @@ class SiswaController extends Controller
         }
 
         // 2. Dari Apresiasi (Lencana)
-        $allBadges = Apresiasi::query()->where('id_siswa', $idSiswa)->with(['guru', 'beritaAcara.mataPelajaran'])->latest('tanggal')->get();
+        $allBadges = Apresiasi::query()->where('id_siswa', $idSiswa)->with(['guru', 'beritaAcara.mataPelajaran'])->latest('created_at')->get();
         foreach ($allBadges as $badge) {
             $mapelName = $badge->beritaAcara?->mataPelajaran?->nama_mapel;
             $mapelInfo = $mapelName ? ' pada mapel ' . $mapelName : '';
@@ -227,15 +202,15 @@ class SiswaController extends Controller
             $timeline->push([
                 'id' => 'badge_' . $badge->id_apresiasi,
                 'title' => 'Mendapat Lencana: ' . $badge->jenis_badge . $mapelInfo . ' (dari ' . $guruName . ')',
-                'date_raw' => clone $badge->tanggal,
-                'date' => \Carbon\Carbon::parse($badge->tanggal)->diffForHumans(),
+                'date_raw' => clone $badge->created_at,
+                'date' => \Carbon\Carbon::parse($badge->created_at)->diffForHumans(),
                 'type' => 'badge',
                 'icon' => '🎖️',
             ]);
         }
 
         // 3. Dari Catatan Privat
-        $allNotes = CatatanPrivat::query()->where('id_siswa', $idSiswa)->with(['guru', 'beritaAcara.mataPelajaran'])->latest('tanggal')->get();
+        $allNotes = CatatanPrivat::query()->where('id_siswa', $idSiswa)->with(['guru', 'beritaAcara.mataPelajaran'])->latest('created_at')->get();
         foreach ($allNotes as $note) {
             $mapelName = $note->beritaAcara?->mataPelajaran?->nama_mapel;
             $mapelInfo = $mapelName ? ' pada mapel ' . $mapelName : '';
@@ -244,8 +219,8 @@ class SiswaController extends Controller
             $timeline->push([
                 'id' => 'note_' . $note->id_catatan,
                 'title' => 'Mendapat Catatan dari ' . $guruName . $mapelInfo,
-                'date_raw' => clone $note->tanggal,
-                'date' => \Carbon\Carbon::parse($note->tanggal)->diffForHumans(),
+                'date_raw' => clone $note->created_at,
+                'date' => \Carbon\Carbon::parse($note->created_at)->diffForHumans(),
                 'type' => 'note',
                 'icon' => '💬',
             ]);
@@ -686,6 +661,7 @@ class SiswaController extends Controller
             'jumlah_salah' => count($resultPerSoal) - $jumlahBenar,
             'mata_pelajaran' => $sesi->mataPelajaran?->nama_mapel,
             'jenis_asesmen' => $sesi->jenis_asesmen,
+            'tipe_soal' => $sesi->tipe_soal,
             'detail_hasil' => $resultPerSoal,
             'analisis_diagnostik' => $analisisDiagnostik,
         ], 200);

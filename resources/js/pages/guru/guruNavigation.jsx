@@ -1,5 +1,5 @@
 import React from 'react';
-import { LayoutDashboard, User, Users, Calendar, Database, ClipboardCheck } from 'lucide-react';
+import { LayoutDashboard, User, Users, Calendar, Database, ClipboardCheck, BarChart2 } from 'lucide-react';
 
 export const guruNavigation = [
     { label: 'Dashboard', href: '/guru/dashboard', badge: 'Home', icon: <LayoutDashboard className="w-5 h-5" /> },
@@ -7,5 +7,6 @@ export const guruNavigation = [
     { label: 'Daftar Siswa', href: '/guru/siswa', badge: 'Data', icon: <Users className="w-5 h-5" /> },
     { label: 'Jadwal CBT', href: '/guru/jadwal-cbt', badge: 'Ujian', icon: <Calendar className="w-5 h-5" /> },
     { label: 'Bank Soal', href: '/guru/bank-soal', badge: 'Soal', icon: <Database className="w-5 h-5" /> },
+    { label: 'Analitik', href: '/guru/analitik', badge: 'Laporan', icon: <BarChart2 className="w-5 h-5" /> },
     { label: 'Berita Acara', href: '/guru/berita-acara', badge: 'Presensi', icon: <ClipboardCheck className="w-5 h-5" /> },
 ];

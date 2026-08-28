@@ -94,10 +94,54 @@ export default function SiswaLearningHistoryPage({ session, onLogout }) {
                     <p className="mt-2 text-sm text-accent">Halaman ini menampilkan topik yang dipelajari, status kehadiran Anda, dan ringkasan per mata pelajaran.</p>
 
                     <div className="mt-6 grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
-                        <StatCard label="Total Pertemuan" value={loading ? '...' : history?.total_pertemuan ?? 0} description="Seluruh BAP yang relevan" tone="blue" className="!bg-[#EEDCC8] !border-transparent" />
-                        <StatCard label="Hadir" value={loading ? '...' : history?.summary_kehadiran?.hadir ?? 0} description="Pertemuan yang dihadiri" tone="emerald" className="!bg-[#EEDCC8] !border-transparent" />
-                        <StatCard label="Izin/Sakit" value={loading ? '...' : (history?.summary_kehadiran?.izin ?? 0) + (history?.summary_kehadiran?.sakit ?? 0)} description="Absensi yang tercatat" tone="amber" className="!bg-[#EEDCC8] !border-transparent" />
-                        <StatCard label="Alpa" value={loading ? '...' : history?.summary_kehadiran?.alpa ?? 0} description="Ketidakhadiran" tone="rose" className="!bg-[#EEDCC8] !border-transparent" />
+                        <StatCard 
+                            label="Total Pertemuan" 
+                            value={loading ? '...' : history?.total_pertemuan ?? 0} 
+                            description="Seluruh BAP yang relevan" 
+                            tone="blue" 
+                            className="!bg-[#EEDCC8] !border-transparent" 
+                            icon={
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                </svg>
+                            }
+                        />
+                        <StatCard 
+                            label="Hadir" 
+                            value={loading ? '...' : history?.summary_kehadiran?.hadir ?? 0} 
+                            description="Pertemuan yang dihadiri" 
+                            tone="emerald" 
+                            className="!bg-[#EEDCC8] !border-transparent" 
+                            icon={
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                            }
+                        />
+                        <StatCard 
+                            label="Izin/Sakit" 
+                            value={loading ? '...' : (history?.summary_kehadiran?.izin ?? 0) + (history?.summary_kehadiran?.sakit ?? 0)} 
+                            description="Absensi yang tercatat" 
+                            tone="amber" 
+                            className="!bg-[#EEDCC8] !border-transparent" 
+                            icon={
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                            }
+                        />
+                        <StatCard 
+                            label="Alpa" 
+                            value={loading ? '...' : history?.summary_kehadiran?.alpa ?? 0} 
+                            description="Ketidakhadiran" 
+                            tone="rose" 
+                            className="!bg-[#EEDCC8] !border-transparent" 
+                            icon={
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                            }
+                        />
                     </div>
                 </section>
 

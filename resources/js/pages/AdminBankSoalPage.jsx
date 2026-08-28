@@ -488,80 +488,89 @@ export default function AdminBankSoalPage({ session, onLogout }) {
                         <span className="text-sm text-slate-500 font-medium">Total: {filteredSoal.length} Soal</span>
                     </div>
 
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-left text-sm whitespace-nowrap">
-                            <thead className="bg-slate-50 text-slate-500 uppercase tracking-wider text-xs font-semibold">
-                                <tr>
-                                    <th className="px-6 py-4">No</th>
-                                    <th className="px-6 py-4">Pembuat</th>
-                                    <th className="px-6 py-4">Topik</th>
-                                    <th className="px-6 py-4">Jenis</th>
-                                    <th className="px-6 py-4">Level</th>
-                                    <th className="px-6 py-4">Isi Soal</th>
-                                    <th className="px-6 py-4 text-right">Aksi</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-100">
-                                {loading ? (
-                                    <tr><td colSpan="7" className="px-6 py-8 text-center text-slate-400">Memuat data...</td></tr>
-                                ) : filteredSoal.length === 0 ? (
-                                    <tr><td colSpan="7" className="px-6 py-8 text-center text-slate-400">Belum ada soal.</td></tr>
-                                ) : (
-                                    Object.entries(groupedBankSoal).map(([id_mapel, group]) => (
-                                        <React.Fragment key={id_mapel}>
-                                            <tr 
-                                                className="cursor-pointer bg-primary/5/50 hover:bg-primary/5 transition-colors"
-                                                onClick={() => toggleBankFolder(id_mapel)}
-                                            >
-                                                <td colSpan="7" className="px-5 py-4">
-                                                    <div className="flex items-center justify-between">
-                                                        <div className="flex items-center gap-3">
-                                                            <span className={`transform transition-transform ${expandedBankFolders[id_mapel] ? 'rotate-90' : ''}`}>
-                                                                ▶
-                                                            </span>
-                                                            <span className="font-bold text-slate-900">
-                                                                📁 {group.mapel?.nama_mapel} (Kelas {group.mapel?.tingkat})
-                                                            </span>
-                                                            <span className="text-sm font-medium text-slate-500 bg-white px-2 py-1 rounded-md shadow-sm border border-border">
-                                                                {group.soals.length} Soal
-                                                            </span>
-                                                        </div>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                            {expandedBankFolders[id_mapel] && group.soals.map((soal, index) => (
-                                                <tr key={soal.id_soal} className="align-top hover:bg-slate-50/70 border-l-4 border-primary">
-                                                    <td className="px-5 py-4 font-medium text-slate-500 pl-6">
-                                                        {index + 1}
-                                                    </td>
-                                                    <td className="px-6 py-4">
-                                                        <span className={`inline-flex px-2 py-1 rounded-md text-xs font-semibold ${soal.pembuat?.role === 'admin' ? 'bg-primary/10 text-primary' : 'bg-amber-100 text-amber-700'}`}>
-                                                            {soal.pembuat?.role === 'admin' 
-                                                                ? (soal.pembuat?.id_pengguna === session?.user?.id_pengguna ? 'Admin (Anda)' : `Admin (${soal.pembuat?.admin?.nama_lengkap || 'Unknown'})`) 
-                                                                : `Guru (${soal.pembuat?.guru?.nama_lengkap || 'Unknown'})`}
-                                                        </span>
-                                                    </td>
-                                                    <td className="px-6 py-4 text-slate-600">{soal.topik_materi}</td>
-                                                    <td className="px-6 py-4">
-                                                        <span className="inline-flex items-center px-2 py-1 rounded-md bg-slate-100 text-slate-600 text-xs font-medium">
-                                                            {soal.jenis_soal.replace(/_/g, ' ')}
-                                                        </span>
-                                                    </td>
-                                                    <td className="px-6 py-4 text-slate-600">{soal.level_kognitif}</td>
-                                                    <td className="px-6 py-4 text-slate-600 truncate max-w-xs" title={soal.isi_soal}>
-                                                        {soal.isi_soal}
-                                                    </td>
-                                                    <td className="px-6 py-4 text-right space-x-2">
-                                                        <button onClick={() => handleEditSoal(soal)} className="text-primary hover:text-primary font-medium">Edit</button>
-                                                        <button onClick={() => handleDelete(soal.id_soal)} className="text-red-500 hover:text-red-700 font-medium">Hapus</button>
-                                                    </td>
+                    <div className="p-5 bg-slate-50/30">
+                        {loading ? (
+                            <div className="flex h-32 items-center justify-center text-slate-400">Memuat data...</div>
+                        ) : filteredSoal.length === 0 ? (
+                            <div className="rounded-2xl border border-slate-200 bg-white p-12 text-center">
+                                <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-slate-50 text-slate-400">
+                                    <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                                </div>
+                                <h4 className="text-sm font-semibold text-slate-900">Belum ada data</h4>
+                                <p className="mt-1 text-sm text-slate-500">Tidak ada soal yang cocok dengan pencarian Anda.</p>
+                            </div>
+                        ) : (
+                            Object.entries(groupedBankSoal).map(([id_mapel, group]) => (
+                                <details key={id_mapel} open className="group mb-5 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm last:mb-0">
+                                    <summary className="flex cursor-pointer items-center justify-between border-b border-slate-200 bg-slate-50/80 px-5 py-4 list-none transition hover:bg-slate-100 [&::-webkit-details-marker]:hidden">
+                                        <div className="flex items-center gap-4">
+                                            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-white text-slate-400 shadow-sm border border-slate-200 group-open:bg-blue-600 group-open:text-white group-open:border-blue-600 transition-colors">
+                                                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" /></svg>
+                                            </div>
+                                            <div>
+                                                <h5 className="text-base font-bold text-slate-800">{group.mapel?.nama_mapel} {group.mapel?.tingkat ? `(Kelas ${group.mapel.tingkat})` : ''}</h5>
+                                                <p className="mt-0.5 flex items-center gap-1.5 text-xs font-medium text-slate-500">
+                                                    <span className="flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-slate-200 px-1.5 text-[10px] text-slate-600">{group.soals.length}</span>
+                                                    Soal
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <div className="text-slate-400 transition-transform group-open:-rotate-180">
+                                            <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" /></svg>
+                                        </div>
+                                    </summary>
+                                    <div className="overflow-x-auto">
+                                        <table className="min-w-full divide-y divide-slate-100 text-left text-sm">
+                                            <thead className="bg-white text-[11px] uppercase tracking-[0.2em] text-slate-400">
+                                                <tr>
+                                                    <th className="px-5 py-4 font-semibold">No</th>
+                                                    <th className="px-5 py-4 font-semibold">Pembuat</th>
+                                                    <th className="px-5 py-4 font-semibold">Topik</th>
+                                                    <th className="px-5 py-4 font-semibold">Jenis</th>
+                                                    <th className="px-5 py-4 font-semibold">Level</th>
+                                                    <th className="px-5 py-4 font-semibold">Isi Soal</th>
+                                                    <th className="px-5 py-4 font-semibold text-right">Aksi</th>
                                                 </tr>
-                                            ))}
-                                        </React.Fragment>
-                                    ))
-                                )}
-                            </tbody>
-                        </table>
+                                            </thead>
+                                            <tbody className="divide-y divide-slate-50 bg-white">
+                                                {group.soals.map((soal, index) => (
+                                                    <tr key={soal.id_soal} className="align-top transition-colors hover:bg-slate-50/80">
+                                                        <td className="px-5 py-4 font-semibold text-slate-400">{index + 1}</td>
+                                                        <td className="px-5 py-4">
+                                                            <span className={`inline-flex px-2 py-1 rounded-md text-[11px] font-semibold ${soal.pembuat?.role === 'admin' ? 'bg-primary/10 text-primary' : 'bg-amber-100 text-amber-700'}`}>
+                                                                {soal.pembuat?.role === 'admin' 
+                                                                    ? (soal.pembuat?.id_pengguna === session?.user?.id_pengguna ? 'Admin (Anda)' : `Admin (${soal.pembuat?.admin?.nama_lengkap || 'Unknown'})`) 
+                                                                    : `Guru (${soal.pembuat?.guru?.nama_lengkap || 'Unknown'})`}
+                                                            </span>
+                                                        </td>
+                                                        <td className="px-5 py-4 text-slate-600">{soal.topik_materi}</td>
+                                                        <td className="px-5 py-4 text-slate-600 whitespace-nowrap">
+                                                            <span className="inline-flex items-center px-2 py-1 rounded-md bg-slate-100 text-[11px] font-medium text-slate-600">
+                                                                {soal.jenis_soal.replace(/_/g, ' ')}
+                                                            </span>
+                                                        </td>
+                                                        <td className="px-5 py-4 text-slate-600 whitespace-nowrap">{soal.level_kognitif}</td>
+                                                        <td className="px-5 py-4 text-slate-600 truncate max-w-xs" title={soal.isi_soal}>
+                                                            {soal.isi_soal}
+                                                        </td>
+                                                        <td className="px-5 py-4 text-right">
+                                                            <div className="flex items-center justify-end gap-2">
+                                                                <button onClick={() => handleEditSoal(soal)} title="Edit" className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-100 text-slate-600 hover:bg-amber-100 hover:text-amber-700 transition-colors">
+                                                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                                                                </button>
+                                                                <button onClick={() => handleDelete(soal.id_soal)} title="Hapus" className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-100 text-slate-600 hover:bg-rose-100 hover:text-rose-700 transition-colors">
+                                                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                                                </button>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </details>
+                            ))
+                        )}
                     </div>
                 </div>
             </div>

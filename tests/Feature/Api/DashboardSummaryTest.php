@@ -101,7 +101,7 @@ class DashboardSummaryTest extends TestCase
         ]);
 
         BankSoal::create([
-            'id_guru' => $guru->guru->id_guru,
+            'created_by' => $guru->id_pengguna,
             'id_mapel' => $mapel->id_mapel,
             'isi_soal' => 'Contoh soal',
             'jenis_soal' => 'esai',
@@ -255,10 +255,10 @@ class DashboardSummaryTest extends TestCase
 
         $response->assertOk();
         $response->assertJsonPath('cards.apresiasi', 1);
-        $response->assertJsonPath('cards.tugas_aktif', 0);
+        $response->assertJsonPath('cards.tugas_aktif', 1);
         $response->assertJsonPath('profile.kelas_aktif.nama_kelas', 'XI IPA 1');
         $response->assertJsonCount(1, 'available_subjects');
-        $response->assertJsonStructure(['cards', 'trend', 'highlight']);
+        $response->assertJsonStructure(['cards', 'trend_data', 'highlight']);
     }
 
     public function test_siswa_active_sessions_endpoint_returns_list_for_widget(): void

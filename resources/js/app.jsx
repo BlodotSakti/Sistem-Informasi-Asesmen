@@ -28,6 +28,8 @@ import GuruProfilePage from './pages/GuruProfilePage';
 import GuruLaporanDiagnostikPage from './pages/GuruLaporanDiagnostikPage';
 import GuruArsipDiagnostikPage from './pages/GuruArsipDiagnostikPage';
 
+import GuruAnalitikPage from './pages/GuruAnalitikPage';
+
 const STORAGE_KEY = 'sia-session';
 
 function loadSession() {
@@ -76,6 +78,7 @@ function App() {
             '/guru/berita-acara',
             '/guru/siswa',
             '/guru/profil',
+            '/guru/analitik',
             '/guru/arsip-diagnostik',
             '/siswa/dashboard',
             '/siswa/profil',
@@ -218,6 +221,10 @@ function App() {
 
         if (pathname === '/guru/berita-acara') {
             return <GuruBeritaAcaraPage session={session} onLogout={onLogout} />;
+        }
+
+        if (pathname === '/guru/analitik') {
+            return <GuruAnalitikPage session={session} onLogout={onLogout} />;
         }
 
         if (pathname === '/guru/siswa') return <GuruSiswaPage session={session} onLogout={onLogout} />;

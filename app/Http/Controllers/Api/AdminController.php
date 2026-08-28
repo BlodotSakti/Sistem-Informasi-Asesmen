@@ -111,7 +111,7 @@ class AdminController extends Controller
             }
         }
 
-        if ($pengguna->role === 'admin' && ( (isset($data['role']) && $data['role'] !== 'admin') || (isset($data['is_aktif']) && $data['is_aktif'] === false) )) {
+        if ($pengguna->role === 'admin' && ((isset($data['role']) && $data['role'] !== 'admin') || (isset($data['is_aktif']) && $data['is_aktif'] === false))) {
             $activeAdminCount = Pengguna::where('role', 'admin')->where('is_aktif', true)->count();
             if ($activeAdminCount <= 1) {
                 return response()->json(['message' => 'Tidak dapat mengubah atau menonaktifkan admin terakhir yang aktif.'], 403);
@@ -126,14 +126,14 @@ class AdminController extends Controller
             'is_aktif' => $data['is_aktif'] ?? $pengguna->is_aktif,
         ];
 
-        if (! empty($data['password'])) {
+        if (!empty($data['password'])) {
             $updateData['password'] = $data['password'];
         }
 
         if (
-            (! empty($data['password'])) ||
+            (!empty($data['password'])) ||
             $roleChanged ||
-            (isset($data['is_aktif']) && (bool)$data['is_aktif'] === false && $pengguna->is_aktif === true)
+            (isset($data['is_aktif']) && (bool) $data['is_aktif'] === false && $pengguna->is_aktif === true)
         ) {
             $pengguna->tokens()->delete();
         }
@@ -321,7 +321,7 @@ class AdminController extends Controller
         $nextSiswaId = (int) ($data['id_siswa'] ?? $kelasSiswa->id_siswa);
         $nextKelasId = (int) ($data['id_kelas'] ?? $kelasSiswa->id_kelas);
 
-        if (! isset($data['tahun_ajaran']) && isset($data['id_kelas'])) {
+        if (!isset($data['tahun_ajaran']) && isset($data['id_kelas'])) {
             $data['tahun_ajaran'] = Kelas::query()->findOrFail($nextKelasId)->tahun_ajaran;
         }
 
@@ -350,7 +350,7 @@ class AdminController extends Controller
         $kelasSiswa->load(['kelas', 'siswa']);
         $namaSiswa = $kelasSiswa->siswa->nama_lengkap ?? 'Siswa Terhapus';
         $namaKelas = $kelasSiswa->kelas->nama_kelas ?? 'Kelas Terhapus';
-        
+
         $kelasSiswa->delete();
 
         LogAktivitas::create([
@@ -431,7 +431,7 @@ class AdminController extends Controller
         $nextGuruId = (int) ($data['id_guru'] ?? $penugasanPembelajaran->id_guru);
         $nextTahunAjaran = $data['tahun_ajaran'] ?? $penugasanPembelajaran->tahun_ajaran;
 
-        if (! isset($data['tahun_ajaran']) && isset($data['id_kelas'])) {
+        if (!isset($data['tahun_ajaran']) && isset($data['id_kelas'])) {
             $nextTahunAjaran = Kelas::query()->findOrFail($nextKelasId)->tahun_ajaran;
             $data['tahun_ajaran'] = $nextTahunAjaran;
         }
@@ -507,7 +507,7 @@ class AdminController extends Controller
             $kelas = Kelas::query()->where('nama_kelas', 'like', "%{$namaKelas}%")->first();
             $siswa = Siswa::query()->where('nama_lengkap', 'like', "%{$namaSiswa}%")->first();
 
-            if (! $kelas) {
+            if (!$kelas) {
                 $summary['skipped']++;
                 $summary['skipped_rows'][] = [
                     'row' => $index + 2,
@@ -517,7 +517,7 @@ class AdminController extends Controller
                 continue;
             }
 
-            if (! $siswa) {
+            if (!$siswa) {
                 $summary['skipped']++;
                 $summary['skipped_rows'][] = [
                     'row' => $index + 2,
@@ -603,13 +603,13 @@ class AdminController extends Controller
                     ->where('tingkat', trim($matches[2]))
                     ->first();
             }
-            if (! $mapel) {
+            if (!$mapel) {
                 $mapel = MataPelajaran::query()->where('nama_mapel', 'like', "%{$namaMapel}%")->first();
             }
 
             $guru = Guru::query()->where('nama_lengkap', 'like', "%{$namaGuru}%")->first();
 
-            if (! $kelas) {
+            if (!$kelas) {
                 $summary['skipped']++;
                 $summary['skipped_rows'][] = [
                     'row' => $index + 2,
@@ -619,7 +619,7 @@ class AdminController extends Controller
                 continue;
             }
 
-            if (! $mapel) {
+            if (!$mapel) {
                 $summary['skipped']++;
                 $summary['skipped_rows'][] = [
                     'row' => $index + 2,
@@ -629,7 +629,7 @@ class AdminController extends Controller
                 continue;
             }
 
-            if (! $guru) {
+            if (!$guru) {
                 $summary['skipped']++;
                 $summary['skipped_rows'][] = [
                     'row' => $index + 2,
@@ -690,7 +690,7 @@ class AdminController extends Controller
             ],
         ];
 
-        if (! isset($definitions[$type]) || ! in_array($format, ['csv', 'xlsx'], true)) {
+        if (!isset($definitions[$type]) || !in_array($format, ['csv', 'xlsx'], true)) {
             abort(404);
         }
 
@@ -741,7 +741,7 @@ class AdminController extends Controller
                 'required',
                 'string',
                 'max:30',
-                Rule::unique('tahun_ajaran', 'nama_tahun_ajaran')->where(fn ($query) => $query->where('semester', $semester)),
+                Rule::unique('tahun_ajaran', 'nama_tahun_ajaran')->where(fn($query) => $query->where('semester', $semester)),
             ],
             'semester' => ['sometimes', Rule::in(['ganjil', 'genap'])],
             'tanggal_mulai' => ['nullable', 'date'],
@@ -776,7 +776,7 @@ class AdminController extends Controller
                 'string',
                 'max:30',
                 Rule::unique('tahun_ajaran', 'nama_tahun_ajaran')
-                    ->where(fn ($query) => $query->where('semester', $semester))
+                    ->where(fn($query) => $query->where('semester', $semester))
                     ->ignore($tahunAjaran->id_tahun_ajaran, 'id_tahun_ajaran'),
             ],
             'semester' => ['sometimes', Rule::in(['ganjil', 'genap'])],
@@ -801,7 +801,7 @@ class AdminController extends Controller
     {
         $nama = $tahunAjaran->nama_tahun_ajaran;
         $semester = ucfirst($tahunAjaran->semester);
-        
+
         $tahunAjaran->delete();
 
         LogAktivitas::create([
@@ -990,7 +990,7 @@ class AdminController extends Controller
         if ($data['role'] === 'guru') {
             $data['nip'] = $data['nip'] ?: $data['username'] ?: ($pengguna?->guru?->nip ?? null);
 
-            if (! $data['nip']) {
+            if (!$data['nip']) {
                 throw \Illuminate\Validation\ValidationException::withMessages([
                     'nip' => 'NIP wajib diisi untuk guru.',
                 ]);
@@ -1000,7 +1000,7 @@ class AdminController extends Controller
         } elseif ($data['role'] === 'siswa') {
             $data['nisn'] = $data['nisn'] ?: $data['username'] ?: ($pengguna?->siswa?->nisn ?? null);
 
-            if (! $data['nisn']) {
+            if (!$data['nisn']) {
                 throw \Illuminate\Validation\ValidationException::withMessages([
                     'nisn' => 'NISN wajib diisi untuk siswa.',
                 ]);
@@ -1018,7 +1018,7 @@ class AdminController extends Controller
         if ($data['role'] === 'guru') {
             $existingNip = Guru::query()
                 ->where('nip', $data['nip'])
-                ->when($pengguna?->guru, fn ($query) => $query->where('id_guru', '!=', $pengguna->guru->id_guru))
+                ->when($pengguna?->guru, fn($query) => $query->where('id_guru', '!=', $pengguna->guru->id_guru))
                 ->exists();
 
             if ($existingNip) {
@@ -1031,7 +1031,7 @@ class AdminController extends Controller
         if ($data['role'] === 'siswa') {
             $existingNisn = Siswa::query()
                 ->where('nisn', $data['nisn'])
-                ->when($pengguna?->siswa, fn ($query) => $query->where('id_siswa', '!=', $pengguna->siswa->id_siswa))
+                ->when($pengguna?->siswa, fn($query) => $query->where('id_siswa', '!=', $pengguna->siswa->id_siswa))
                 ->exists();
 
             if ($existingNisn) {
@@ -1043,7 +1043,7 @@ class AdminController extends Controller
 
         $existingUser = Pengguna::query()
             ->where('username', $data['username'])
-            ->when($pengguna, fn ($query) => $query->where('id_pengguna', '!=', $pengguna->id_pengguna))
+            ->when($pengguna, fn($query) => $query->where('id_pengguna', '!=', $pengguna->id_pengguna))
             ->first();
 
         if ($existingUser) {
@@ -1152,7 +1152,7 @@ class AdminController extends Controller
             return [];
         }
 
-        $headers = array_map(static fn ($value): string => strtolower(trim((string) $value)), array_shift($rows));
+        $headers = array_map(static fn($value): string => strtolower(trim((string) $value)), array_shift($rows));
         $result = [];
 
         foreach ($rows as $row) {
@@ -1166,7 +1166,7 @@ class AdminController extends Controller
                 $record[$header] = isset($row[$index]) ? trim((string) $row[$index]) : '';
             }
 
-            if (count(array_filter($record, static fn ($value): bool => $value !== '')) === 0) {
+            if (count(array_filter($record, static fn($value): bool => $value !== '')) === 0) {
                 continue;
             }
 
@@ -1219,7 +1219,7 @@ class AdminController extends Controller
         KelasSiswa::query()
             ->where('id_siswa', $idSiswa)
             ->where('is_aktif', true)
-            ->when($exceptId, fn ($query) => $query->where('id_kelas_siswa', '!=', $exceptId))
+            ->when($exceptId, fn($query) => $query->where('id_kelas_siswa', '!=', $exceptId))
             ->update([
                 'is_aktif' => false,
                 'tanggal_keluar' => now()->toDateString(),

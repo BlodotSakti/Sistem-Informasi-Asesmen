@@ -205,8 +205,22 @@ export default function GuruJadwalCbtPage({ session, onLogout }) {
                             </div>
                             
                             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full xl:w-[60%]">
-                                <StatCard label="Total Jadwal" value={loading ? '...' : sesiAsesmenHistory.length} description="Semua sesi ujian yang pernah dibuat" tone="slate" className="!bg-[#EEDCC8] !border-transparent h-full" />
-                                <StatCard label="Ujian Aktif" value={loading ? '...' : summary?.cards?.ujian_aktif ?? 0} description="Ujian yang sedang berlangsung atau akan datang" tone="amber" className="!bg-[#EEDCC8] !border-transparent h-full" />
+                                <StatCard 
+                                    label="Total Jadwal" 
+                                    value={loading ? '...' : sesiAsesmenHistory.length} 
+                                    description="Semua sesi ujian yang pernah dibuat" 
+                                    tone="slate" 
+                                    className="!bg-[#EEDCC8] !border-transparent h-full" 
+                                    icon={<svg className="h-5 w-5 sm:h-6 sm:w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>}
+                                />
+                                <StatCard 
+                                    label="Ujian Aktif" 
+                                    value={loading ? '...' : summary?.cards?.ujian_aktif ?? 0} 
+                                    description="Ujian yang sedang berlangsung atau akan datang" 
+                                    tone="amber" 
+                                    className="!bg-[#EEDCC8] !border-transparent h-full" 
+                                    icon={<svg className="h-5 w-5 sm:h-6 sm:w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>}
+                                />
                                 
                             </div>
                         </div>
@@ -496,7 +510,7 @@ export default function GuruJadwalCbtPage({ session, onLogout }) {
                                 <h3 className="text-xl font-semibold text-slate-900">Buat Jadwal Asesmen (CBT)</h3>
                                 <button type="button" onClick={() => { setIsSesiModalOpen(false); setEditingSesiId(null); }} className="text-slate-400 hover:text-slate-600">&times;</button>
                             </div>
-                            <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
+                            <div className="p-6 space-y-4 max-h-[85vh] overflow-y-auto">
                                 <div className="grid gap-4 md:grid-cols-2">
                                     <label className="space-y-2 text-sm font-medium text-slate-700">
                                         <span>Kelas</span>
@@ -558,7 +572,7 @@ export default function GuruJadwalCbtPage({ session, onLogout }) {
                                     <div className="flex items-center justify-between mb-4">
                                         <h4 className="text-base font-semibold text-slate-900">Pilih Soal dari Bank Soal ({Object.keys(selectedSoalMap).length} Terpilih)</h4>
                                     </div>
-                                    <div className="max-h-64 overflow-y-auto overflow-x-auto border border-border rounded-xl">
+                                    <div className="max-h-[50vh] overflow-y-auto overflow-x-auto border border-border rounded-xl">
                                         <table className="min-w-full text-left text-sm divide-y divide-slate-200">
                                             <thead className="bg-slate-50 sticky top-0">
                                                 <tr>
@@ -592,13 +606,13 @@ export default function GuruJadwalCbtPage({ session, onLogout }) {
                                                                 className="h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary"
                                                             />
                                                         </td>
-                                                        <td className="px-4 py-3 truncate max-w-xs">{item.isi_soal.substring(0, 50)}...</td>
+                                                        <td className="px-4 py-3 min-w-[300px] max-w-md whitespace-pre-wrap break-words">{item.isi_soal}</td>
                                                         <td className="px-4 py-3">{item.tipe_soal === 'pilihan_ganda_kompleks' ? 'PGK' : item.tipe_soal === 'esai' ? 'Esai' : 'PG'}</td>
                                                         <td className="px-4 py-3">
                                                             <div className="flex flex-col">
                                                                 <span>{item.mata_pelajaran?.nama_lengkap || item.mata_pelajaran?.nama_mapel}</span>
                                                                 <span className={`mt-1 inline-flex w-max px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider ${item.created_by === session.user.id_pengguna ? 'bg-primary/10 text-primary' : 'bg-amber-100 text-amber-700'}`}>
-                                                                    {item.created_by === session.user.id_pengguna ? 'Soal Anda' : (item.pembuat?.peran === 'admin' ? 'Soal Admin' : 'Soal Guru Lain')}
+                                                                    {item.created_by === session.user.id_pengguna ? 'Soal Anda' : (item.pembuat?.role === 'admin' ? 'Soal Admin' : 'Soal Guru Lain')}
                                                                 </span>
                                                             </div>
                                                         </td>

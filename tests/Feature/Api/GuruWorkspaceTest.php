@@ -56,7 +56,7 @@ class GuruWorkspaceTest extends TestCase
         $response->assertJsonPath('opsi_jawaban.2', 'x = 4');
 
         $this->assertDatabaseHas('bank_soal', [
-            'id_guru' => $guru->guru->id_guru,
+            'created_by' => $guru->id_pengguna,
             'id_mapel' => $mapel->id_mapel,
             'jenis_soal' => 'pilihan_ganda',
             'kunci_jawaban' => 'x = 4',
@@ -274,14 +274,8 @@ class GuruWorkspaceTest extends TestCase
             'evaluasi_kendala' => 'Diskusi aktif namun perlu penguatan istilah.',
             'catatan_kelas' => 'Pertemuan berjalan lancar.',
             'kehadiran_siswa' => [
-                ['id_siswa' => $siswaA->siswa->id_siswa, 'status_kehadiran' => 'hadir'],
-                ['id_siswa' => $siswaB->siswa->id_siswa, 'status_kehadiran' => 'hadir'],
-            ],
-            'catatan_pribadi_siswa' => [
-                ['id_siswa' => $siswaA->siswa->id_siswa, 'isi_pesan' => 'Bagus dalam diskusi kelas.'],
-            ],
-            'apresiasi_siswa' => [
-                ['id_siswa' => $siswaB->siswa->id_siswa, 'jenis_badge' => 'emas'],
+                ['id_siswa' => $siswaA->siswa->id_siswa, 'status_kehadiran' => 'hadir', 'catatan_pribadi' => 'Bagus dalam diskusi kelas.'],
+                ['id_siswa' => $siswaB->siswa->id_siswa, 'status_kehadiran' => 'hadir', 'jenis_badge' => 'emas'],
             ],
         ]);
 

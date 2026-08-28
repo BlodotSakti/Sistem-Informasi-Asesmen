@@ -421,9 +421,9 @@ class AdminMasterDataTest extends TestCase
         ]);
 
         $filePath = $this->makeExcelFixture([
-            ['id_kelas', 'id_mapel', 'id_guru', 'tahun_ajaran', 'is_aktif'],
-            [$kelas->id_kelas, $mapel->id_mapel, $guru->id_guru, '2026/2027', true],
-            [$kelas->id_kelas, $mapel->id_mapel, $guru->id_guru, '2026/2027', false],
+            ['nama_kelas', 'nama_mapel', 'nama_guru', 'tahun_ajaran', 'is_aktif'],
+            [$kelas->nama_kelas, $mapel->nama_mapel, $guru->nama_lengkap, '2026/2027', true],
+            [$kelas->nama_kelas, $mapel->nama_mapel, $guru->nama_lengkap, '2026/2027', false],
         ]);
 
         $upload = UploadedFile::fake()->createWithContent('penugasan.xlsx', file_get_contents($filePath));

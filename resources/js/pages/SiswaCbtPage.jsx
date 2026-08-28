@@ -75,9 +75,16 @@ export default function SiswaCbtPage({ session, onLogout, idSesi }) {
                     setJawaban({ ...serverAnswers, ...localAnswers });
 
                     // Initialize timer
-                    const startTime = new Date(data.sesi.waktu_mulai).getTime();
+                    const now = new Date().getTime();
                     const durationMs = data.sesi.durasi_menit * 60 * 1000;
-                    let endTime = startTime + durationMs;
+                    
+                    let studentStartTime = localStorage.getItem(`${STORAGE_PREFIX}start-${idSesi}`);
+                    if (!studentStartTime) {
+                        studentStartTime = now;
+                        localStorage.setItem(`${STORAGE_PREFIX}start-${idSesi}`, studentStartTime);
+                    }
+                    
+                    let endTime = parseInt(studentStartTime, 10) + durationMs;
 
                     if (data.sesi.waktu_selesai) {
                         const absoluteEndTime = new Date(data.sesi.waktu_selesai).getTime();
@@ -86,7 +93,6 @@ export default function SiswaCbtPage({ session, onLogout, idSesi }) {
                         }
                     }
 
-                    const now = new Date().getTime();
                     const remaining = Math.max(0, Math.floor((endTime - now) / 1000));
 
                     setTimeLeft(remaining);
@@ -246,6 +252,9 @@ export default function SiswaCbtPage({ session, onLogout, idSesi }) {
                         </div>
                         <h1 className="text-2xl sm:text-3xl font-bold text-slate-800">Ujian Selesai!</h1>
                         <p className="mt-2 text-lg text-slate-500">{resultData.mata_pelajaran} — <span className="capitalize">{resultData.jenis_asesmen}</span></p>
+                        <div className="mt-3 inline-flex items-center rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
+                            Tipe Soal: <span className="ml-1 uppercase text-slate-800">{resultData.tipe_soal || 'CBT'}</span>
+                        </div>
 
                         <div className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-4">
                             <div className="rounded-2xl bg-primary/5 px-4 py-5">
@@ -415,7 +424,9 @@ export default function SiswaCbtPage({ session, onLogout, idSesi }) {
                     </div>
                     <div>
                         <h1 className="font-semibold leading-tight text-accent">{sesiData?.mata_pelajaran || 'Ujian'}</h1>
-                        <p className="text-xs font-medium text-accent uppercase tracking-widest">{sesiData?.jenis_asesmen}</p>
+                        <p className="text-[10px] sm:text-xs font-medium text-accent/80 uppercase tracking-widest">
+                            {sesiData?.tipe_soal || 'CBT'} • {sesiData?.jenis_asesmen}
+                        </p>
                     </div>
                 </div>
 

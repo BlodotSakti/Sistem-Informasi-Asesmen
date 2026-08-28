@@ -82,6 +82,8 @@ Route::middleware('auth:sanctum')->group(function (): void {
 
 		Route::prefix('guru')->as('api.guru.')->middleware('role:guru')->group(function (): void {
 			Route::get('/dashboard-summary', [GuruController::class, 'dashboardSummary'])->name('dashboard-summary');
+			Route::get('/analitik', [GuruController::class, 'analyticsData'])->name('analitik');
+			Route::patch('/penugasan/{id_penugasan}/kkm', [GuruController::class, 'updateKkm'])->name('penugasan.kkm.update');
 			Route::get('/workspace-data', [GuruController::class, 'workspaceData'])->name('workspace-data');
 			Route::get('/bank-soal', [GuruController::class, 'bankSoalIndex'])->name('bank-soal.index');
 			Route::post('/bank-soal', [GuruController::class, 'bankSoalStore'])->name('bank-soal.store');

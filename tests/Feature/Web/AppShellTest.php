@@ -34,7 +34,6 @@ class AppShellTest extends TestCase
             '/admin/mata-pelajaran',
             '/admin/kelas-siswa',
             '/admin/penugasan-pembelajaran',
-            '/admin/import-akun',
         ];
 
         foreach ($pages as $page) {

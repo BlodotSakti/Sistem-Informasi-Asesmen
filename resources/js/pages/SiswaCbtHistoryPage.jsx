@@ -32,25 +32,38 @@ export default function SiswaCbtHistoryPage({ session, onLogout }) {
         return () => { mounted = false; };
     }, [session]);
 
+    const validHistory = useMemo(() => {
+        const now = new Date();
+        return history.filter(item => {
+            if (item.jumlah_dijawab > 0 || item.submitted_at) return true;
+            if (item.waktu_mulai && item.durasi_menit) {
+                const endTime = new Date(new Date(item.waktu_mulai).getTime() + item.durasi_menit * 60000);
+                if (now > endTime) return true;
+            }
+            return false;
+        });
+    }, [history]);
+
     const filteredHistory = useMemo(() => {
         const search = searchTerm.trim().toLowerCase();
-        if (!search) return history;
-        return history.filter((item) =>
+        if (!search) return validHistory;
+        return validHistory.filter((item) =>
             [item.mata_pelajaran, item.kelas, item.jenis_asesmen, item.tipe_soal]
                 .filter(Boolean)
                 .some((v) => String(v).toLowerCase().includes(search))
         );
-    }, [searchTerm, history]);
+    }, [searchTerm, validHistory]);
 
     const stats = useMemo(() => {
-        if (history.length === 0) return { total: 0, rataRata: 0, tertinggi: 0 };
-        const scores = history.map(h => h.total_bobot > 0 ? (h.total_skor / h.total_bobot) * 100 : 0);
+        if (validHistory.length === 0) return { total: 0, rataRata: 0, tertinggi: 0 };
+        
+        const scores = validHistory.map(h => h.total_bobot > 0 ? (h.total_skor / h.total_bobot) * 100 : 0);
         return {
-            total: history.length,
+            total: validHistory.length,
             rataRata: Number((scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(2)),
             tertinggi: Number(Math.max(...scores).toFixed(2)),
         };
-    }, [history]);
+    }, [validHistory]);
 
     const openReview = async (idSesi) => {
         try {
@@ -84,9 +97,44 @@ export default function SiswaCbtHistoryPage({ session, onLogout }) {
                     <p className="text-xs uppercase tracking-[0.4em] text-accent font-bold">Riwayat Ujian CBT</p>
                     <h3 className="mt-2 text-2xl sm:text-3xl font-semibold text-[#EEDCC8]">Nilai CBT yang pernah dikerjakan</h3>
                     <div className="mt-6 grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3">
-                        <StatCard label="Total CBT" value={loading ? '...' : stats.total} description="Ujian yang pernah dikerjakan" tone="blue" className="!bg-[#EEDCC8] !border-transparent" />
-                        <StatCard label="Rata-Rata" value={loading ? '...' : `${stats.rataRata}%`} description="Persentase rata-rata skor" tone="amber" className="!bg-[#EEDCC8] !border-transparent" />
-                        <StatCard label="Tertinggi" value={loading ? '...' : `${stats.tertinggi}%`} description="Persentase skor tertinggi" tone="slate" className="!bg-[#EEDCC8] !border-transparent" />
+                        <StatCard 
+                            label="Total CBT" 
+                            value={loading ? '...' : stats.total} 
+                            description="Ujian yang pernah dikerjakan" 
+                            tone="blue" 
+                            className="!bg-[#EEDCC8] !border-transparent" 
+                            icon={
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                                </svg>
+                            }
+                        />
+                        <StatCard 
+                            label="Rata-Rata" 
+                            value={loading ? '...' : `${stats.rataRata}%`} 
+                            description="Persentase rata-rata skor" 
+                            tone="amber" 
+                            className="!bg-[#EEDCC8] !border-transparent" 
+                            icon={
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path d="M12 14l9-5-9-5-9 5 9 5z" />
+                                    <path d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z" />
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 14l9-5-9-5-9 5 9 5zm0 0l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14zm-4 6v-7.5l4-2.222" />
+                                </svg>
+                            }
+                        />
+                        <StatCard 
+                            label="Tertinggi" 
+                            value={loading ? '...' : `${stats.tertinggi}%`} 
+                            description="Persentase skor tertinggi" 
+                            tone="slate" 
+                            className="!bg-[#EEDCC8] !border-transparent" 
+                            icon={
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+                                </svg>
+                            }
+                        />
                     </div>
                 </section>
 
@@ -116,6 +164,8 @@ export default function SiswaCbtHistoryPage({ session, onLogout }) {
                             <tbody className="divide-y divide-slate-100 bg-white">
                                 {filteredHistory.map((item, index) => {
                                     const persen = item.total_bobot > 0 ? Number(((item.total_skor / item.total_bobot) * 100).toFixed(2)) : 0;
+                                    const isMissed = item.jumlah_dijawab === 0 && !item.submitted_at;
+                                    
                                     return (
                                         <tr key={item.id_sesi} className="align-top hover:bg-slate-50/70">
                                             <td className="px-4 py-3 font-semibold text-slate-500 text-center">{index + 1}</td>
@@ -126,16 +176,26 @@ export default function SiswaCbtHistoryPage({ session, onLogout }) {
                                             <td className="px-4 py-3 text-slate-600">{item.jumlah_dijawab}/{item.jumlah_soal}</td>
                                             <td className="px-4 py-3 text-slate-600">{item.jumlah_benar}</td>
                                             <td className="px-4 py-3 text-center">
-                                                <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-bold ${persen >= 70 ? 'bg-emerald-100 text-emerald-700' : persen >= 50 ? 'bg-amber-100 text-amber-700' : 'bg-rose-100 text-rose-700'}`}>
-                                                    {Number(item.total_skor).toFixed(2)}/{item.total_bobot} ({persen}%)
-                                                </span>
+                                                {isMissed ? (
+                                                    <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-bold bg-rose-100 text-rose-700">
+                                                        Terlewat
+                                                    </span>
+                                                ) : (
+                                                    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-bold ${persen >= 70 ? 'bg-emerald-100 text-emerald-700' : persen >= 50 ? 'bg-amber-100 text-amber-700' : 'bg-rose-100 text-rose-700'}`}>
+                                                        {Number(item.total_skor).toFixed(2)}/{item.total_bobot} ({persen}%)
+                                                    </span>
+                                                )}
                                             </td>
                                             <td className="px-4 py-3 text-center">
                                                 <div className="flex items-center justify-end gap-2">
-                                                    {item.has_analisis && <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary">🤖 AI</span>}
-                                                    <button onClick={() => openReview(item.id_sesi)} className="rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-white transition hover:bg-primary/85">
-                                                        Review
-                                                    </button>
+                                                    {item.has_analisis && !isMissed && <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary">🤖 AI</span>}
+                                                    {isMissed ? (
+                                                        <span className="text-xs font-medium text-slate-400 italic">Tidak ada review</span>
+                                                    ) : (
+                                                        <button onClick={() => openReview(item.id_sesi)} className="rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-white transition hover:bg-primary/85">
+                                                            Review
+                                                        </button>
+                                                    )}
                                                 </div>
                                             </td>
                                         </tr>

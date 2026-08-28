@@ -148,8 +148,8 @@ class AdminUserManagementTest extends TestCase
         $response = $this->withToken($token)->getJson('/api/admin/pengguna?search=arsip&role=siswa&status=archived');
 
         $response->assertOk();
-        $response->assertJsonCount(1, 'data');
-        $response->assertJsonPath('data.0.username', '1234567898124');
+        $response->assertJsonCount(1, 'users.data');
+        $response->assertJsonPath('users.data.0.username', '1234567898124');
     }
 
     protected function createAdminUser(): Pengguna

@@ -85,11 +85,12 @@ class AdminBankSoalController extends Controller
         $data['opsi_jawaban'] = $cleanOptions;
 
         $soal = BankSoal::create($data);
+        $namaMapel = $soal->mataPelajaran->nama_lengkap ?? "ID {$data['id_mapel']}";
 
         LogAktivitas::create([
             'id_pengguna_aktor' => request()->user()->id_pengguna,
             'tipe_aksi' => 'Buat Soal',
-            'deskripsi' => "Admin membuat 1 soal baru secara manual untuk mata pelajaran dengan ID {$data['id_mapel']}.",
+            'deskripsi' => "Admin membuat 1 soal baru secara manual untuk mata pelajaran {$namaMapel}.",
         ]);
 
         return response()->json($soal, 201);
@@ -221,10 +222,13 @@ class AdminBankSoalController extends Controller
             $created[] = BankSoal::create($soal);
         }
 
+        $mapel = \App\Models\MataPelajaran::find($data['id_mapel']);
+        $namaMapel = $mapel ? $mapel->nama_lengkap : "ID {$data['id_mapel']}";
+
         LogAktivitas::create([
             'id_pengguna_aktor' => $penggunaId,
             'tipe_aksi' => 'Import Soal',
-            'deskripsi' => "Admin mengimpor " . count($created) . " soal baru dari file Excel/CSV untuk mata pelajaran dengan ID {$data['id_mapel']}.",
+            'deskripsi' => "Admin mengimpor " . count($created) . " soal baru dari file Excel/CSV untuk mata pelajaran {$namaMapel}.",
         ]);
 
         return response()->json(['message' => count($created) . ' soal berhasil diimport.', 'data' => $created], 201);

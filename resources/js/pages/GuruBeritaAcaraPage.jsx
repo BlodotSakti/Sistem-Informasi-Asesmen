@@ -50,6 +50,7 @@ export default function GuruBeritaAcaraPage({ session, onLogout }) {
     const [beritaSearch, setBeritaSearch] = useState('');
     const [editingBeritaId, setEditingBeritaId] = useState(null);
     const [beritaKelasFilter, setBeritaKelasFilter] = useState('');
+    const [pageMap, setPageMap] = useState({});
 
     const showToast = (message) => {
         setToast(message);
@@ -102,6 +103,23 @@ export default function GuruBeritaAcaraPage({ session, onLogout }) {
         return filtered;
     }, [beritaSearch, beritaKelasFilter, workspace.berita_acara]);
 
+    const groupedBeritaRows = useMemo(() => {
+        const groups = {};
+        beritaRows.forEach((item) => {
+            const classId = item.id_kelas;
+            const className = item.kelas?.nama_kelas || 'Lainnya';
+            if (!groups[classId]) {
+                groups[classId] = {
+                    id: classId,
+                    name: className,
+                    items: [],
+                };
+            }
+            groups[classId].items.push(item);
+        });
+        return Object.values(groups).sort((a, b) => a.name.localeCompare(b.name));
+    }, [beritaRows]);
+
     const mapelBySelectedClass = useMemo(
         () =>
             (workspace.teaching_assignments || [])
@@ -122,7 +140,22 @@ export default function GuruBeritaAcaraPage({ session, onLogout }) {
                 grouped[row.status_kehadiran] += 1;
             }
         });
-        return `H:${grouped.hadir} I:${grouped.izin} S:${grouped.sakit} A:${grouped.alpa}`;
+        return (
+            <div className="flex flex-wrap gap-1.5">
+                <span title="Hadir" className="inline-flex items-center gap-1 rounded-md bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-inset ring-emerald-600/20 shadow-sm">
+                    H : {grouped.hadir}
+                </span>
+                <span title="Izin" className="inline-flex items-center gap-1 rounded-md bg-blue-50 px-2 py-1 text-xs font-semibold text-blue-700 ring-1 ring-inset ring-blue-700/10 shadow-sm">
+                    I : {grouped.izin}
+                </span>
+                <span title="Sakit" className="inline-flex items-center gap-1 rounded-md bg-amber-50 px-2 py-1 text-xs font-semibold text-amber-700 ring-1 ring-inset ring-amber-600/20 shadow-sm">
+                    S : {grouped.sakit}
+                </span>
+                <span title="Alpa" className="inline-flex items-center gap-1 rounded-md bg-rose-50 px-2 py-1 text-xs font-semibold text-rose-700 ring-1 ring-inset ring-rose-600/10 shadow-sm">
+                    A : {grouped.alpa}
+                </span>
+            </div>
+        );
     };
 
     const optionalSummary = (items) => {
@@ -135,7 +168,25 @@ export default function GuruBeritaAcaraPage({ session, onLogout }) {
                 grouped.badge += 1;
             }
         });
-        return `Catatan:${grouped.catatan} Badge:${grouped.badge}`;
+        
+        if (grouped.catatan === 0 && grouped.badge === 0) return null;
+
+        return (
+            <div className="flex flex-wrap gap-1.5 mt-2">
+                {grouped.catatan > 0 && (
+                    <span title="Total Catatan" className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-0.5 text-[10px] font-semibold text-slate-600">
+                        <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                        {grouped.catatan} Catatan
+                    </span>
+                )}
+                {grouped.badge > 0 && (
+                    <span title="Total Badge" className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-0.5 text-[10px] font-semibold text-slate-600">
+                        <svg className="h-3 w-3 text-amber-500" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 2a1 1 0 011 1v1.323l3.954 1.582 1.599-.8a1 1 0 01.894 1.79l-1.233.616 1.738 5.42a1 1 0 01-.286 1.051l-3.111 2.924V18a1 1 0 01-2 0v-1.92L10 17.5l-2.555-1.42V18a1 1 0 01-2 0v-1.076l-3.111-2.924a1 1 0 01-.286-1.051l1.738-5.42-1.233-.617a1 1 0 01.894-1.788l1.599.799L9 4.323V3a1 1 0 011-1zm-5.165 9.113l7.98 2.98.547-1.706-7.98-2.98-.547 1.706zm4.184-2.868l-3.528 1.319.349-1.089 3.528-1.319-.349 1.089z" clipRule="evenodd" /></svg>
+                        {grouped.badge} Badge
+                    </span>
+                )}
+            </div>
+        );
     };
 
     const resetBeritaForm = () => {
@@ -263,8 +314,22 @@ export default function GuruBeritaAcaraPage({ session, onLogout }) {
                             </div>
                             
                             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full xl:w-[60%]">
-                                <StatCard label="Total Kelas" value={loading ? '...' : (workspace?.kelas_options || []).length} description="Kelas yang diampu" tone="slate" className="!bg-[#EEDCC8] !border-transparent h-full" />
-                                <StatCard label="Total BAP" value={loading ? '...' : (workspace?.berita_acara || []).length} description="Semua Berita Acara" tone="blue" className="!bg-[#EEDCC8] !border-transparent h-full" />
+                                <StatCard 
+                                    label="Total Kelas" 
+                                    value={loading ? '...' : (workspace?.kelas_options || []).length} 
+                                    description="Kelas yang diampu" 
+                                    tone="slate" 
+                                    className="!bg-[#EEDCC8] !border-transparent h-full" 
+                                    icon={<svg className="h-5 w-5 sm:h-6 sm:w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>}
+                                />
+                                <StatCard 
+                                    label="Total BAP" 
+                                    value={loading ? '...' : (workspace?.berita_acara || []).length} 
+                                    description="Semua Berita Acara" 
+                                    tone="blue" 
+                                    className="!bg-[#EEDCC8] !border-transparent h-full" 
+                                    icon={<svg className="h-5 w-5 sm:h-6 sm:w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" /></svg>}
+                                />
                                
                             </div>
                         </div>
@@ -493,65 +558,138 @@ export default function GuruBeritaAcaraPage({ session, onLogout }) {
                             </div>
                         </div>
                     </div>
-                    <div className="overflow-x-auto">
-                        <table className="min-w-full divide-y divide-slate-200 text-left text-sm">
-                            <thead className="border-b border-border bg-slate-50 text-xs uppercase tracking-[0.2em] text-slate-500">
-                                <tr>
-                                    <th className="px-5 py-4 font-semibold">No</th>
-                                    <th className="px-5 py-4 font-semibold">Tanggal</th>
-                                    <th className="px-5 py-4 font-semibold">Kelas</th>
-                                    <th className="px-5 py-4 font-semibold">Mapel</th>
-                                    <th className="px-5 py-4 font-semibold">Pertemuan</th>
-                                    <th className="px-5 py-4 font-semibold">Topik</th>
-                                    <th className="px-5 py-4 font-semibold">Rekap Presensi</th>
-                                    <th className="px-5 py-4 font-semibold">Catatan / Badge</th>
-                                    <th className="px-5 py-4 font-semibold">Aksi</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-100 bg-white">
-                                {beritaRows.map((item, index) => (
-                                    <tr key={item.id_berita_acara} className="align-top hover:bg-slate-50/70">
-                                        <td className="px-5 py-4 font-semibold text-slate-500">{index + 1}</td>
-                                        <td className="px-5 py-4 text-slate-600">{formatDateLabel(item.tanggal)}</td>
-                                        <td className="px-5 py-4 font-semibold text-slate-900">{item.kelas?.nama_kelas || '-'}</td>
-                                        <td className="px-5 py-4 text-slate-600">{item.mata_pelajaran?.nama_lengkap || item.mata_pelajaran?.nama_mapel || '-'}</td>
-                                        <td className="px-5 py-4 text-slate-600">Pertemuan ke-{item.pertemuan_ke}</td>
-                                        <td className="px-5 py-4 text-slate-600">{item.materi_bahasan}</td>
-                                        <td className="px-5 py-4 text-slate-600">
-                                            <div className="font-medium text-slate-900">{attendanceSummary(item.kehadiran_siswa)}</div>
-                                            <div className="mt-1 text-xs text-slate-500">{optionalSummary(item.kehadiran_siswa)}</div>
-                                        </td>
-                                        <td className="px-5 py-4 text-slate-600">
-                                            {(item.kehadiran_siswa || []).some((row) => String(row.catatan_pribadi || '').trim() || String(row.jenis_badge || '').trim()) ? (
-                                                <div className="space-y-2">
-                                                    {(item.kehadiran_siswa || []).filter((row) => String(row.catatan_pribadi || '').trim() || String(row.jenis_badge || '').trim()).map((row) => (
-                                                        <div key={`${item.id_berita_acara}-${row.id_siswa}`} className="rounded-2xl bg-slate-50 px-3 py-2 text-xs text-slate-600">
-                                                            <p className="font-semibold text-slate-900">{studentNameMap[row.id_siswa] || `Siswa ${row.id_siswa}`}</p>
-                                                            {row.catatan_pribadi ? <p className="mt-1">Catatan: {row.catatan_pribadi}</p> : null}
-                                                            {row.jenis_badge ? <p className="mt-1">Badge: {row.jenis_badge}</p> : null}
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            ) : (
-                                                <span className="text-slate-400">Tidak ada penguatan</span>
-                                            )}
-                                        </td>
-                                        <td className="px-5 py-4 text-slate-600">
+                    <div className="p-5 bg-slate-50/30">
+                        {groupedBeritaRows.length > 0 ? groupedBeritaRows.map((group) => {
+                            const itemsPerPage = 15;
+                            const currentPage = pageMap[group.id] || 1;
+                            const totalPages = Math.ceil(group.items.length / itemsPerPage);
+                            const currentItems = group.items.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+                            
+                            return (
+                            <details key={group.id} open className="group mb-5 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm last:mb-0">
+                                <summary className="flex cursor-pointer items-center justify-between border-b border-slate-200 bg-slate-50/80 px-5 py-4 list-none transition hover:bg-slate-100 [&::-webkit-details-marker]:hidden">
+                                    <div className="flex items-center gap-4">
+                                        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-white text-slate-400 shadow-sm border border-slate-200 group-open:bg-primary group-open:text-white group-open:border-primary transition-colors">
+                                            <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>
+                                        </div>
+                                        <div>
+                                            <h5 className="text-base font-bold text-slate-800">Kelas {group.name}</h5>
+                                            <p className="mt-0.5 flex items-center gap-1.5 text-xs font-medium text-slate-500">
+                                                <span className="flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-slate-200 px-1.5 text-[10px] text-slate-600">{group.items.length}</span>
+                                                Berita Acara
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div className="text-slate-400 transition-transform group-open:-rotate-180">
+                                        <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" /></svg>
+                                    </div>
+                                </summary>
+                                <div className="overflow-x-auto">
+                                    <table className="min-w-full divide-y divide-slate-100 text-left text-sm">
+                                        <thead className="bg-white text-[11px] uppercase tracking-[0.2em] text-slate-400">
+                                            <tr>
+                                                <th className="px-5 py-4 font-semibold">No</th>
+                                                <th className="px-5 py-4 font-semibold">Tanggal</th>
+                                                <th className="px-5 py-4 font-semibold">Mapel</th>
+                                                <th className="px-5 py-4 font-semibold">Pertemuan</th>
+                                                <th className="px-5 py-4 font-semibold">Topik</th>
+                                                <th className="px-5 py-4 font-semibold">Rekap Presensi</th>
+                                                <th className="px-5 py-4 font-semibold min-w-[240px]">Catatan / Badge</th>
+                                                <th className="px-5 py-4 font-semibold">Aksi</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-slate-50 bg-white">
+                                            {currentItems.map((item, index) => (
+                                                <tr key={item.id_berita_acara} className="align-top transition-colors hover:bg-slate-50/80">
+                                                    <td className="px-5 py-4 font-semibold text-slate-400">{(currentPage - 1) * itemsPerPage + index + 1}</td>
+                                                    <td className="px-5 py-4 text-slate-600 whitespace-nowrap">{formatDateLabel(item.tanggal)}</td>
+                                                    <td className="px-5 py-4 text-slate-600">{item.mata_pelajaran?.nama_lengkap || item.mata_pelajaran?.nama_mapel || '-'}</td>
+                                                    <td className="px-5 py-4 text-slate-600 whitespace-nowrap">Pertemuan ke-{item.pertemuan_ke}</td>
+                                                    <td className="px-5 py-4 text-slate-600 max-w-[200px] truncate" title={item.materi_bahasan}>{item.materi_bahasan}</td>
+                                                    <td className="px-5 py-4 text-slate-600">
+                                                        <div className="font-medium text-slate-900">{attendanceSummary(item.kehadiran_siswa)}</div>
+                                                        <div className="mt-1 text-xs text-slate-500">{optionalSummary(item.kehadiran_siswa)}</div>
+                                                    </td>
+                                                    <td className="px-5 py-4 text-slate-600">
+                                                        {(item.kehadiran_siswa || []).some((row) => String(row.catatan_pribadi || '').trim() || String(row.jenis_badge || '').trim()) ? (
+                                                            <div className="space-y-2">
+                                                                {(item.kehadiran_siswa || []).filter((row) => String(row.catatan_pribadi || '').trim() || String(row.jenis_badge || '').trim()).map((row) => (
+                                                                    <div key={`${item.id_berita_acara}-${row.id_siswa}`} className="rounded-xl bg-slate-50 border border-slate-100 px-3 py-2 text-xs text-slate-600">
+                                                                        <p className="font-semibold text-slate-900">{studentNameMap[row.id_siswa] || `Siswa ${row.id_siswa}`}</p>
+                                                                        {row.catatan_pribadi ? <p className="mt-1 text-slate-500">{row.catatan_pribadi}</p> : null}
+                                                                        {row.jenis_badge ? (
+                                                                            <p className="mt-1.5 inline-flex items-center gap-1 font-medium text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full ring-1 ring-amber-500/20">
+                                                                                <svg className="h-3 w-3" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 2a1 1 0 011 1v1.323l3.954 1.582 1.599-.8a1 1 0 01.894 1.79l-1.233.616 1.738 5.42a1 1 0 01-.286 1.051l-3.111 2.924V18a1 1 0 01-2 0v-1.92L10 17.5l-2.555-1.42V18a1 1 0 01-2 0v-1.076l-3.111-2.924a1 1 0 01-.286-1.051l1.738-5.42-1.233-.617a1 1 0 01.894-1.788l1.599.799L9 4.323V3a1 1 0 011-1zm-5.165 9.113l7.98 2.98.547-1.706-7.98-2.98-.547 1.706zm4.184-2.868l-3.528 1.319.349-1.089 3.528-1.319-.349 1.089z" clipRule="evenodd" /></svg>
+                                                                                {row.jenis_badge}
+                                                                            </p>
+                                                                        ) : null}
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        ) : (
+                                                            <span className="text-slate-400 italic text-xs">Tidak ada penguatan</span>
+                                                        )}
+                                                    </td>
+                                                    <td className="px-5 py-4 text-slate-600">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => openEditBeritaAcara(item)}
+                                                            className="rounded-full bg-accent/10 px-4 py-2 text-[11px] font-bold uppercase tracking-[0.15em] text-primary transition hover:bg-accent hover:text-white"
+                                                        >
+                                                            Edit
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                                {totalPages > 1 && (
+                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-t border-slate-100 bg-slate-50/50 px-5 py-4">
+                                        <span className="text-xs text-slate-500 font-medium">
+                                            Menampilkan {(currentPage - 1) * itemsPerPage + 1} - {Math.min(currentPage * itemsPerPage, group.items.length)} dari {group.items.length} data
+                                        </span>
+                                        <div className="flex flex-wrap items-center gap-1.5">
                                             <button
-                                                type="button"
-                                                onClick={() => openEditBeritaAcara(item)}
-                                                className="rounded-full bg-accent/40 px-4 py-2 text-xs font-bold uppercase tracking-[0.18em] text-primary transition-colors hover:bg-accent shadow-sm"
+                                                disabled={currentPage === 1}
+                                                onClick={() => setPageMap(prev => ({...prev, [group.id]: currentPage - 1}))}
+                                                className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                                             >
-                                                Edit
+                                                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" /></svg>
                                             </button>
-                                        </td>
-                                    </tr>
-                                ))}
-                                {!loading && beritaRows.length === 0 ? (
-                                    <tr><td colSpan="9" className="px-5 py-6 text-sm text-slate-500">Belum ada data berita acara yang cocok.</td></tr>
-                                ) : null}
-                            </tbody>
-                        </table>
+                                            {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                                                <button
+                                                    key={page}
+                                                    onClick={() => setPageMap(prev => ({...prev, [group.id]: page}))}
+                                                    className={`flex h-8 w-8 items-center justify-center rounded-lg border text-xs font-semibold transition-colors ${
+                                                        currentPage === page
+                                                            ? 'border-primary bg-primary text-white shadow-sm shadow-primary/30'
+                                                            : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
+                                                    }`}
+                                                >
+                                                    {page}
+                                                </button>
+                                            ))}
+                                            <button
+                                                disabled={currentPage === totalPages}
+                                                onClick={() => setPageMap(prev => ({...prev, [group.id]: currentPage + 1}))}
+                                                className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                            >
+                                                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" /></svg>
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+                            </details>
+                        )}) : (
+                            <div className="rounded-2xl border border-slate-200 bg-white p-12 text-center">
+                                <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-slate-50 text-slate-400">
+                                    <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                                </div>
+                                <h4 className="text-sm font-semibold text-slate-900">Belum ada data</h4>
+                                <p className="mt-1 text-sm text-slate-500">Tidak ada berita acara yang cocok dengan pencarian Anda.</p>
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>

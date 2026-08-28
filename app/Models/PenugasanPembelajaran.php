@@ -23,11 +23,12 @@ class PenugasanPembelajaran extends Model
     protected $primaryKey = 'id_penugasan_pembelajaran';
 
     protected $fillable = [
-        'id_kelas',
-        'id_mapel',
         'id_guru',
+        'id_mapel',
+        'id_kelas',
         'tahun_ajaran',
         'is_aktif',
+        'nilai_kkm',
     ];
 
     protected $casts = [

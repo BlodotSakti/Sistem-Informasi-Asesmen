@@ -54,13 +54,12 @@ const CustomXAxisTick = ({ x, y, payload, chartMode }) => {
     const mainLabel = parts[0] || '';
     const subLabel = chartMode !== 'bar' ? (parts[1] || '') : '';
     
-    // With horizontal scrolling, we don't need to squash labels too much
-    const maxLen = 18;
-    const displayLabel = mainLabel.length > maxLen ? mainLabel.slice(0, maxLen) + '…' : mainLabel;
+    // Tampilkan label secara utuh tanpa dipotong
+    const displayLabel = mainLabel;
     
     return (
         <g transform={`translate(${x},${y})`}>
-            <text x={0} y={0} dy={16} textAnchor="end" fill="#64748b" fontSize={10} fontWeight={600} transform="rotate(-25)">
+            <text x={0} y={0} dy={16} textAnchor="end" fill="#64748b" fontSize={10} fontWeight={600} transform="rotate(-35)">
                 <tspan x={0} dy="0em">{displayLabel}</tspan>
                 {subLabel && <tspan x={0} dy="1.2em" fill="#94a3b8" fontSize={9} fontWeight={500}>{subLabel}</tspan>}
             </text>
@@ -193,10 +192,56 @@ export default function SiswaDashboard({ session, onLogout }) {
                     </div>
 
                     <div className="mt-5 sm:mt-8 grid grid-cols-2 gap-3 lg:grid-cols-4 relative z-10">
-                        <StatCard label="Rata-rata Nilai" value={loading ? '...' : cards.rata_rata ?? 0} description="Skor CBT semester ini" tone="blue" className="!bg-[#EEDCC8] !border-transparent" />
-                        <StatCard label="Ujian Menunggu" value={loading ? '...' : cards.ujian_menunggu ?? 0} description="Misi CBT yang siap dikerjakan" tone="amber" className="!bg-[#EEDCC8] !border-transparent" />
-                        <StatCard label="Asesmen Selesai" value={loading ? '...' : cards.tugas_aktif ?? 0} description="CBT yang telah ditaklukkan" tone="emerald" className="!bg-[#EEDCC8] !border-transparent" />
-                        <StatCard label="Total Lencana" value={loading ? '...' : cards.apresiasi ?? 0} description="Penghargaan apresiasi guru" tone="indigo" className="!bg-[#EEDCC8] !border-transparent" />
+                        <StatCard 
+                            label="Rata-rata Nilai" 
+                            value={loading ? '...' : cards.rata_rata ?? 0} 
+                            description="Skor CBT semester ini" 
+                            tone="blue" 
+                            className="!bg-[#EEDCC8] !border-transparent" 
+                            icon={
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path d="M12 14l9-5-9-5-9 5 9 5z" />
+                                    <path d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z" />
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 14l9-5-9-5-9 5 9 5zm0 0l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14zm-4 6v-7.5l4-2.222" />
+                                </svg>
+                            }
+                        />
+                        <StatCard 
+                            label="Ujian Menunggu" 
+                            value={loading ? '...' : cards.ujian_menunggu ?? 0} 
+                            description="Misi CBT yang siap dikerjakan" 
+                            tone="amber" 
+                            className="!bg-[#EEDCC8] !border-transparent" 
+                            icon={
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                            }
+                        />
+                        <StatCard 
+                            label="Asesmen Selesai" 
+                            value={loading ? '...' : cards.tugas_aktif ?? 0} 
+                            description="CBT yang telah ditaklukkan" 
+                            tone="emerald" 
+                            className="!bg-[#EEDCC8] !border-transparent" 
+                            icon={
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                            }
+                        />
+                        <StatCard 
+                            label="Total Lencana" 
+                            value={loading ? '...' : cards.apresiasi ?? 0} 
+                            description="Penghargaan apresiasi guru" 
+                            tone="indigo" 
+                            className="!bg-[#EEDCC8] !border-transparent" 
+                            icon={
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
+                                </svg>
+                            }
+                        />
                     </div>
                 </section>
 
@@ -340,7 +385,7 @@ export default function SiswaDashboard({ session, onLogout }) {
                                                             </linearGradient>
                                                         </defs>
                                                         <CartesianGrid strokeDasharray="4 4" vertical={false} stroke="#f1f5f9" />
-                                                        <XAxis dataKey="name" axisLine={false} tickLine={false} tick={<CustomXAxisTick chartMode="area" />} interval={0} height={70} />
+                                                        <XAxis dataKey="name" axisLine={false} tickLine={false} tick={<CustomXAxisTick chartMode="area" />} interval={0} height={100} />
                                                         <YAxis axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 11, fontWeight: 600 }} domain={[0, 100]} ticks={[0, 25, 50, 75, 100]} interval={0} />
                                                         <Tooltip content={<CustomTooltip />} cursor={{ stroke: '#cbd5e1', strokeWidth: 2, strokeDasharray: '4 4' }} />
                                                         <Area type="monotone" dataKey="Nilai" stroke="#1E3A5F" strokeWidth={3} fillOpacity={1} fill="url(#colorNilai)" dot={{ r: 5, fill: '#1E3A5F', stroke: '#fff', strokeWidth: 2 }} activeDot={{ r: 8, fill: '#1E3A5F', stroke: '#fff', strokeWidth: 3 }} />
@@ -348,7 +393,7 @@ export default function SiswaDashboard({ session, onLogout }) {
                                                 ) : (
                                                     <BarChart data={barColoredData} margin={{ top: 10, right: 10, left: -25, bottom: 20 }}>
                                                         <CartesianGrid strokeDasharray="4 4" vertical={false} stroke="#f1f5f9" />
-                                                        <XAxis dataKey="name" axisLine={false} tickLine={false} tick={<CustomXAxisTick chartMode="bar" />} interval={0} height={70} />
+                                                        <XAxis dataKey="name" axisLine={false} tickLine={false} tick={<CustomXAxisTick chartMode="bar" />} interval={0} height={100} />
                                                         <YAxis axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 11, fontWeight: 600 }} domain={[0, 100]} ticks={[0, 25, 50, 75, 100]} interval={0} />
                                                         <Tooltip content={<CustomTooltip />} cursor={{ fill: '#f8fafc' }} />
                                                         <Bar dataKey="Nilai" radius={[6, 6, 0, 0]} barSize={32} animationDuration={600}>
@@ -413,10 +458,10 @@ export default function SiswaDashboard({ session, onLogout }) {
                             <div className="mt-4 w-full h-56 sm:h-64">
                                 {barChartData.length > 0 ? (
                                     <ResponsiveContainer width="100%" height="100%">
-                                        <BarChart data={barChartData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }} layout="vertical">
+                                        <BarChart data={barChartData} margin={{ top: 5, right: 5, left: 0, bottom: 0 }} layout="vertical">
                                             <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="#f1f5f9" />
                                             <XAxis type="number" domain={[0, 100]} hide />
-                                            <YAxis dataKey="subject" type="category" axisLine={false} tickLine={false} tick={{ fill: '#475569', fontSize: 10, fontWeight: 600 }} width={75} />
+                                            <YAxis dataKey="subject" type="category" axisLine={false} tickLine={false} tick={{ fill: '#475569', fontSize: 10, fontWeight: 600 }} width={90} />
                                             <Tooltip content={<CustomTooltip />} cursor={{ fill: '#f8fafc' }} />
                                             <Bar dataKey="A" fill="#D9A441" radius={[0, 4, 4, 0]} barSize={18} />
                                         </BarChart>
@@ -436,14 +481,15 @@ export default function SiswaDashboard({ session, onLogout }) {
                                 <h3 className="mt-1 text-base sm:text-xl font-extrabold text-white">Galeri Lencana</h3>
                                 <p className="text-xs text-slate-400 mt-1">Koleksi apresiasi spesial dari gurumu!</p>
                             </div>
-                            <div className="relative z-10 grid grid-cols-3 gap-2 sm:gap-3">
+                            <div className="relative z-10 grid grid-cols-3 gap-2 sm:gap-3 pb-6">
                                 {badgeData.length > 0 ? badgeData.map((badge) => (
                                     <div key={badge.id_apresiasi} className="group relative flex flex-col items-center">
                                         <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl flex items-center justify-center shadow-lg shadow-amber-500/10 transition-transform group-hover:scale-110 group-hover:rotate-3 cursor-pointer">
                                             <BadgeIcon name={badge.jenis_badge} className="w-12 h-12 sm:w-16 sm:h-16" />
                                         </div>
-                                        <div className="mt-2 text-center opacity-0 group-hover:opacity-100 transition-opacity absolute -bottom-8 w-[150%] bg-slate-800 text-white text-[10px] font-bold px-2 py-1 rounded-lg z-20 pointer-events-none shadow-xl">
+                                        <div className="mt-2 text-center opacity-0 group-hover:opacity-100 transition-opacity absolute -bottom-8 w-max px-3 bg-slate-800 text-white text-[10px] font-bold py-1.5 rounded-lg z-20 pointer-events-none shadow-xl">
                                             {badge.jenis_badge}
+                                            <div className="absolute left-1/2 -top-1 -translate-x-1/2 border-4 border-transparent border-b-slate-800"></div>
                                         </div>
                                     </div>
                                 )) : (

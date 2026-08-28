@@ -126,7 +126,7 @@ export default function NotificationPanel() {
             </button>
 
             {isOpen && (
-                <div className="absolute right-0 mt-3 w-80 origin-top-right rounded-2xl bg-white shadow-2xl ring-1 ring-slate-900/5 focus:outline-none z-50">
+                <div className="absolute -right-2 sm:right-0 mt-3 w-72 sm:w-80 origin-top-right rounded-2xl bg-white shadow-2xl ring-1 ring-slate-900/5 focus:outline-none z-50">
                     <div className="border-b border-slate-100 px-4 py-3 flex justify-between items-center bg-slate-50 rounded-t-2xl">
                         <h3 className="text-sm font-semibold text-slate-900">Notifikasi</h3>
                         <button 
