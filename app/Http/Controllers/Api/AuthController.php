@@ -22,7 +22,7 @@ class AuthController extends Controller
             ->where('username', $credentials['username'])
             ->first();
 
-        if (! $pengguna || ! Hash::check($credentials['password'], $pengguna->password)) {
+        if (! $pengguna || $pengguna->username !== $credentials['username'] || ! Hash::check($credentials['password'], $pengguna->password)) {
             return response()->json([
                 'message' => 'Username atau password tidak valid.',
             ], 422);
