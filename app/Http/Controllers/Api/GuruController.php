@@ -142,6 +142,10 @@ class GuruController extends Controller
             'opsi_jawaban' => ['nullable', 'array'],
             'opsi_jawaban.*' => ['nullable', 'string', 'max:255'],
             'gambar_soal' => ['nullable', 'image', 'mimes:jpeg,png,jpg', 'max:2048'],
+            'keywords' => ['nullable', 'array'],
+            'keywords.*' => ['string'],
+            'rule_weight' => ['nullable', 'numeric', 'min:0', 'max:1'],
+            'lsa_weight' => ['nullable', 'numeric', 'min:0', 'max:1'],
         ]);
 
         $validator->after(function ($validator) use ($request): void {
@@ -196,6 +200,9 @@ class GuruController extends Controller
         if ($data['jenis_soal'] === 'esai') {
             $cleanOptions = [];
             $data['kunci_jawaban'] = trim((string) $data['kunci_jawaban']);
+            $data['keywords'] = array_values(array_filter(array_map('trim', $data['keywords'] ?? [])));
+            $data['rule_weight'] = $data['rule_weight'] ?? 0.50;
+            $data['lsa_weight'] = $data['lsa_weight'] ?? 0.50;
         } elseif ($data['jenis_soal'] === 'pilihan_ganda_kompleks') {
             $data['kunci_jawaban'] = json_encode(array_values(array_filter(array_map('trim', (array) $data['kunci_jawaban']))));
         } else {
@@ -224,6 +231,10 @@ class GuruController extends Controller
             'opsi_jawaban' => ['nullable', 'array'],
             'opsi_jawaban.*' => ['nullable', 'string', 'max:255'],
             'gambar_soal' => ['nullable', 'image', 'mimes:jpeg,png,jpg', 'max:2048'],
+            'keywords' => ['nullable', 'array'],
+            'keywords.*' => ['string'],
+            'rule_weight' => ['nullable', 'numeric', 'min:0', 'max:1'],
+            'lsa_weight' => ['nullable', 'numeric', 'min:0', 'max:1'],
         ]);
 
         $validator->after(function ($validator) use ($request): void {
@@ -283,6 +294,9 @@ class GuruController extends Controller
         if ($data['jenis_soal'] === 'esai') {
             $cleanOptions = [];
             $data['kunci_jawaban'] = trim((string) $data['kunci_jawaban']);
+            $data['keywords'] = array_values(array_filter(array_map('trim', $data['keywords'] ?? [])));
+            $data['rule_weight'] = $data['rule_weight'] ?? 0.50;
+            $data['lsa_weight'] = $data['lsa_weight'] ?? 0.50;
         } elseif ($data['jenis_soal'] === 'pilihan_ganda_kompleks') {
             $data['kunci_jawaban'] = json_encode(array_values(array_filter(array_map('trim', (array) $data['kunci_jawaban']))));
         } else {
