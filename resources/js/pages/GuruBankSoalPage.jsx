@@ -25,6 +25,9 @@ export default function GuruBankSoalPage({ session, onLogout }) {
         gambar_soal: null,
         gambar_soal_url: '',
         hapus_gambar: false,
+        keywords: '',
+        rule_weight: 0.5,
+        lsa_weight: 0.5,
     });
     const [bankSearch, setBankSearch] = useState('');
     const [bankFilterMapel, setBankFilterMapel] = useState('');
@@ -97,6 +100,9 @@ export default function GuruBankSoalPage({ session, onLogout }) {
             gambar_soal: null,
             gambar_soal_url: item.gambar_soal ? `/storage/${item.gambar_soal}` : '',
             hapus_gambar: false,
+            keywords: item.keywords ? item.keywords.join('\n') : '',
+            rule_weight: item.rule_weight || 0.5,
+            lsa_weight: item.lsa_weight || 0.5,
         });
         
         // Smooth scroll ke arah form
@@ -118,6 +124,9 @@ export default function GuruBankSoalPage({ session, onLogout }) {
             gambar_soal: null,
             gambar_soal_url: '',
             hapus_gambar: false,
+            keywords: '',
+            rule_weight: 0.5,
+            lsa_weight: 0.5,
         }));
     };
 
@@ -166,6 +175,15 @@ export default function GuruBankSoalPage({ session, onLogout }) {
                 });
             } else {
                 formData.append('kunci_jawaban', bankForm.kunci_jawaban);
+            }
+
+            if (bankForm.jenis_soal === 'esai') {
+                const keywordArray = bankForm.keywords.split('\n').map(k => k.trim()).filter(Boolean);
+                keywordArray.forEach(kw => {
+                    formData.append('keywords[]', kw);
+                });
+                formData.append('rule_weight', bankForm.rule_weight);
+                formData.append('lsa_weight', bankForm.lsa_weight);
             }
 
             if (bankForm.gambar_soal instanceof File) {
@@ -486,6 +504,23 @@ export default function GuruBankSoalPage({ session, onLogout }) {
                                 <input required value={bankForm.kunci_jawaban} onChange={(event) => setBankForm((current) => ({ ...current, kunci_jawaban: event.target.value }))} className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-slate-900" placeholder={bankForm.jenis_soal === 'esai' ? 'Panduan jawaban esai' : 'Harus sama dengan salah satu opsi'} />
                             )}
                         </label>
+                        {bankForm.jenis_soal === 'esai' && (
+                            <>
+                                <label className="space-y-2 text-sm font-medium text-slate-700 md:col-span-2">
+                                    <span>Kata Kunci Penilaian AI (Satu per baris)</span>
+                                    <p className="text-xs font-normal text-slate-500">Gunakan <code>;</code> untuk memisahkan sinonim. Gunakan <code>**</code> untuk wajib persis. <br/>Contoh: <code>**Soekarno;Bung Karno</code></p>
+                                    <textarea rows="3" value={bankForm.keywords} onChange={(event) => setBankForm((current) => ({ ...current, keywords: event.target.value }))} className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-slate-900" placeholder="Kata kunci 1&#10;Kata kunci 2;Sinonim 2" />
+                                </label>
+                                <label className="space-y-2 text-sm font-medium text-slate-700">
+                                    <span>Bobot Aturan (Rule-Based)</span>
+                                    <input type="number" step="0.1" min="0" max="1" value={bankForm.rule_weight} onChange={(event) => setBankForm((current) => ({ ...current, rule_weight: event.target.value }))} className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-slate-900" />
+                                </label>
+                                <label className="space-y-2 text-sm font-medium text-slate-700">
+                                    <span>Bobot Makna (LSA)</span>
+                                    <input type="number" step="0.1" min="0" max="1" value={bankForm.lsa_weight} onChange={(event) => setBankForm((current) => ({ ...current, lsa_weight: event.target.value }))} className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-slate-900" />
+                                </label>
+                            </>
+                        )}
                     </div>
                     <div className="mt-4 flex flex-wrap gap-3">
                         <button type="submit" className="rounded-full bg-primary px-5 py-3 text-sm font-semibold text-white transition hover:bg-primary/85">
