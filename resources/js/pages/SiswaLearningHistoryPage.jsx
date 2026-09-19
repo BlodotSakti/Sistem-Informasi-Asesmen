@@ -12,6 +12,7 @@ export default function SiswaLearningHistoryPage({ session, onLogout }) {
     const [error, setError] = useState('');
     const [search, setSearch] = useState('');
     const [subjectFilter, setSubjectFilter] = useState('');
+    const [statusFilter, setStatusFilter] = useState('');
 
     useEffect(() => {
         let mounted = true;
@@ -53,9 +54,12 @@ export default function SiswaLearningHistoryPage({ session, onLogout }) {
 
         return rows.filter((item) => {
             const matchSubject = subjectFilter === '' || String(item.id_mapel) === String(subjectFilter);
+            const matchStatus = statusFilter === '' || item.status_kehadiran === statusFilter;
+
+            if (!matchSubject || !matchStatus) return false;
 
             if (!query) {
-                return matchSubject;
+                return true;
             }
 
             return matchSubject && [
@@ -171,7 +175,36 @@ export default function SiswaLearningHistoryPage({ session, onLogout }) {
                                             <td className="px-4 py-3 text-slate-600">
                                                 <div className="font-semibold text-slate-900">{item.total_pertemuan} pertemuan</div>
                                                 <div className="mt-1 text-xs text-slate-500">Terakhir {item.pertemuan_terakhir || '-'}</div>
-                                                <div className="mt-1 text-xs text-slate-500">H:{item.hadir} I:{item.izin} S:{item.sakit} A:{item.alpa}</div>
+                                                <div className="mt-2 flex flex-wrap gap-1.5">
+                                                    <span title="Hadir" className="inline-flex items-center gap-1 rounded-md bg-emerald-50 px-2 py-1 text-[11px] font-semibold text-emerald-700 ring-1 ring-inset ring-emerald-600/20 shadow-sm">
+                                                        H : {item.hadir}
+                                                    </span>
+                                                    <span title="Izin" className="inline-flex items-center gap-1 rounded-md bg-blue-50 px-2 py-1 text-[11px] font-semibold text-blue-700 ring-1 ring-inset ring-blue-700/10 shadow-sm">
+                                                        I : {item.izin}
+                                                    </span>
+                                                    <span title="Sakit" className="inline-flex items-center gap-1 rounded-md bg-amber-50 px-2 py-1 text-[11px] font-semibold text-amber-700 ring-1 ring-inset ring-amber-600/20 shadow-sm">
+                                                        S : {item.sakit}
+                                                    </span>
+                                                    <span title="Alpa" className="inline-flex items-center gap-1 rounded-md bg-rose-50 px-2 py-1 text-[11px] font-semibold text-rose-700 ring-1 ring-inset ring-rose-600/10 shadow-sm">
+                                                        A : {item.alpa}
+                                                    </span>
+                                                </div>
+                                                {(item.catatan_pribadi > 0 || item.apresiasi > 0) && (
+                                                    <div className="flex flex-wrap gap-1.5 mt-2">
+                                                        {item.catatan_pribadi > 0 && (
+                                                            <span title="Total Catatan" className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-0.5 text-[10px] font-semibold text-slate-600">
+                                                                <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                                                                {item.catatan_pribadi} Catatan
+                                                            </span>
+                                                        )}
+                                                        {item.apresiasi > 0 && (
+                                                            <span title="Total Badge" className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-0.5 text-[10px] font-semibold text-slate-600">
+                                                                <svg className="h-3 w-3 text-amber-500" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 2a1 1 0 011 1v1.323l3.954 1.582 1.599-.8a1 1 0 01.894 1.79l-1.233.616 1.738 5.42a1 1 0 01-.286 1.051l-3.111 2.924V18a1 1 0 01-2 0v-1.92L10 17.5l-2.555-1.42V18a1 1 0 01-2 0v-1.076l-3.111-2.924a1 1 0 01-.286-1.051l1.738-5.42-1.233-.617a1 1 0 01.894-1.788l1.599.799L9 4.323V3a1 1 0 011-1zm-5.165 9.113l7.98 2.98.547-1.706-7.98-2.98-.547 1.706zm4.184-2.868l-3.528 1.319.349-1.089 3.528-1.319-.349 1.089z" clipRule="evenodd" /></svg>
+                                                                {item.apresiasi} Badge
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                )}
                                             </td>
                                         </tr>
                                     ))}
@@ -209,6 +242,20 @@ export default function SiswaLearningHistoryPage({ session, onLogout }) {
                                     ]}
                                     placeholder="Semua Mapel"
                                     icon="📚"
+                                    align="right"
+                                />
+                                <FilterSelect
+                                    value={statusFilter}
+                                    onChange={setStatusFilter}
+                                    options={[
+                                        { value: '', label: 'Semua Status' },
+                                        { value: 'hadir', label: 'Hadir' },
+                                        { value: 'izin', label: 'Izin' },
+                                        { value: 'sakit', label: 'Sakit' },
+                                        { value: 'alpa', label: 'Alpa' },
+                                    ]}
+                                    placeholder="Semua Status"
+                                    icon="👤"
                                     align="right"
                                 />
                             </div>
