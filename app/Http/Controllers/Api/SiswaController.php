@@ -566,7 +566,23 @@ class SiswaController extends Controller
                     try {
                         $response = \Illuminate\Support\Facades\Http::timeout(10)->post($apiUrl . '/grade', [
                             'student_answer' => $teksJawaban,
-                            'keywords' => $keywords,
+                            'reference_answers' => array_values(array_filter(array_map('trim', explode('|', $bankSoal->kunci_jawaban ?? '')))),
+                            'keywords' => array_map(function($kw) {
+                                $kw = trim($kw);
+                                $strict = false;
+                                if (str_starts_with($kw, '**')) {
+                                    $strict = true;
+                                    $kw = trim(substr($kw, 2));
+                                    if (str_ends_with($kw, '**')) {
+                                        $kw = trim(substr($kw, 0, -2));
+                                    }
+                                }
+                                return [
+                                    'keyword' => $kw,
+                                    'weight' => 1.0,
+                                    'strict' => $strict
+                                ];
+                            }, $keywords),
                             'rule_weight' => (float) ($bankSoal->rule_weight ?? 0.5),
                             'lsa_weight' => (float) ($bankSoal->lsa_weight ?? 0.5)
                         ]);
@@ -575,8 +591,8 @@ class SiswaController extends Controller
                             $gradeData = $response->json();
                             $scoreRatio = $gradeData['final_score'] ?? 0;
                             $essayGrades[$detail->id_detail] = [
-                                'score' => round($scoreRatio * $detail->bobot_nilai, 4),
-                                'is_correct' => $scoreRatio >= 0.5 
+                                'score' => round(($scoreRatio / 100) * $detail->bobot_nilai, 4),
+                                'is_correct' => $scoreRatio >= 50 
                             ];
                         } else {
                             $essayGrades[$detail->id_detail] = ['score' => 0, 'is_correct' => false];
