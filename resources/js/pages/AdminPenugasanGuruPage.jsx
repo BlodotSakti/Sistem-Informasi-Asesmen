@@ -477,6 +477,10 @@ export default function AdminPenugasanGuruPage({ session, onLogout }) {
                                     </div>
                                 </div>
                             </div>
+                            <p className="text-[11px] sm:text-xs text-slate-500 mb-2 italic flex items-center">
+                                <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path></svg>
+                                Geser tabel ke kanan/kiri untuk melihat detail selengkapnya
+                            </p>
                             <div className="overflow-x-auto">
                                 <table className="min-w-full divide-y divide-slate-200 text-left text-sm">
                                     <thead className={TABLE_HEAD_CLASS}>

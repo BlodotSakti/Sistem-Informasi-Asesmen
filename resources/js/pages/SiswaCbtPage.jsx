@@ -79,7 +79,9 @@ export default function SiswaCbtPage({ session, onLogout, idSesi }) {
                     const durationMs = data.sesi.durasi_menit * 60 * 1000;
                     
                     let studentStartTime = localStorage.getItem(`${STORAGE_PREFIX}start-${idSesi}`);
-                    if (!studentStartTime) {
+                    
+                    // Reset timer jika belum ada atau jika guru telah mereset ujian (jawaban kosong) namun timer lokal sudah habis
+                    if (!studentStartTime || ((data.jawaban_tersimpan || []).length === 0 && (parseInt(studentStartTime, 10) + durationMs) <= now)) {
                         studentStartTime = now;
                         localStorage.setItem(`${STORAGE_PREFIX}start-${idSesi}`, studentStartTime);
                     }
@@ -171,7 +173,13 @@ export default function SiswaCbtPage({ session, onLogout, idSesi }) {
 
     // Timer
     useEffect(() => {
-        if (loading || submitting || timeLeft <= 0 || resultData) return;
+        if (loading || submitting || resultData) return;
+
+        if (timeLeft <= 0) {
+            // Jika waktu sudah habis di awal, otomatis kumpulkan
+            handleSubmit();
+            return;
+        }
 
         const timerId = setInterval(() => {
             setTimeLeft((prev) => {
@@ -356,11 +364,11 @@ export default function SiswaCbtPage({ session, onLogout, idSesi }) {
                     {/* Analisis Diagnostik AI */}
                     <AnalisisDiagnostikCard analisis={resultData.analisis_diagnostik} />
 
-                    <div className="mt-10 text-center">
-                        <a href="/siswa/riwayat-cbt" className="mr-4 rounded-xl border border-border bg-white px-6 py-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50">
+                    <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
+                        <a href="/siswa/riwayat-cbt" className="w-full sm:w-auto rounded-xl border border-border bg-white px-6 py-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 text-center">
                             Lihat Riwayat CBT
                         </a>
-                        <a href="/siswa/dashboard" className="rounded-xl bg-primary px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-primary/85">
+                        <a href="/siswa/dashboard" className="w-full sm:w-auto rounded-xl bg-primary px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-primary/85 text-center">
                             Kembali ke Dashboard
                         </a>
                     </div>
@@ -417,33 +425,33 @@ export default function SiswaCbtPage({ session, onLogout, idSesi }) {
     return (
         <div className="min-h-screen bg-slate-100 font-sans text-slate-900 flex flex-col selection:bg-primary/10">
             {/* Header */}
-            <header className="sticky top-0 z-10 flex h-14 sm:h-16 items-center justify-between border-b border-border bg-secondary px-3 sm:px-6 backdrop-blur-md shadow-sm">
-                <div className="flex items-center space-x-4">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-accent font-bold">
+            <header className="sticky top-0 z-10 flex flex-col sm:flex-row items-center justify-between border-b border-border bg-secondary px-3 py-3 sm:py-0 sm:px-6 sm:h-16 backdrop-blur-md shadow-sm gap-3 sm:gap-0">
+                <div className="flex w-full sm:w-auto items-center space-x-3 justify-center sm:justify-start">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary text-accent font-bold">
                         CBT
                     </div>
-                    <div>
-                        <h1 className="font-semibold leading-tight text-accent">{sesiData?.mata_pelajaran || 'Ujian'}</h1>
-                        <p className="text-[10px] sm:text-xs font-medium text-accent/80 uppercase tracking-widest">
+                    <div className="min-w-0 text-center sm:text-left flex-1 sm:flex-none">
+                        <h1 className="font-semibold leading-tight text-accent truncate text-sm sm:text-base">{sesiData?.mata_pelajaran || 'Ujian'}</h1>
+                        <p className="text-[10px] sm:text-xs font-medium text-accent/80 uppercase tracking-widest truncate">
                             {sesiData?.tipe_soal || 'CBT'} • {sesiData?.jenis_asesmen}
                         </p>
                     </div>
                 </div>
 
-                <div className="flex items-center space-x-6">
-                    <div className="flex items-center space-x-3 rounded-xl bg-primary px-4 py-2 border border-border shadow-inner">
-                        <span className="relative flex h-3 w-3">
+                <div className="flex w-full sm:w-auto items-center gap-2 sm:gap-6">
+                    <div className="flex flex-1 sm:flex-none items-center justify-center space-x-2 sm:space-x-3 rounded-xl bg-primary px-3 py-2 sm:px-4 border border-border shadow-inner">
+                        <span className="relative flex h-2.5 w-2.5 sm:h-3 sm:w-3 shrink-0">
                             <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-secondary/70 opacity-75"></span>
-                            <span className="relative inline-flex h-3 w-3 rounded-full bg-secondary"></span>
+                            <span className="relative inline-flex h-2.5 w-2.5 sm:h-3 sm:w-3 rounded-full bg-secondary"></span>
                         </span>
-                        <span className={`font-mono text-lg font-bold tracking-wider ${timeLeft < 300 ? 'text-rose-600' : 'text-accent'}`}>
+                        <span className={`font-mono text-sm sm:text-lg font-bold tracking-wider ${timeLeft < 300 ? 'text-rose-600' : 'text-accent'}`}>
                             {formatTime(timeLeft)}
                         </span>
                     </div>
                     <button
                         onClick={() => setShowSummary(true)}
                         disabled={submitting}
-                        className="rounded-xl bg-primary px-5 py-2 text-sm font-semibold text-accent shadow-sm transition hover:bg-primary/85 disabled:opacity-50"
+                        className="flex-1 sm:flex-none rounded-xl bg-primary px-3 py-2 sm:px-5 text-xs sm:text-sm font-semibold text-accent shadow-sm transition hover:bg-primary/85 disabled:opacity-50 whitespace-nowrap text-center"
                     >
                         Kumpulkan Jawaban
                     </button>
@@ -452,27 +460,51 @@ export default function SiswaCbtPage({ session, onLogout, idSesi }) {
 
             <main className="mx-auto flex w-full max-w-7xl flex-1 flex-col lg:flex-row items-start gap-4 sm:gap-8 p-3 sm:p-6">
                 {/* Mobile Question Palette */}
-                <div className="w-full lg:hidden">
-                    <div className="flex gap-1.5 overflow-x-auto pb-2 scrollbar-hide">
-                        {soalData.map((soal, idx) => {
-                            const hasAnswered = !!jawaban[soal.id_detail];
-                            const isActive = idx === currentIndex;
-                            return (
-                                <button
-                                    key={soal.id_detail}
-                                    onClick={() => setCurrentIndex(idx)}
-                                    className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-xs font-bold transition-all ${
-                                        isActive
-                                            ? 'bg-primary text-white shadow-md ring-2 ring-primary ring-offset-1'
-                                            : hasAnswered
-                                            ? 'bg-emerald-100 text-emerald-700'
-                                            : 'bg-white text-slate-500 border border-border'
-                                    }`}
-                                >
-                                    {idx + 1}
-                                </button>
-                            );
-                        })}
+                <div className="w-full lg:hidden mb-4">
+                    <div className="rounded-3xl border border-border bg-secondary p-6 shadow-sm">
+                        <h3 className="mb-4 text-sm font-bold uppercase tracking-widest text-accent">Navigasi Soal</h3>
+
+                        <div className="grid grid-cols-5 gap-2 sm:grid-cols-8">
+                            {soalData.map((soal, idx) => {
+                                const hasAnswered = !!jawaban[soal.id_detail];
+                                const isActive = idx === currentIndex;
+
+                                return (
+                                    <button
+                                        key={soal.id_detail}
+                                        onClick={() => setCurrentIndex(idx)}
+                                        className={`flex h-12 w-full items-center justify-center rounded-xl font-semibold transition-all ${
+                                            isActive
+                                                ? 'bg-primary text-white shadow-md ring-2 ring-primary ring-offset-2'
+                                                : hasAnswered
+                                                ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200'
+                                                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                                        }`}
+                                    >
+                                        {idx + 1}
+                                    </button>
+                                );
+                            })}
+                        </div>
+
+                        <div className="mt-8 space-y-3 border-t border-slate-100 pt-6">
+                            <div className="flex items-center text-sm">
+                                <span className="mr-3 block h-4 w-4 rounded-md bg-emerald-100"></span>
+                                <span className="text-accent">Sudah Dijawab</span>
+                            </div>
+                            <div className="flex items-center text-sm">
+                                <span className="mr-3 block h-4 w-4 rounded-md bg-slate-100"></span>
+                                <span className="text-accent">Belum Dijawab</span>
+                            </div>
+                            <div className="flex items-center text-sm">
+                                <span className="mr-3 block h-4 w-4 rounded-md bg-primary"></span>
+                                <span className="text-accent">Sedang Dibuka</span>
+                            </div>
+                        </div>
+
+                        <div className="mt-6 border-t border-slate-100 pt-4 text-center text-xs text-accent">
+                            Jawaban tersimpan otomatis
+                        </div>
                     </div>
                 </div>
 

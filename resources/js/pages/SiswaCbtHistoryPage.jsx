@@ -146,6 +146,10 @@ export default function SiswaCbtHistoryPage({ session, onLogout }) {
                         <span>Cari riwayat</span>
                         <input value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-slate-900" placeholder="Mapel, kelas, jenis..." />
                     </label>
+                    <p className="text-[11px] sm:text-xs text-slate-500 mb-2 italic flex items-center">
+                        <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path></svg>
+                        Geser tabel ke kanan/kiri untuk melihat detail selengkapnya
+                    </p>
                     <div className="overflow-x-auto">
                         <table className="min-w-full divide-y divide-slate-200 text-left text-sm">
                             <thead className="border-b border-border bg-slate-50 text-xs uppercase tracking-[0.2em] text-slate-500">
@@ -256,7 +260,14 @@ export default function SiswaCbtHistoryPage({ session, onLogout }) {
                                             {(reviewData.soal || []).map((item, idx) => (
                                                 <div key={item.id_detail} className={`rounded-2xl border p-4 ${item.is_correct ? 'border-emerald-200 bg-emerald-50/30' : 'border-rose-200 bg-rose-50/30'}`}>
                                                     <div className="flex items-start justify-between mb-2">
-                                                        <h4 className="font-semibold text-slate-800">Soal {idx + 1}</h4>
+                                                        <div className="flex items-center gap-2">
+                                                            <h4 className="font-semibold text-slate-800">Soal {idx + 1}</h4>
+                                                            {item.taksonomi_bloom && (
+                                                                <span className="rounded bg-indigo-50 border border-indigo-200 px-2 py-0.5 text-xs font-bold text-indigo-700">
+                                                                    {item.taksonomi_bloom.toUpperCase()}
+                                                                </span>
+                                                            )}
+                                                        </div>
                                                         <span className={`rounded-full px-3 py-1 text-xs font-bold ${item.is_correct ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
                                                             {item.is_correct ? '✓ Benar' : '✗ Salah'} — {item.skor_diperoleh}/{item.bobot_nilai}
                                                         </span>
@@ -314,15 +325,16 @@ export default function SiswaCbtHistoryPage({ session, onLogout }) {
                                                     )}
 
                                                     {/* Essay answers */}
-                                                    {item.jenis_soal === 'essay' && (
+                                                    {/* Essay answers */}
+                                                    {(item.jenis_soal === 'essay' || item.jenis_soal === 'esai') && (
                                                         <div className="grid gap-2 text-sm sm:grid-cols-2">
                                                             <div className="rounded-xl bg-white/80 border border-border px-4 py-2">
                                                                 <span className="font-medium text-slate-500">Jawaban Anda:</span>
-                                                                <p className="mt-1 text-slate-700">{item.jawaban_siswa || <em className="text-slate-400">Tidak dijawab</em>}</p>
+                                                                <p className="mt-1 text-slate-700 whitespace-pre-wrap">{item.jawaban_siswa || <em className="text-slate-400">Tidak dijawab</em>}</p>
                                                             </div>
                                                             <div className="rounded-xl bg-white/80 border border-border px-4 py-2">
                                                                 <span className="font-medium text-slate-500">Kunci Jawaban:</span>
-                                                                <p className="mt-1 text-slate-700">{formatJawaban(item.kunci_jawaban, item.jenis_soal)}</p>
+                                                                <p className="mt-1 text-slate-700 whitespace-pre-wrap">{formatJawaban(item.kunci_jawaban, item.jenis_soal)}</p>
                                                             </div>
                                                         </div>
                                                     )}

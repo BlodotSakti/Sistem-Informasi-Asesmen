@@ -145,7 +145,7 @@ function App() {
         window.location.replace(`/${payload.user.role}/dashboard`);
     };
 
-    const onLogout = async () => {
+    const onLogout = async (reason = null) => {
         if (session?.token) {
             await fetch(apiBase('/api/auth/logout'), {
                 method: 'POST',
@@ -159,8 +159,57 @@ function App() {
 
         clearSession();
         setSession(null);
+        if (reason === 'timeout') {
+            localStorage.setItem('sia-session-expired', 'true');
+        }
         window.location.replace('/login');
     };
+
+    // Idle Tracking Effect
+    useEffect(() => {
+        if (!session?.token) return;
+
+        // Pengecualian: Jangan aktifkan auto-logout jika siswa sedang dalam ujian
+        if (pathname.startsWith('/siswa/cbt/')) {
+            return;
+        }
+
+        let timeoutId;
+        const TIMEOUT_DURATION = 60 * 60 * 1000; // 60 menit dalam milidetik
+
+        const handleIdle = () => {
+            onLogout('timeout');
+        };
+
+        const resetTimer = () => {
+            if (timeoutId) clearTimeout(timeoutId);
+            timeoutId = setTimeout(handleIdle, TIMEOUT_DURATION);
+        };
+
+        // Mulai timer pertama kali
+        resetTimer();
+
+        // Daftar event yang dianggap sebagai aktivitas pengguna
+        const events = ['mousemove', 'keydown', 'mousedown', 'touchstart', 'scroll'];
+        
+        let isThrottled = false;
+        const throttleReset = () => {
+            if (!isThrottled) {
+                resetTimer();
+                isThrottled = true;
+                setTimeout(() => (isThrottled = false), 1000); // Throttling 1 detik agar tidak terlalu sering mereset
+            }
+        };
+
+        // Pasang event listener ke window
+        events.forEach(event => window.addEventListener(event, throttleReset));
+
+        // Bersihkan saat unmount atau saat dependensi berubah
+        return () => {
+            if (timeoutId) clearTimeout(timeoutId);
+            events.forEach(event => window.removeEventListener(event, throttleReset));
+        };
+    }, [session, pathname]);
 
     const page = useMemo(() => {
         const adminRouteMap = {

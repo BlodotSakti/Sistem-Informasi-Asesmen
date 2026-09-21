@@ -203,6 +203,9 @@ class AdminBankSoalController extends Controller
             'soal.*.topik_materi' => ['required', 'string', 'max:255'],
             'soal.*.level_kognitif' => ['required', 'in:C1,C2,C3,C4,C5,C6'],
             'soal.*.opsi_jawaban' => ['nullable', 'array'],
+            'soal.*.keywords' => ['nullable', 'array'],
+            'soal.*.rule_weight' => ['nullable', 'numeric'],
+            'soal.*.lsa_weight' => ['nullable', 'numeric'],
         ]);
 
         $penggunaId = $request->user()->id_pengguna;
@@ -218,6 +221,9 @@ class AdminBankSoalController extends Controller
             if ($soal['jenis_soal'] === 'pilihan_ganda_kompleks' && is_string($soal['kunci_jawaban'])) {
                 $soal['kunci_jawaban'] = json_encode(array_values(array_filter(array_map('trim', explode(',', $soal['kunci_jawaban'])))));
             }
+            
+            $soal['rule_weight'] = $soal['rule_weight'] ?? 0;
+            $soal['lsa_weight'] = $soal['lsa_weight'] ?? 0;
             
             $created[] = BankSoal::create($soal);
         }

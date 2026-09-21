@@ -125,7 +125,7 @@ export default function DashboardLayout({ title, user, navigation, onLogout, pro
                             <button
                                 type="button"
                                 onClick={onLogout}
-                                className="rounded-full bg-primary px-4 py-2 md:px-5 md:py-2.5 text-xs md:text-sm font-semibold text-accent transition hover:bg-primary/85 whitespace-nowrap"
+                                className="rounded-full bg-primary px-4 py-2 md:px-5 md:py-2.5 text-xs md:text-sm font-semibold text-accent transition hover:bg-blue-900 hover:text-accent whitespace-nowrap"
                             >
                                 Logout
                             </button>

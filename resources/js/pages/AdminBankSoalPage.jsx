@@ -181,7 +181,8 @@ export default function AdminBankSoalPage({ session, onLogout }) {
     const downloadTemplateExcel = () => {
         const headers = [
             "nama_mapel", "isi_soal", "opsi_a", "opsi_b", "opsi_c", "opsi_d", "opsi_e",
-            "kunci_jawaban", "jenis_soal", "topik_materi", "level_kognitif"
+            "kunci_jawaban", "jenis_soal", "topik_materi", "level_kognitif",
+            "keywords", "rule_weight", "lsa_weight"
         ];
 
         const exampleData = [
@@ -196,20 +197,26 @@ export default function AdminBankSoalPage({ session, onLogout }) {
                 "kunci_jawaban": "Thomas Edison",
                 "jenis_soal": "pilihan_ganda",
                 "topik_materi": "Sejarah Penemuan",
-                "level_kognitif": "C1"
+                "level_kognitif": "C1",
+                "keywords": "",
+                "rule_weight": "",
+                "lsa_weight": ""
             },
             {
                 "nama_mapel": "Bahasa Indonesia (X)",
-                "isi_soal": "1 + 1 = ?",
-                "opsi_a": "1",
-                "opsi_b": "2",
-                "opsi_c": "3",
-                "opsi_d": "4",
-                "opsi_e": "5",
-                "kunci_jawaban": "2",
-                "jenis_soal": "pilihan_ganda",
-                "topik_materi": "Matematika Dasar",
-                "level_kognitif": "C2"
+                "isi_soal": "Jelaskan apa yang dimaksud dengan majas personifikasi beserta satu contohnya!",
+                "opsi_a": "",
+                "opsi_b": "",
+                "opsi_c": "",
+                "opsi_d": "",
+                "opsi_e": "",
+                "kunci_jawaban": "Majas personifikasi adalah gaya bahasa yang memberikan sifat-sifat manusia kepada benda mati. Contoh: Angin menari-nari di sela dedaunan.",
+                "jenis_soal": "esai",
+                "topik_materi": "Gaya Bahasa",
+                "level_kognitif": "C3",
+                "keywords": "majas, gaya bahasa, sifat manusia, benda mati",
+                "rule_weight": 0.4,
+                "lsa_weight": 0.6
             },
             {
                 "nama_mapel": "Bahasa Indonesia (X)",
@@ -222,7 +229,10 @@ export default function AdminBankSoalPage({ session, onLogout }) {
                 "kunci_jawaban": "Python, JavaScript, C++",
                 "jenis_soal": "pilihan_ganda_kompleks",
                 "topik_materi": "Informatika",
-                "level_kognitif": "C2"
+                "level_kognitif": "C2",
+                "keywords": "",
+                "rule_weight": "",
+                "lsa_weight": ""
             }
         ];
 
@@ -232,7 +242,7 @@ export default function AdminBankSoalPage({ session, onLogout }) {
 
         const wscols = [
             {wch: 25}, {wch: 40}, {wch: 20}, {wch: 20}, {wch: 20}, {wch: 20}, {wch: 20},
-            {wch: 20}, {wch: 15}, {wch: 20}, {wch: 15},
+            {wch: 30}, {wch: 15}, {wch: 20}, {wch: 15}, {wch: 30}, {wch: 15}, {wch: 15}
         ];
         worksheet['!cols'] = wscols;
 
@@ -302,13 +312,21 @@ export default function AdminBankSoalPage({ session, onLogout }) {
                     if (row.opsi_d) opsi.push(String(row.opsi_d));
                     if (row.opsi_e) opsi.push(String(row.opsi_e));
 
+                    let keywords = [];
+                    if (row.keywords) {
+                        keywords = String(row.keywords).split(',').map(s => s.trim()).filter(Boolean);
+                    }
+
                     mapelGroup[resolvedId].push({
                         isi_soal: String(row.isi_soal || ''),
                         jenis_soal: row.jenis_soal || 'pilihan_ganda',
                         kunci_jawaban: String(row.kunci_jawaban || ''),
                         topik_materi: row.topik_materi || 'Umum',
                         level_kognitif: row.level_kognitif || 'C1',
-                        opsi_jawaban: opsi
+                        opsi_jawaban: opsi,
+                        keywords: keywords,
+                        rule_weight: row.rule_weight !== undefined && row.rule_weight !== '' ? parseFloat(row.rule_weight) : 0,
+                        lsa_weight: row.lsa_weight !== undefined && row.lsa_weight !== '' ? parseFloat(row.lsa_weight) : 0,
                     });
                 });
 
@@ -519,6 +537,10 @@ export default function AdminBankSoalPage({ session, onLogout }) {
                                             <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" /></svg>
                                         </div>
                                     </summary>
+                                    <p className="text-[11px] sm:text-xs text-slate-500 mb-2 italic flex items-center">
+                                        <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path></svg>
+                                        Geser tabel ke kanan/kiri untuk melihat detail selengkapnya
+                                    </p>
                                     <div className="overflow-x-auto">
                                         <table className="min-w-full divide-y divide-slate-100 text-left text-sm">
                                             <thead className="bg-white text-[11px] uppercase tracking-[0.2em] text-slate-400">

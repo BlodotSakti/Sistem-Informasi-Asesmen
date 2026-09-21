@@ -96,6 +96,8 @@ Route::middleware('auth:sanctum')->group(function (): void {
 			Route::patch('/sesi-asesmen/{id_sesi}', [GuruController::class, 'sesiAsesmenUpdate'])->name('sesi-asesmen.update');
 			Route::delete('/sesi-asesmen/{id_sesi}', [GuruController::class, 'sesiAsesmenDestroy'])->name('sesi-asesmen.destroy');
 			Route::get('/sesi-asesmen/{id_sesi}/detail', [GuruController::class, 'sesiAsesmenDetail'])->name('sesi-asesmen.detail');
+			Route::put('/sesi-asesmen/{id_sesi}/jawaban/{id_detail}/siswa/{id_siswa}/score', [GuruController::class, 'updateSkorJawaban'])->name('sesi-asesmen.update-skor');
+			Route::post('/sesi-asesmen/{id_sesi}/validasi-nilai/{id_siswa}', [GuruController::class, 'validasiNilai'])->name('sesi-asesmen.validasi-nilai');
 			Route::get('/berita-acara', [GuruController::class, 'beritaAcaraIndex'])->name('berita-acara.index');
 			Route::post('/berita-acara', [GuruController::class, 'beritaAcaraStore'])->name('berita-acara.store');
 			Route::patch('/berita-acara/{id_berita_acara}', [GuruController::class, 'beritaAcaraUpdate'])->name('berita-acara.update');

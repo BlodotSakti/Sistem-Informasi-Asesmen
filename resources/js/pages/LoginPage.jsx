@@ -18,6 +18,13 @@ export default function LoginPage({ session, onLogin }) {
         if (session?.role) {
             window.location.replace(`/${session.role}/dashboard`);
         }
+
+        // Cek apakah baru saja di-logout otomatis karena idle
+        const isSessionExpired = localStorage.getItem('sia-session-expired');
+        if (isSessionExpired === 'true') {
+            setError('Sesi Anda telah habis karena tidak ada aktivitas. Silakan login kembali.');
+            localStorage.removeItem('sia-session-expired');
+        }
     }, [session]);
 
     const handleSubmit = async (event) => {
