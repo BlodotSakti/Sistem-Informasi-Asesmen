@@ -58,10 +58,14 @@ class BankSoal extends Model
         'topik_materi',
         'level_kognitif',
         'gambar_soal',
+        'keywords',
+        'rule_weight',
+        'lsa_weight',
     ];
 
     protected $casts = [
         'opsi_jawaban' => 'array',
+        'keywords' => 'array',
     ];
 
     public function pembuat(): BelongsTo

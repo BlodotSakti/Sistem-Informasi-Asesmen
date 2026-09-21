@@ -542,7 +542,72 @@ class SiswaController extends Controller
         // Deduplikasi: hanya ambil jawaban terakhir per id_detail
         $jawabanByDetail = collect($data['jawaban'])->keyBy('id_detail')->values()->all();
 
-        DB::transaction(function () use ($jawabanByDetail, $siswa, $details, &$totalSkor, &$resultPerSoal) {
+        // --- Auto-Grading Essay API Calls ---
+        $essayGrades = [];
+        $apiUrl = env('ESSAY_GRADER_API_URL');
+        
+        foreach ($jawabanByDetail as $jawab) {
+            $detail = $details->get($jawab['id_detail']);
+            if (!$detail || !$detail->bankSoal) continue;
+            
+            $bankSoal = $detail->bankSoal;
+            $teksJawaban = $jawab['teks_jawaban'] ?? null;
+            
+            if ($bankSoal->jenis_soal === 'esai' && $teksJawaban !== null && $teksJawaban !== '') {
+                $keywords = $bankSoal->keywords ?? [];
+                
+                // Cek flag MANUAL_REVIEW
+                if (in_array('MANUAL_REVIEW', $keywords)) {
+                    $essayGrades[$detail->id_detail] = ['score' => 0, 'is_correct' => false];
+                    continue;
+                }
+
+                if ($apiUrl) {
+                    try {
+                        $response = \Illuminate\Support\Facades\Http::timeout(10)->post($apiUrl . '/grade', [
+                            'student_answer' => $teksJawaban,
+                            'reference_answers' => array_values(array_filter(array_map('trim', explode('|', $bankSoal->kunci_jawaban ?? '')))),
+                            'keywords' => array_map(function($kw) {
+                                $kw = trim($kw);
+                                $strict = false;
+                                if (str_starts_with($kw, '**')) {
+                                    $strict = true;
+                                    $kw = trim(substr($kw, 2));
+                                    if (str_ends_with($kw, '**')) {
+                                        $kw = trim(substr($kw, 0, -2));
+                                    }
+                                }
+                                return [
+                                    'keyword' => $kw,
+                                    'weight' => 1.0,
+                                    'strict' => $strict
+                                ];
+                            }, $keywords),
+                            'rule_weight' => (float) ($bankSoal->rule_weight ?? 0.5),
+                            'lsa_weight' => (float) ($bankSoal->lsa_weight ?? 0.5)
+                        ]);
+                        
+                        if ($response->successful()) {
+                            $gradeData = $response->json();
+                            $scoreRatio = $gradeData['final_score'] ?? 0;
+                            $essayGrades[$detail->id_detail] = [
+                                'score' => round(($scoreRatio / 100) * $detail->bobot_nilai, 4),
+                                'is_correct' => $scoreRatio >= 50 
+                            ];
+                        } else {
+                            $essayGrades[$detail->id_detail] = ['score' => 0, 'is_correct' => false];
+                        }
+                    } catch (\Exception $e) {
+                        \Illuminate\Support\Facades\Log::error('Essay Grading API Error: ' . $e->getMessage());
+                        $essayGrades[$detail->id_detail] = ['score' => 0, 'is_correct' => false];
+                    }
+                } else {
+                    $essayGrades[$detail->id_detail] = ['score' => 0, 'is_correct' => false];
+                }
+            }
+        }
+
+        DB::transaction(function () use ($jawabanByDetail, $siswa, $details, &$totalSkor, &$resultPerSoal, $essayGrades) {
             foreach ($jawabanByDetail as $jawab) {
                 $detail = $details->get($jawab['id_detail']);
                 if (!$detail || !$detail->bankSoal) continue;
@@ -579,8 +644,12 @@ class SiswaController extends Controller
                             $skorDiperoleh = round($calculatedScore * $detail->bobot_nilai, 4);
                             $isCorrect = ($truePositives == count($kunciArr) && $falsePositives == 0);
                         }
+                    } elseif ($bankSoal->jenis_soal === 'esai') {
+                        if (isset($essayGrades[$detail->id_detail])) {
+                            $skorDiperoleh = $essayGrades[$detail->id_detail]['score'];
+                            $isCorrect = $essayGrades[$detail->id_detail]['is_correct'];
+                        }
                     }
-                    // Essay: stays 0, needs manual grading
                 }
 
                 $totalSkor += $skorDiperoleh;
