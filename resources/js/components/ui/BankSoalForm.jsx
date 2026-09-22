@@ -200,6 +200,24 @@ export default function BankSoalForm({
                         />
                     )}
                 </label>
+
+                {bankForm.jenis_soal === 'esai' && (
+                    <>
+                        <label className="space-y-2 text-sm font-medium text-slate-700 md:col-span-2">
+                            <span>Kata Kunci Penilaian AI (Satu per baris)</span>
+                            <p className="text-xs font-normal text-slate-500">Gunakan <code>;</code> untuk memisahkan sinonim. Gunakan <code>**</code> untuk wajib persis. <br/>Contoh: <code>**Soekarno;Bung Karno</code></p>
+                            <textarea rows="3" value={bankForm.keywords} onChange={(event) => setBankForm((current) => ({ ...current, keywords: event.target.value }))} className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-slate-900" placeholder="Kata kunci 1&#10;Kata kunci 2;Sinonim 2" />
+                        </label>
+                        <label className="space-y-2 text-sm font-medium text-slate-700">
+                            <span>Bobot Aturan (Rule-Based)</span>
+                            <input type="number" step="0.1" min="0" max="1" value={bankForm.rule_weight} onChange={(event) => setBankForm((current) => ({ ...current, rule_weight: event.target.value }))} className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-slate-900" />
+                        </label>
+                        <label className="space-y-2 text-sm font-medium text-slate-700">
+                            <span>Bobot Makna (LSA)</span>
+                            <input type="number" step="0.1" min="0" max="1" value={bankForm.lsa_weight} onChange={(event) => setBankForm((current) => ({ ...current, lsa_weight: event.target.value }))} className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-slate-900" />
+                        </label>
+                    </>
+                )}
             </div>
 
             <div className="mt-4 flex flex-wrap gap-3">
