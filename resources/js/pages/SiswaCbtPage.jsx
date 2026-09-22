@@ -22,6 +22,7 @@ export default function SiswaCbtPage({ session, onLogout, idSesi }) {
 
     const [isLockdownActive, setIsLockdownActive] = useState(false);
     const [lockdownWarning, setLockdownWarning] = useState(null);
+    const [submitErrorPopup, setSubmitErrorPopup] = useState(null);
     const [isLockedOut, setIsLockedOut] = useState(false);
     const [lockdownMessage, setLockdownMessage] = useState(null);
 
@@ -275,7 +276,7 @@ export default function SiswaCbtPage({ session, onLogout, idSesi }) {
 
             setResultData(result);
         } catch (err) {
-            alert(`Terjadi kesalahan: ${err.message}`);
+            setSubmitErrorPopup(err.message || "Terjadi kesalahan saat mengumpulkan ujian.");
             setSubmitting(false);
         }
     }, [jawaban, session.token, idSesi, submitting, storageKey]);
@@ -626,6 +627,27 @@ export default function SiswaCbtPage({ session, onLogout, idSesi }) {
                 </div>
             )}
             
+            {/* Submit Error Modal */}
+            {submitErrorPopup && (
+                <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+                    <div className="w-full max-w-sm rounded-3xl bg-white p-6 text-center shadow-2xl">
+                        <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-rose-100 text-rose-600">
+                            <svg className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                            </svg>
+                        </div>
+                        <h3 className="mb-2 text-xl font-bold text-slate-800">Gagal Mengumpulkan</h3>
+                        <p className="mb-6 text-slate-600">{submitErrorPopup}</p>
+                        <button
+                            onClick={() => setSubmitErrorPopup(null)}
+                            className="w-full rounded-xl bg-slate-900 py-3 font-semibold text-white transition hover:bg-slate-800"
+                        >
+                            Tutup & Coba Lagi
+                        </button>
+                    </div>
+                </div>
+            )}
+
             {/* Header */}
             <header className="sticky top-0 z-10 flex flex-col sm:flex-row items-center justify-between border-b border-border bg-secondary px-3 py-3 sm:py-0 sm:px-6 sm:h-16 backdrop-blur-md shadow-sm gap-3 sm:gap-0">
                 <div className="flex w-full sm:w-auto items-center space-x-3 justify-center sm:justify-start">
