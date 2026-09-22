@@ -78,7 +78,7 @@ export default function GuruArsipDiagnostikPage({ session, onLogout }) {
     return (
         <DashboardLayout title="Arsip Laporan Diagnostik" user={session?.user} navigation={guruNavigation} onLogout={onLogout} profileHref="/guru/profil">
             <div className="space-y-6">
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4">
                     <div>
                         <button onClick={() => window.location.href = '/guru/analitik'} className="flex items-center gap-2 text-sm font-medium text-slate-500 hover:text-slate-900 transition mb-2">
                             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
@@ -138,6 +138,10 @@ export default function GuruArsipDiagnostikPage({ session, onLogout }) {
                 )}
 
                 <div className="overflow-hidden rounded-3xl border border-border bg-white shadow-sm">
+                    <p className="text-[11px] sm:text-xs text-slate-500 mb-2 italic flex items-center">
+                        <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path></svg>
+                        Geser tabel ke kanan/kiri untuk melihat detail selengkapnya
+                    </p>
                     <div className="overflow-x-auto">
                         <table className="min-w-full divide-y divide-slate-200 text-left text-sm">
                             <thead className="bg-slate-50/50">

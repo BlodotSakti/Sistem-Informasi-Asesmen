@@ -364,6 +364,9 @@ class GuruController extends Controller
             'soal.*.topik_materi' => ['required', 'string', 'max:255'],
             'soal.*.level_kognitif' => ['required', 'in:C1,C2,C3,C4,C5,C6'],
             'soal.*.opsi_jawaban' => ['nullable', 'array'],
+            'soal.*.keywords' => ['nullable', 'array'],
+            'soal.*.rule_weight' => ['nullable', 'numeric'],
+            'soal.*.lsa_weight' => ['nullable', 'numeric'],
         ]);
 
         $guruId = $request->user()->guru->id_guru;
@@ -402,6 +405,9 @@ class GuruController extends Controller
                     $soal['kunci_jawaban'] = $kunci;
                 }
             }
+            
+            $soal['rule_weight'] = $soal['rule_weight'] ?? 0;
+            $soal['lsa_weight'] = $soal['lsa_weight'] ?? 0;
 
             $created[] = $soal;
         }
@@ -456,6 +462,8 @@ class GuruController extends Controller
                 'jenis_soal' => $bs->jenis_soal,
                 'opsi_jawaban' => $bs->opsi_jawaban,
                 'kunci_jawaban' => $bs->kunci_jawaban,
+                'keywords' => $bs->keywords,
+                'level_kognitif' => $bs->level_kognitif,
                 'bobot_nilai' => $detail->bobot_nilai,
             ];
         })->values();
@@ -542,6 +550,77 @@ class GuruController extends Controller
                 'skor_terendah' => count($skorSemua) > 0 ? round(min($skorSemua), 2) : 0,
             ],
             'siswa' => $siswaResults,
+        ]);
+    }
+
+    public function updateSkorJawaban(Request $request, int $id_sesi, int $id_detail, int $id_siswa): JsonResponse
+    {
+        $request->validate([
+            'skor' => ['required', 'numeric', 'min:0'],
+        ]);
+
+        $jawaban = JawabanSiswa::where('id_siswa', $id_siswa)
+            ->where('id_detail', $id_detail)
+            ->whereHas('detailSesiSoal', function ($q) use ($id_sesi) {
+                $q->where('id_sesi', $id_sesi);
+            })->firstOrFail();
+
+        $is_correct = $request->skor > 0;
+        
+        $jawaban->update([
+            'skor_diperoleh' => $request->skor,
+            'is_correct' => $is_correct
+        ]);
+
+        $detailIds = \App\Models\DetailSesiSoal::where('id_sesi', $id_sesi)->pluck('id_detail');
+        $totalSkor = JawabanSiswa::where('id_siswa', $id_siswa)
+            ->whereIn('id_detail', $detailIds)
+            ->sum('skor_diperoleh');
+
+        \App\Models\AnalisisDiagnostik::where('id_siswa', $id_siswa)
+            ->where('id_sesi', $id_sesi)
+            ->update(['skor_total' => $totalSkor]);
+
+        return response()->json([
+            'message' => 'Skor berhasil diperbarui',
+            'skor_diperoleh' => $jawaban->skor_diperoleh,
+            'is_correct' => $jawaban->is_correct,
+            'total_skor_baru' => $totalSkor
+        ]);
+    }
+
+    public function validasiNilai(Request $request, int $id_sesi, int $id_siswa): JsonResponse
+    {
+        $sesi = SesiAsesmen::findOrFail($id_sesi);
+        $siswa = \App\Models\Siswa::findOrFail($id_siswa);
+
+        $detailIds = $sesi->detailSesiSoal->pluck('id_detail');
+        $totalSkor = JawabanSiswa::where('id_siswa', $id_siswa)
+            ->whereIn('id_detail', $detailIds)
+            ->sum('skor_diperoleh');
+
+        $existing = \App\Models\AnalisisDiagnostik::where('id_siswa', $id_siswa)
+            ->where('id_sesi', $id_sesi)
+            ->first();
+
+        // Pengecekan cerdas: batalkan trigger jika skor sama dan narasi sudah pernah dibuat (tidak kosong)
+        if ($existing && round($existing->skor_total, 2) === round($totalSkor, 2) && !empty($existing->narasi_kekuatan)) {
+            return response()->json([
+                'status' => 'unchanged',
+                'message' => 'Nilai tidak mengalami perubahan. Analisis Diagnostik sebelumnya masih relevan sehingga tidak diperbarui ulang untuk menghemat kuota AI.'
+            ]);
+        }
+
+        \App\Models\AnalisisDiagnostik::updateOrCreate(
+            ['id_siswa' => $id_siswa, 'id_sesi' => $id_sesi],
+            ['skor_total' => $totalSkor, 'tanggal_generate' => now()]
+        );
+        
+        \App\Jobs\GenerateAnalisisDiagnostikJob::dispatch($id_siswa, $id_sesi);
+
+        return response()->json([
+            'status' => 'updated',
+            'message' => 'Validasi berhasil, analisis diagnostik AI sedang diperbarui berdasarkan nilai terbaru.'
         ]);
     }
 

@@ -493,6 +493,17 @@ class SiswaController extends Controller
             ->get()
             ->keyBy('id_detail');
 
+        // SAFE RETAKE LOGIC:
+        // Jika sudah ada AnalisisDiagnostik (artinya sudah pernah submit ujian ini),
+        // Jangan kembalikan jawaban lama ke frontend agar tampilan bersih.
+        $hasAnalisis = AnalisisDiagnostik::where('id_siswa', $siswa->id_siswa)
+            ->where('id_sesi', $id_sesi)
+            ->exists();
+
+        if ($hasAnalisis && $sesi->boleh_ulang) {
+            $jawaban = collect(); // Kosongkan riwayat yang dikirim ke frontend
+        }
+
         return response()->json([
             'sesi' => [
                 'id_sesi' => $sesi->id_sesi,
@@ -615,6 +626,12 @@ class SiswaController extends Controller
         }
 
         DB::transaction(function () use ($jawabanByDetail, $siswa, $details, &$totalSkor, &$resultPerSoal, $essayGrades) {
+            // SAFE RETAKE LOGIC: Hapus semua jawaban lama untuk sesi ini
+            // Agar pertanyaan yang tadinya dijawab lalu sekarang dikosongkan benar-benar terhapus
+            JawabanSiswa::where('id_siswa', $siswa->id_siswa)
+                ->whereIn('id_detail', $details->pluck('id_detail'))
+                ->delete();
+
             foreach ($jawabanByDetail as $jawab) {
                 $detail = $details->get($jawab['id_detail']);
                 if (!$detail || !$detail->bankSoal) continue;
@@ -661,17 +678,13 @@ class SiswaController extends Controller
 
                 $totalSkor += $skorDiperoleh;
 
-                JawabanSiswa::updateOrCreate(
-                    [
-                        'id_siswa' => $siswa->id_siswa,
-                        'id_detail' => $jawab['id_detail'],
-                    ],
-                    [
-                        'teks_jawaban' => $teksJawaban ?? '',
-                        'is_correct' => $isCorrect,
-                        'skor_diperoleh' => $skorDiperoleh,
-                    ]
-                );
+                JawabanSiswa::create([
+                    'id_siswa' => $siswa->id_siswa,
+                    'id_detail' => $jawab['id_detail'],
+                    'teks_jawaban' => $teksJawaban ?? '',
+                    'is_correct' => $isCorrect,
+                    'skor_diperoleh' => $skorDiperoleh,
+                ]);
 
                 $resultPerSoal[] = [
                     'id_detail' => $detail->id_detail,
@@ -763,6 +776,17 @@ class SiswaController extends Controller
 
         if ($sesi->id_kelas !== $siswa->kelasAktifAssignment?->id_kelas) {
             return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        // SAFE RETAKE LOGIC:
+        // Jika sudah ada AnalisisDiagnostik (artinya sudah pernah submit ujian ini),
+        // matikan auto-save agar tidak merusak data lama jika siswa batal mengerjakan (menutup browser).
+        $hasAnalisis = AnalisisDiagnostik::where('id_siswa', $siswa->id_siswa)
+            ->where('id_sesi', $id_sesi)
+            ->exists();
+
+        if ($hasAnalisis && $sesi->boleh_ulang) {
+            return response()->json(['message' => 'Auto-save ditangguhkan selama retake untuk melindungi data lama.'], 200);
         }
 
         $detail = \App\Models\DetailSesiSoal::with('bankSoal')->where('id_detail', $data['id_detail'])->first();
@@ -898,6 +922,7 @@ class SiswaController extends Controller
                 'isi_soal' => $bankSoal->isi_soal,
                 'gambar_soal' => $bankSoal->gambar_soal,
                 'jenis_soal' => $bankSoal->jenis_soal,
+                'taksonomi_bloom' => $bankSoal->taksonomi_bloom,
                 'opsi_jawaban' => $bankSoal->opsi_jawaban,
                 'kunci_jawaban' => $bankSoal->kunci_jawaban,
                 'bobot_nilai' => $detail->bobot_nilai,

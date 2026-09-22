@@ -32,8 +32,115 @@ export default function GuruJadwalCbtPage({ session, onLogout }) {
     const [sharedBankSoal, setSharedBankSoal] = useState([]);
     const [sharedBankSoalLoading, setSharedBankSoalLoading] = useState(false);
 
+    // Filter states untuk tabel Bank Soal CBT
+    const [bankSearch, setBankSearch] = useState('');
+    const [bankFilterLevel, setBankFilterLevel] = useState('');
+    const [bankFilterJenis, setBankFilterJenis] = useState('');
+
+    const [editingScoreId, setEditingScoreId] = useState(null);
+    const [editScoreValue, setEditScoreValue] = useState('');
+    const [unsavedChanges, setUnsavedChanges] = useState(false);
+    const [pendingAction, setPendingAction] = useState(null);
+    const [isUnsavedModalOpen, setIsUnsavedModalOpen] = useState(false);
+    const [isValidasiModalOpen, setIsValidasiModalOpen] = useState(false);
+    const [validasiSiswaId, setValidasiSiswaId] = useState(null);
+    const [validasiLoading, setValidasiLoading] = useState(false);
+
+    // Detail Siswa Modal States
+    const [detailSiswaSearch, setDetailSiswaSearch] = useState('');
+    const [detailSiswaStatus, setDetailSiswaStatus] = useState('');
+    const [detailSiswaSort, setDetailSiswaSort] = useState('');
+
     const showSuccessPopup = (title, message) => setSuccessPopup({ title, message });
     const closeSuccessPopup = () => setSuccessPopup(null);
+
+    const requestAction = (actionFn) => {
+        if (unsavedChanges) {
+            setPendingAction(() => actionFn);
+            setIsUnsavedModalOpen(true);
+        } else {
+            actionFn();
+        }
+    };
+
+    const confirmPendingAction = () => {
+        setIsUnsavedModalOpen(false);
+        setUnsavedChanges(false);
+        setEditingScoreId(null);
+        setEditScoreValue('');
+        if (pendingAction) {
+            pendingAction();
+            setPendingAction(null);
+        }
+    };
+
+    const cancelPendingAction = () => {
+        setIsUnsavedModalOpen(false);
+        setPendingAction(null);
+    };
+
+    const handleEditScore = (id_detail, initialScore) => {
+        setEditingScoreId(id_detail);
+        setEditScoreValue(initialScore);
+        setUnsavedChanges(true);
+    };
+
+    const handleCancelEditScore = () => {
+        setEditingScoreId(null);
+        setEditScoreValue('');
+        setUnsavedChanges(false);
+    };
+
+    const handleSaveScore = async (id_sesi, id_detail, id_siswa) => {
+        try {
+            const res = await apiFetch(`/api/guru/sesi-asesmen/${id_sesi}/jawaban/${id_detail}/siswa/${id_siswa}/score`, session, {
+                method: 'PUT',
+                body: JSON.stringify({ skor: editScoreValue }),
+            });
+            setSesiDetailData(prev => {
+                if (!prev) return prev;
+                const newData = { ...prev };
+                const siswaIndex = newData.siswa.findIndex(s => s.id_siswa === id_siswa);
+                if (siswaIndex !== -1) {
+                    const detailIndex = newData.siswa[siswaIndex].detail_jawaban.findIndex(d => d.id_detail === id_detail);
+                    if (detailIndex !== -1) {
+                        newData.siswa[siswaIndex].detail_jawaban[detailIndex].skor_diperoleh = res.skor_diperoleh;
+                        newData.siswa[siswaIndex].detail_jawaban[detailIndex].is_correct = res.is_correct;
+                    }
+                    newData.siswa[siswaIndex].total_skor = res.total_skor_baru;
+                }
+                return newData;
+            });
+            setEditingScoreId(null);
+            setEditScoreValue('');
+            setUnsavedChanges(false);
+            showSuccessPopup('Sukses', 'Skor berhasil diperbarui.');
+        } catch (error) {
+            console.error('Failed to update score:', error);
+            alert('Gagal memperbarui skor.');
+        }
+    };
+
+    const handleValidasiNilai = async () => {
+        if (!validasiSiswaId || !sesiDetailData?.sesi?.id_sesi) return;
+        setValidasiLoading(true);
+        try {
+            const res = await apiFetch(`/api/guru/sesi-asesmen/${sesiDetailData.sesi.id_sesi}/validasi-nilai/${validasiSiswaId}`, session, {
+                method: 'POST'
+            });
+            setIsValidasiModalOpen(false);
+            if (res?.status === 'unchanged') {
+                showSuccessPopup('Info', res.message);
+            } else {
+                showSuccessPopup('Validasi Berhasil', res?.message || 'Nilai berhasil divalidasi dan analisis diagnostik sedang diperbarui.');
+            }
+        } catch (error) {
+            console.error('Failed to validate:', error);
+            alert('Gagal memvalidasi nilai.');
+        } finally {
+            setValidasiLoading(false);
+        }
+    };
 
     useEffect(() => {
         const fetchSharedSoal = async () => {
@@ -94,6 +201,9 @@ export default function GuruJadwalCbtPage({ session, onLogout }) {
             setSesiForm({
                 id_kelas: '', id_mapel: '', tipe_soal: '', jenis_asesmen: 'ujian', waktu_mulai: '', waktu_selesai: '', durasi_menit: 60, boleh_ulang: false
             });
+            setBankSearch('');
+            setBankFilterLevel('');
+            setBankFilterJenis('');
             await reloadWorkspace();
         } catch (exception) {
             showSuccessPopup('Gagal Menyimpan Jadwal', exception.message || 'Gagal menyimpan sesi asesmen.');
@@ -134,17 +244,20 @@ export default function GuruJadwalCbtPage({ session, onLogout }) {
     };
 
     const fetchSesiDetail = async (idSesi) => {
-        try {
-            setSesiDetailLoading(true);
-            setSesiDetailData(null);
-            setExpandedSiswaId(null);
-            const data = await apiFetch(`/api/guru/sesi-asesmen/${idSesi}/detail`, session);
-            setSesiDetailData(data);
-        } catch (err) {
-            showSuccessPopup('Gagal', err.message || 'Gagal memuat detail sesi.');
-        } finally {
-            setSesiDetailLoading(false);
-        }
+        requestAction(async () => {
+            try {
+                setSesiDetailLoading(true);
+                setSesiDetailData(null);
+                setExpandedSiswaId(null);
+                const data = await apiFetch(`/api/guru/sesi-asesmen/${idSesi}/detail`, session);
+                setSesiDetailData(data);
+            } catch (err) {
+                console.error("Failed to fetch sesi detail", err);
+                showSuccessPopup('Gagal', err.message || 'Gagal memuat detail sesi.');
+            } finally {
+                setSesiDetailLoading(false);
+            }
+        });
     };
 
     const getSesiStatus = (waktuMulai, waktuSelesai) => {
@@ -174,6 +287,31 @@ export default function GuruJadwalCbtPage({ session, onLogout }) {
             return mapel.includes(searchLower) || kelas.includes(searchLower) || tipeSoal.includes(searchLower) || tipeAsesmen.includes(searchLower);
         });
     }, [sesiAsesmenHistory, cbtSearch, cbtFilterKelas]);
+
+    const filteredDetailSiswa = useMemo(() => {
+        if (!sesiDetailData?.siswa) return [];
+        let list = [...sesiDetailData.siswa];
+        
+        if (detailSiswaSearch) {
+            const q = detailSiswaSearch.toLowerCase();
+            list = list.filter(sw => sw.nama_lengkap?.toLowerCase().includes(q) || sw.nisn?.toLowerCase().includes(q));
+        }
+        
+        if (detailSiswaStatus) {
+            list = list.filter(sw => sw.status === detailSiswaStatus);
+        }
+        
+        if (detailSiswaSort) {
+            list.sort((a, b) => {
+                const scoreA = a.total_skor || 0;
+                const scoreB = b.total_skor || 0;
+                if (detailSiswaSort === 'score_desc') return scoreB - scoreA;
+                if (detailSiswaSort === 'score_asc') return scoreA - scoreB;
+                return 0;
+            });
+        }
+        return list;
+    }, [sesiDetailData, detailSiswaSearch, detailSiswaStatus, detailSiswaSort]);
 
     return (
         <DashboardLayout
@@ -228,12 +366,26 @@ export default function GuruJadwalCbtPage({ session, onLogout }) {
                 </section>
 
                 <div className="overflow-hidden rounded-3xl border border-border bg-white">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-border px-5 py-4 gap-4">
+                    <div className="flex flex-col xl:flex-row xl:items-center justify-between border-b border-border px-5 py-4 gap-4">
                         <div>
                             <h4 className="text-lg font-semibold text-slate-900">Daftar Jadwal CBT</h4>
                             <p className="text-sm text-slate-500">Daftar sesi asesmen yang telah dibuat.</p>
                         </div>
-                        <div className="flex items-center gap-3 w-full sm:w-auto flex-wrap sm:flex-nowrap justify-end">
+                        <div className="flex items-center gap-3 w-full xl:w-auto flex-wrap xl:flex-nowrap justify-start xl:justify-end">
+                            <div className="relative w-full sm:w-64">
+                                <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                    </svg>
+                                </div>
+                                <input 
+                                    type="text" 
+                                    placeholder="Cari kelas, mapel, tipe..." 
+                                    className="w-full rounded-full border border-slate-300 bg-slate-50 py-2 pl-9 pr-4 text-sm outline-none transition focus:border-primary focus:bg-white focus:ring-1 focus:ring-primary"
+                                    value={cbtSearch}
+                                    onChange={(e) => setCbtSearch(e.target.value)}
+                                />
+                            </div>
                             <FilterSelect
                                 value={cbtFilterKelas}
                                 onChange={setCbtFilterKelas}
@@ -249,25 +401,17 @@ export default function GuruJadwalCbtPage({ session, onLogout }) {
                                 // warna untuk item dropdown yang dipilih
                                 dropdownAccentClass="bg-accent border-accent text-white shadow-md shadow-gold-900"
                             />
-                            <div className="relative w-full sm:w-64">
-                                <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                                    </svg>
-                                </div>
-                                <input 
-                                    type="text" 
-                                    placeholder="Cari kelas, mapel, tipe..." 
-                                    className="w-full rounded-full border border-slate-300 bg-slate-50 py-2 pl-9 pr-4 text-sm outline-none transition focus:border-primary focus:bg-white focus:ring-1 focus:ring-primary"
-                                    value={cbtSearch}
-                                    onChange={(e) => setCbtSearch(e.target.value)}
-                                />
-                            </div>
                             <button onClick={() => setIsSesiModalOpen(true)} type="button" className="rounded-full bg-primary px-5 py-2 text-sm font-semibold text-white transition hover:bg-primary/85 whitespace-nowrap">
                                 + Buat Jadwal CBT
                             </button>
                         </div>
                     </div>
+                    {/* Petunjuk Geser Tabel (hanya muncul di layar kecil) */}
+                    
+                    <p className="text-[11px] sm:text-xs text-slate-500 mb-2 italic flex items-center">
+                        <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path></svg>
+                        <span>Geser tabel ke kanan/kiri untuk melihat detail selengkapnyaa</span>
+                    </p>
                     <div className="overflow-x-auto">
                         <table className="min-w-full divide-y divide-slate-200 text-left text-sm">
                             <thead className="border-b border-border bg-slate-50 text-xs uppercase tracking-[0.2em] text-slate-500">
@@ -355,7 +499,12 @@ export default function GuruJadwalCbtPage({ session, onLogout }) {
                                             </h3>
                                             <p className="text-sm text-slate-500 capitalize">{sesiDetailData.sesi.jenis_asesmen} — {sesiDetailData.sesi.kelas}</p>
                                         </div>
-                                        <button onClick={() => setSesiDetailData(null)} className="text-2xl text-slate-400 hover:text-slate-600">&times;</button>
+                                        <button onClick={() => {
+                                            setSesiDetailData(null);
+                                            setDetailSiswaSearch('');
+                                            setDetailSiswaStatus('');
+                                            setDetailSiswaSort('');
+                                        }} className="text-2xl text-slate-400 hover:text-slate-600">&times;</button>
                                     </div>
                                     <div className="p-6 space-y-6 overflow-y-auto">
                                         {/* Statistik */}
@@ -400,7 +549,14 @@ export default function GuruJadwalCbtPage({ session, onLogout }) {
                                                             <span className="text-xs font-medium text-slate-500">Bobot: {s.bobot_nilai}</span>
                                                         </div>
                                                         <p className="text-sm text-slate-600 whitespace-pre-wrap">{s.isi_soal}</p>
-                                                        <p className="mt-1 text-xs text-emerald-600 font-medium">Kunci: {(() => { try { const arr = JSON.parse(s.kunci_jawaban); if (Array.isArray(arr)) return arr.join(', '); } catch {} return s.kunci_jawaban; })()}</p>
+                                                        <p className="mt-1 text-xs text-emerald-600 font-medium whitespace-pre-wrap">Kunci: {(() => { try { const arr = JSON.parse(s.kunci_jawaban); if (Array.isArray(arr)) return arr.join(', '); } catch {} return s.kunci_jawaban; })()}</p>
+                                                        {(s.jenis_soal === 'esai' || s.jenis_soal === 'essay') && s.keywords && (
+                                                            <p className="mt-1 text-xs text-indigo-600 font-medium whitespace-pre-wrap">Kata Kunci: {(() => { 
+                                                                if (Array.isArray(s.keywords)) return s.keywords.join(', ');
+                                                                try { const arr = JSON.parse(s.keywords); if (Array.isArray(arr)) return arr.join(', '); } catch {} 
+                                                                return s.keywords; 
+                                                            })()}</p>
+                                                        )}
                                                     </div>
                                                 ))}
                                             </div>
@@ -409,6 +565,45 @@ export default function GuruJadwalCbtPage({ session, onLogout }) {
                                         {/* Daftar Siswa */}
                                         <div>
                                             <h4 className="text-lg font-bold text-slate-800 mb-3">👥 Status Siswa</h4>
+                                            
+                                            <div className="flex flex-col sm:flex-row gap-3 mb-4">
+                                                <input 
+                                                    type="text" 
+                                                    placeholder="Cari nama atau NISN..." 
+                                                    value={detailSiswaSearch}
+                                                    onChange={(e) => setDetailSiswaSearch(e.target.value)}
+                                                    className="flex-1 rounded-2xl border border-slate-300 px-4 py-2 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+                                                />
+                                                <div className="flex gap-2">
+                                                    <FilterSelect
+                                                        value={detailSiswaStatus}
+                                                        onChange={setDetailSiswaStatus}
+                                                        placeholder="Semua Status"
+                                                        options={[
+                                                            { value: '', label: 'Semua Status' },
+                                                            { value: 'sudah', label: 'Sudah Mengerjakan' },
+                                                            { value: 'belum', label: 'Belum Mengerjakan' },
+                                                        ]}
+                                                        align="left"
+                                                    />
+                                                    <FilterSelect
+                                                        value={detailSiswaSort}
+                                                        onChange={setDetailSiswaSort}
+                                                        placeholder="Urutkan Default"
+                                                        options={[
+                                                            { value: '', label: 'Urutkan Default' },
+                                                            { value: 'score_desc', label: 'Skor Tertinggi' },
+                                                            { value: 'score_asc', label: 'Skor Terendah' },
+                                                        ]}
+                                                        align="right"
+                                                    />
+                                                </div>
+                                            </div>
+
+                                            <p className="text-[11px] sm:text-xs text-slate-500 mb-2 italic flex items-center">
+                                                <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path></svg>
+                                                Geser tabel ke kanan/kiri untuk melihat detail selengkapnya
+                                            </p>
                                             <div className="overflow-x-auto rounded-2xl border border-border">
                                                 <table className="min-w-full divide-y divide-slate-200 text-left text-sm">
                                                     <thead className="bg-slate-50 text-xs uppercase tracking-[0.15em] text-slate-500">
@@ -422,21 +617,35 @@ export default function GuruJadwalCbtPage({ session, onLogout }) {
                                                         </tr>
                                                     </thead>
                                                     <tbody className="divide-y divide-slate-100">
-                                                        {sesiDetailData.siswa.map((sw) => (
+                                                        {filteredDetailSiswa.map((sw) => (
                                                             <React.Fragment key={sw.id_siswa}>
                                                                 <tr className="hover:bg-slate-50/70">
                                                                     <td className="px-4 py-3 font-semibold text-slate-900">{sw.nama_lengkap}</td>
                                                                     <td className="px-4 py-3 text-slate-500">{sw.nisn}</td>
                                                                     <td className="px-4 py-3">
-                                                                        <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-bold ${sw.status === 'sudah' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-600'}`}>
-                                                                            {sw.status === 'sudah' ? '✓ Sudah' : '— Belum'}
+                                                                        <span className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-semibold ${sw.status === 'sudah' ? 'bg-emerald-100/80 text-emerald-700' : 'bg-slate-100 text-slate-600'}`}>
+                                                                            {sw.status === 'sudah' ? (
+                                                                                <>
+                                                                                    <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                                                                                    </svg>
+                                                                                    Sudah
+                                                                                </>
+                                                                            ) : (
+                                                                                <>
+                                                                                    <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M20 12H4" />
+                                                                                    </svg>
+                                                                                    Belum
+                                                                                </>
+                                                                            )}
                                                                         </span>
                                                                     </td>
                                                                     <td className="px-4 py-3 text-slate-600">{sw.status === 'sudah' ? `${sw.total_skor}/${sesiDetailData.total_bobot}` : '-'}</td>
                                                                     <td className="px-4 py-3 text-slate-600">{sw.status === 'sudah' ? `${sw.jumlah_benar}/${sesiDetailData.soal.length}` : '-'}</td>
                                                                     <td className="px-4 py-3 text-right">
                                                                         {sw.status === 'sudah' && (
-                                                                            <button onClick={() => setExpandedSiswaId(expandedSiswaId === sw.id_siswa ? null : sw.id_siswa)} className="text-primary hover:text-primary/85 font-medium text-xs">
+                                                                            <button onClick={() => requestAction(() => setExpandedSiswaId(expandedSiswaId === sw.id_siswa ? null : sw.id_siswa))} className="inline-flex items-center justify-center rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-primary/60 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1">
                                                                                 {expandedSiswaId === sw.id_siswa ? 'Tutup' : 'Lihat Jawaban'}
                                                                             </button>
                                                                         )}
@@ -451,20 +660,88 @@ export default function GuruJadwalCbtPage({ session, onLogout }) {
                                                                                     const jawSiswa = dj?.jawaban_siswa || '-';
                                                                                     const kunci = soal.kunci_jawaban;
                                                                                     const isCorrect = dj?.is_correct;
-                                                                                    const formatVal = (v) => { try { const a = JSON.parse(v); if (Array.isArray(a)) return a.join(', '); } catch {} return v || '-'; };
+                                                                                    const formatVal = (v) => { 
+                                                                                        if (Array.isArray(v)) return v.join(', ');
+                                                                                        try { const a = JSON.parse(v); if (Array.isArray(a)) return a.join(', '); } catch {} 
+                                                                                        return v || '-'; 
+                                                                                    };
+                                                                                    const isEsai = soal.jenis_soal === 'esai' || soal.jenis_soal === 'essay';
+                                                                                    const kemiripan = (dj?.skor_diperoleh || 0) / soal.bobot_nilai;
                                                                                     return (
                                                                                         <div key={soal.id_detail} className={`rounded-xl border px-4 py-3 text-xs ${isCorrect ? 'border-emerald-200 bg-emerald-50/50' : 'border-rose-200 bg-rose-50/50'}`}>
-                                                                                            <div className="flex items-center justify-between mb-1">
-                                                                                                <span className="font-bold text-slate-700">Soal {sIdx + 1}</span>
-                                                                                                <span className={`font-bold ${isCorrect ? 'text-emerald-600' : 'text-rose-600'}`}>{isCorrect ? '✓ Benar' : '✗ Salah'} ({dj?.skor_diperoleh ?? 0}/{soal.bobot_nilai})</span>
+                                                                                            <div className="flex items-center justify-between mb-3 border-b border-slate-200/50 pb-2">
+                                                                                                <div className="flex flex-col">
+                                                                                                    <span className="font-bold text-slate-700">Soal {sIdx + 1}</span>
+                                                                                                    <span className="text-[10px] text-slate-400 mt-0.5">{soal.level_kognitif ? `Taksonomi Bloom: ${soal.level_kognitif}` : 'Level Kognitif tidak disetel'}</span>
+                                                                                                </div>
+                                                                                                <div className="text-right">
+                                                                                                    <div className={`font-bold ${isCorrect ? 'text-emerald-600' : 'text-rose-600'}`}>
+                                                                                                        {isCorrect ? '✓ Benar' : '✗ Salah'} ({dj?.skor_diperoleh ?? 0}/{soal.bobot_nilai})
+                                                                                                    </div>
+                                                                                                    {isEsai && (
+                                                                                                        <div className="text-[10px] text-slate-500 mt-0.5 font-semibold">Kemiripan: {(kemiripan * 100).toFixed(0)}%</div>
+                                                                                                    )}
+                                                                                                </div>
                                                                                             </div>
-                                                                                            <div className="grid gap-2 sm:grid-cols-2 mt-1">
-                                                                                                <div><span className="text-slate-500">Jawaban Siswa:</span> <span className="text-slate-800 font-medium">{formatVal(jawSiswa)}</span></div>
-                                                                                                <div><span className="text-slate-500">Kunci:</span> <span className="text-emerald-700 font-medium">{formatVal(kunci)}</span></div>
+                                                                                            
+                                                                                            <div className="mb-3">
+                                                                                                <p className="text-sm text-slate-700 whitespace-pre-wrap">{soal.isi_soal}</p>
                                                                                             </div>
+
+                                                                                            <div className="grid gap-4 sm:grid-cols-2 mt-1">
+                                                                                                <div>
+                                                                                                    <span className="text-slate-500 block mb-1">Jawaban Siswa:</span>
+                                                                                                    <span className="text-slate-800 font-medium whitespace-pre-wrap">{formatVal(jawSiswa)}</span>
+                                                                                                </div>
+                                                                                                <div>
+                                                                                                    <span className="text-slate-500 block mb-1">Kunci:</span>
+                                                                                                    <span className="text-emerald-700 font-medium whitespace-pre-wrap">{formatVal(kunci)}</span>
+                                                                                                    {isEsai && soal.keywords && (
+                                                                                                        <div className="mt-3">
+                                                                                                            <span className="text-slate-500 block mb-1">Kata Kunci:</span>
+                                                                                                            <span className="text-indigo-600 font-medium whitespace-pre-wrap">{formatVal(soal.keywords)}</span>
+                                                                                                        </div>
+                                                                                                    )}
+                                                                                                </div>
+                                                                                            </div>
+
+                                                                                            {isEsai && (
+                                                                                                <div className="mt-4 pt-3 border-t border-slate-200/50 flex justify-end">
+                                                                                                    {editingScoreId === soal.id_detail ? (
+                                                                                                        <div className="flex items-center gap-2">
+                                                                                                            <input 
+                                                                                                                type="number" 
+                                                                                                                min="0" 
+                                                                                                                max={soal.bobot_nilai} 
+                                                                                                                value={editScoreValue} 
+                                                                                                                onChange={(e) => setEditScoreValue(e.target.value)}
+                                                                                                                className="w-20 rounded-md border-slate-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm px-2 py-1"
+                                                                                                            />
+                                                                                                            <button onClick={handleCancelEditScore} className="text-xs px-3 py-1.5 text-slate-600 hover:bg-slate-200 rounded-lg transition-colors font-medium">Batal</button>
+                                                                                                            <button onClick={() => handleSaveScore(sesiDetailData.sesi.id_sesi, soal.id_detail, sw.id_siswa)} className="text-xs px-3 py-1.5 bg-primary text-white hover:bg-primary/90 font-semibold rounded-lg shadow-sm transition-colors">Simpan Penilaian</button>
+                                                                                                        </div>
+                                                                                                    ) : (
+                                                                                                        <button onClick={() => requestAction(() => handleEditScore(soal.id_detail, dj?.skor_diperoleh ?? 0))} className="text-xs px-4 py-2 bg-slate-800 text-white hover:bg-slate-700 font-semibold rounded-lg shadow-sm transition-colors flex items-center gap-1.5">
+                                                                                                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                                                                                                            </svg>
+                                                                                                            Edit Skor
+                                                                                                        </button>
+                                                                                                    )}
+                                                                                                </div>
+                                                                                            )}
                                                                                         </div>
                                                                                     );
                                                                                 })}
+                                                                            </div>
+                                                                            
+                                                                            <div className="mt-4 flex justify-end">
+                                                                                <button 
+                                                                                    onClick={() => requestAction(() => { setValidasiSiswaId(sw.id_siswa); setIsValidasiModalOpen(true); })}
+                                                                                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold rounded-xl shadow-sm transition-colors flex items-center gap-2"
+                                                                                >
+                                                                                    ✅ Validasi Nilai
+                                                                                </button>
                                                                             </div>
                                                                             {sw.analisis_diagnostik && (
                                                                                 <div className="mt-4 rounded-xl border border-primary/20 bg-primary/5 p-4">
@@ -489,6 +766,13 @@ export default function GuruJadwalCbtPage({ session, onLogout }) {
                                                                 )}
                                                             </React.Fragment>
                                                         ))}
+                                                        {filteredDetailSiswa.length === 0 && (
+                                                            <tr>
+                                                                <td colSpan="6" className="px-4 py-8 text-center text-sm text-slate-500">
+                                                                    Tidak ada siswa yang cocok dengan filter pencarian.
+                                                                </td>
+                                                            </tr>
+                                                        )}
                                                     </tbody>
                                                 </table>
                                             </div>
@@ -510,41 +794,69 @@ export default function GuruJadwalCbtPage({ session, onLogout }) {
                                 <h3 className="text-xl font-semibold text-slate-900">Buat Jadwal Asesmen (CBT)</h3>
                                 <button type="button" onClick={() => { setIsSesiModalOpen(false); setEditingSesiId(null); }} className="text-slate-400 hover:text-slate-600">&times;</button>
                             </div>
+                            <style>{`
+                                .datetime-left-icon {
+                                    position: relative;
+                                }
+                                .datetime-left-icon::-webkit-calendar-picker-indicator {
+                                    position: absolute;
+                                    left: 16px;
+                                    cursor: pointer;
+                                }
+                                .datetime-left-icon::-webkit-datetime-edit {
+                                    padding-left: 24px;
+                                }
+                            `}</style>
                             <div className="p-6 space-y-4 max-h-[85vh] overflow-y-auto">
                                 <div className="grid gap-4 md:grid-cols-2">
-                                    <label className="space-y-2 text-sm font-medium text-slate-700">
+                                    <label className="space-y-2 text-sm font-medium text-slate-700 block min-w-0">
                                         <span>Kelas</span>
-                                        <select required value={sesiForm.id_kelas} onChange={e => setSesiForm(c => ({...c, id_kelas: e.target.value}))} className="w-full rounded-2xl border border-slate-300 px-4 py-3 outline-none transition focus:border-slate-900">
-                                            <option value="">Pilih kelas</option>
-                                            {(workspace.kelas_options || []).map(item => <option key={item.id_kelas} value={item.id_kelas}>{item.nama_kelas}</option>)}
-                                        </select>
+                                        <div className="relative">
+                                            <select required value={sesiForm.id_kelas} onChange={e => setSesiForm(c => ({...c, id_kelas: e.target.value}))} className="w-full appearance-none rounded-2xl border border-slate-300 bg-slate-50/50 hover:bg-slate-50 px-4 py-3 pr-10 text-slate-800 outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/20 truncate">
+                                                <option value="">Pilih kelas</option>
+                                                {(workspace.kelas_options || []).map(item => <option key={item.id_kelas} value={item.id_kelas}>{item.nama_kelas}</option>)}
+                                            </select>
+                                            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-4 text-slate-400">
+                                                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 9l4-4 4 4m0 6l-4 4-4-4"></path></svg>
+                                            </div>
+                                        </div>
                                     </label>
-                                    <label className="space-y-2 text-sm font-medium text-slate-700">
+                                    <label className="space-y-2 text-sm font-medium text-slate-700 block min-w-0">
                                         <span>Mata Pelajaran</span>
-                                        <select required value={sesiForm.id_mapel} onChange={e => setSesiForm(c => ({...c, id_mapel: e.target.value}))} className="w-full rounded-2xl border border-slate-300 px-4 py-3 outline-none transition focus:border-slate-900">
-                                            <option value="">Pilih mata pelajaran</option>
-                                            {(workspace.mapel_options || []).map(item => <option key={item.id_mapel} value={item.id_mapel}>{item.nama_lengkap || item.nama_mapel}</option>)}
-                                        </select>
+                                        <div className="relative">
+                                            <select required value={sesiForm.id_mapel} onChange={e => setSesiForm(c => ({...c, id_mapel: e.target.value}))} className="w-full appearance-none rounded-2xl border border-slate-300 bg-slate-50/50 hover:bg-slate-50 px-4 py-3 pr-10 text-slate-800 outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/20 truncate">
+                                                <option value="">Pilih mata pelajaran</option>
+                                                {(workspace.mapel_options || []).map(item => <option key={item.id_mapel} value={item.id_mapel}>{item.nama_lengkap || item.nama_mapel}</option>)}
+                                            </select>
+                                            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-4 text-slate-400">
+                                                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 9l4-4 4 4m0 6l-4 4-4-4"></path></svg>
+                                            </div>
+                                        </div>
                                     </label>
                                     <label className="space-y-2 text-sm font-medium text-slate-700">
                                         <span>Tipe Soal (Label)</span>
                                         <input required value={sesiForm.tipe_soal} onChange={e => setSesiForm(c => ({...c, tipe_soal: e.target.value}))} className="w-full rounded-2xl border border-slate-300 px-4 py-3 outline-none transition focus:border-slate-900" placeholder="Contoh: Soal UTS Genap" />
                                     </label>
-                                    <label className="space-y-2 text-sm font-medium text-slate-700">
+                                    <label className="space-y-2 text-sm font-medium text-slate-700 block min-w-0">
                                         <span>Jenis Asesmen</span>
-                                        <select required value={sesiForm.jenis_asesmen} onChange={e => setSesiForm(c => ({...c, jenis_asesmen: e.target.value}))} className="w-full rounded-2xl border border-slate-300 px-4 py-3 outline-none transition focus:border-slate-900">
-                                            <option value="ujian">Ujian</option>
-                                            <option value="pretest">Pretest</option>
-                                            <option value="posttest">Posttest</option>
-                                        </select>
+                                        <div className="relative">
+                                            <select required value={sesiForm.jenis_asesmen} onChange={e => setSesiForm(c => ({...c, jenis_asesmen: e.target.value}))} className="w-full appearance-none rounded-2xl border border-slate-300 bg-slate-50/50 hover:bg-slate-50 px-4 py-3 pr-10 text-slate-800 outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/20 truncate">
+                                                <option value="ujian">Ujian</option>
+                                                <option value="pretest">Pretest</option>
+                                                <option value="posttest">Posttest</option>
+                                            </select>
+                                            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-4 text-slate-400">
+                                                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 9l4-4 4 4m0 6l-4 4-4-4"></path></svg>
+                                            </div>
+                                        </div>
                                     </label>
                                     <div className="space-y-2">
                                         <label className="text-sm font-semibold text-slate-700">Waktu Mulai</label>
-                                        <input required type="datetime-local" value={sesiForm.waktu_mulai} onChange={e => setSesiForm(c => ({...c, waktu_mulai: e.target.value}))} className="w-full rounded-2xl border border-slate-300 px-4 py-3 outline-none transition focus:border-slate-900" />
+                                        <input required type="datetime-local" value={sesiForm.waktu_mulai} onChange={e => setSesiForm(c => ({...c, waktu_mulai: e.target.value}))} className="datetime-left-icon w-full rounded-2xl border border-slate-300 px-4 py-3 outline-none transition focus:border-slate-900" />
                                     </div>
                                     <div className="space-y-2">
                                         <label className="text-sm font-semibold text-slate-700">Waktu Berakhir</label>
-                                        <input required type="datetime-local" value={sesiForm.waktu_selesai} onChange={e => setSesiForm(c => ({...c, waktu_selesai: e.target.value}))} className="w-full rounded-2xl border border-slate-300 px-4 py-3 outline-none transition focus:border-slate-900" />
+                                        <input required type="datetime-local" value={sesiForm.waktu_selesai} onChange={e => setSesiForm(c => ({...c, waktu_selesai: e.target.value}))} className="datetime-left-icon w-full rounded-2xl border border-slate-300 px-4 py-3 outline-none transition focus:border-slate-900" />
                                     </div>
                                     <label className="space-y-2 text-sm font-medium text-slate-700">
                                         <span>Durasi (Menit)</span>
@@ -568,26 +880,80 @@ export default function GuruJadwalCbtPage({ session, onLogout }) {
                                     </button>
                                 </div>
 
-                                <div className="mt-6 pt-6 border-t border-border">
-                                    <div className="flex items-center justify-between mb-4">
-                                        <h4 className="text-base font-semibold text-slate-900">Pilih Soal dari Bank Soal ({Object.keys(selectedSoalMap).length} Terpilih)</h4>
-                                    </div>
-                                    <div className="max-h-[50vh] overflow-y-auto overflow-x-auto border border-border rounded-xl">
+                                {(() => {
+                                    const filteredBankSoal = sharedBankSoal.filter(item => {
+                                        if (bankSearch && !item.isi_soal.toLowerCase().includes(bankSearch.toLowerCase())) return false;
+                                        if (bankFilterLevel && item.level_kognitif !== bankFilterLevel) return false;
+                                        if (bankFilterJenis && item.jenis_soal !== bankFilterJenis) return false;
+                                        return true;
+                                    });
+
+                                    return (
+                                        <div className="mt-6 pt-6 border-t border-border">
+                                            <div className="flex flex-col xl:flex-row items-start xl:items-center justify-between mb-4 gap-4">
+                                                <h4 className="text-base font-semibold text-slate-900 whitespace-nowrap">Pilih Soal dari Bank Soal ({Object.keys(selectedSoalMap).length} Terpilih)</h4>
+                                                
+                                                {/* Filters */}
+                                                <div className="flex flex-wrap xl:flex-nowrap items-center gap-2 w-full xl:w-auto">
+                                                    <input
+                                                        type="text"
+                                                        placeholder="Cari isi soal..."
+                                                        value={bankSearch}
+                                                        onChange={(e) => setBankSearch(e.target.value)}
+                                                        className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary w-full sm:w-48"
+                                                    />
+                                                    <FilterSelect
+                                                        value={bankFilterLevel}
+                                                        onChange={setBankFilterLevel}
+                                                        placeholder="Semua Level"
+                                                        align="left"
+                                                        options={[
+                                                            { value: '', label: 'Semua Level' },
+                                                            { value: 'C1', label: 'C1 - Mengingat' },
+                                                            { value: 'C2', label: 'C2 - Memahami' },
+                                                            { value: 'C3', label: 'C3 - Mengaplik.' },
+                                                            { value: 'C4', label: 'C4 - Menganal.' },
+                                                            { value: 'C5', label: 'C5 - Mengeval.' },
+                                                            { value: 'C6', label: 'C6 - Mencipta' },
+                                                        ]}
+                                                    />
+                                                    <FilterSelect
+                                                        value={bankFilterJenis}
+                                                        onChange={setBankFilterJenis}
+                                                        placeholder="Semua Jenis"
+                                                        align="right"
+                                                        options={[
+                                                            { value: '', label: 'Semua Jenis' },
+                                                            { value: 'pilihan_ganda', label: 'Pilihan Ganda' },
+                                                            { value: 'pilihan_ganda_kompleks', label: 'PG Kompleks' },
+                                                            { value: 'esai', label: 'Esai' },
+                                                        ]}
+                                                    />
+                                                </div>
+                                            </div>
+                                            
+                                            {/* Petunjuk Geser Tabel (hanya muncul di layar kecil) */}
+
+                                            <p className="text-[11px] sm:text-xs text-slate-500 mb-2 italic flex items-center">
+                                                <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path></svg>
+                                                Geser tabel ke kanan/kiri untuk melihat detail selengkapnya
+                                            </p>
+                                            <div className="max-h-[50vh] overflow-y-auto overflow-x-auto border border-border rounded-xl shadow-sm">
                                         <table className="min-w-full text-left text-sm divide-y divide-slate-200">
                                             <thead className="bg-slate-50 sticky top-0">
                                                 <tr>
                                                     <th className="px-4 py-3 font-semibold text-slate-600">Pilih</th>
                                                     <th className="px-4 py-3 font-semibold text-slate-600">Isi Soal</th>
-                                                    <th className="px-4 py-3 font-semibold text-slate-600">Kode</th>
+                                                    <th className="px-4 py-3 font-semibold text-slate-600">Level Kognitif</th>
                                                     <th className="px-4 py-3 font-semibold text-slate-600">Tingkat</th>
-                                                    <th className="px-4 py-3 font-semibold text-slate-600">Mapel</th>
+                                                    <th className="px-4 py-3 font-semibold text-slate-600">Topik</th>
                                                     <th className="px-4 py-3 font-semibold text-slate-600">Jenis</th>
                                                     <th className="px-4 py-3 font-semibold text-slate-600">Bobot</th>
                                                 </tr>
                                             </thead>
                                             <tbody className="divide-y divide-slate-100">
                                                 {sharedBankSoalLoading && <tr><td colSpan="7" className="px-4 py-8 text-center text-slate-500">Memuat bank soal...</td></tr>}
-                                                {!sharedBankSoalLoading && sharedBankSoal
+                                                {!sharedBankSoalLoading && filteredBankSoal
                                                     .map(item => (
                                                     <tr key={item.id_soal} className="hover:bg-slate-50">
                                                         <td className="px-4 py-3">
@@ -607,7 +973,7 @@ export default function GuruJadwalCbtPage({ session, onLogout }) {
                                                             />
                                                         </td>
                                                         <td className="px-4 py-3 min-w-[300px] max-w-md whitespace-pre-wrap break-words">{item.isi_soal}</td>
-                                                        <td className="px-4 py-3">{item.tipe_soal === 'pilihan_ganda_kompleks' ? 'PGK' : item.tipe_soal === 'esai' ? 'Esai' : 'PG'}</td>
+                                                        <td className="px-4 py-3"><span className="inline-flex px-2 py-1 rounded bg-slate-100 text-xs font-medium text-slate-600">{item.level_kognitif}</span></td>
                                                         <td className="px-4 py-3">
                                                             <div className="flex flex-col">
                                                                 <span>{item.mata_pelajaran?.nama_lengkap || item.mata_pelajaran?.nama_mapel}</span>
@@ -639,6 +1005,8 @@ export default function GuruJadwalCbtPage({ session, onLogout }) {
                                         </table>
                                     </div>
                                 </div>
+                                    );
+                                })()}
                             </div>
                             <div className="border-t border-border bg-slate-50 px-6 py-4 flex justify-end gap-3">
                                 <button type="button" onClick={() => { setIsSesiModalOpen(false); setEditingSesiId(null); }} className="rounded-full px-5 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-200">Batal</button>
@@ -662,6 +1030,38 @@ export default function GuruJadwalCbtPage({ session, onLogout }) {
                         <h3 className="mb-2 text-xl font-bold text-slate-900">{successPopup.title}</h3>
                         <p className="mb-6 text-sm text-slate-500">{successPopup.message}</p>
                         <button onClick={closeSuccessPopup} className="w-full rounded-2xl bg-slate-900 py-3 text-sm font-semibold text-white transition hover:bg-slate-800">Tutup</button>
+                    </div>
+                </div>
+            )}
+
+            {isUnsavedModalOpen && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
+                    <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl">
+                        <h3 className="text-xl font-bold text-slate-900 mb-2">Perubahan Belum Disimpan</h3>
+                        <p className="text-sm text-slate-600 mb-6">Anda sedang mengubah skor tetapi belum menyimpannya. Apakah Anda ingin melanjutkan dan mengabaikan perubahan tersebut?</p>
+                        <div className="flex gap-3 justify-end">
+                            <button onClick={cancelPendingAction} className="rounded-xl px-5 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 transition">Batal</button>
+                            <button onClick={confirmPendingAction} className="rounded-xl bg-rose-600 px-5 py-2 text-sm font-semibold text-white hover:bg-rose-700 transition">Abaikan Perubahan</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {isValidasiModalOpen && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
+                    <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl">
+                        <h3 className="text-xl font-bold text-slate-900 mb-2">Konfirmasi Validasi Nilai</h3>
+                        <p className="text-sm text-slate-600 mb-6">
+                            Apakah Anda yakin sudah selesai melakukan <strong>Review</strong> dan <strong>Edit Skor</strong> (jika ada) untuk siswa ini? 
+                            <br/><br/>
+                            Mengeklik Validasi akan memicu pembuatan ulang <strong>Analisis Diagnostik AI</strong> berdasarkan skor terbaru.
+                        </p>
+                        <div className="flex gap-3 justify-end">
+                            <button onClick={() => setIsValidasiModalOpen(false)} className="rounded-xl px-5 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 transition" disabled={validasiLoading}>Batal</button>
+                            <button onClick={handleValidasiNilai} className="rounded-xl bg-emerald-600 px-5 py-2 text-sm font-semibold text-white hover:bg-emerald-700 transition flex items-center gap-2" disabled={validasiLoading}>
+                                {validasiLoading ? 'Memvalidasi...' : 'Ya, Validasi'}
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}

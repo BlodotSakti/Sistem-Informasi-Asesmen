@@ -140,7 +140,7 @@ export default function SiswaProfilePage({ session, onLogout }) {
                 {error ? <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div> : null}
 
                 <section className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
-                    <div className="space-y-6">
+                    <div className="space-y-6 min-w-0">
                         <div className="rounded-3xl border border-slate-200/80 bg-white p-6 sm:p-8 shadow-sm hover:shadow-md transition-shadow duration-300">
                             <div className="flex items-center gap-4 mb-8">
                                 <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 shadow-inner">
@@ -173,7 +173,7 @@ export default function SiswaProfilePage({ session, onLogout }) {
 
                     </div>
 
-                    <div className="space-y-6">
+                    <div className="space-y-6 min-w-0">
                         <div className="rounded-3xl border border-slate-200/80 bg-white p-6 sm:p-8 shadow-sm hover:shadow-md transition-shadow duration-300">
                             <div className="flex items-center gap-4 mb-8">
                                 <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600 shadow-inner">
@@ -190,7 +190,8 @@ export default function SiswaProfilePage({ session, onLogout }) {
                                 <input value={classHistorySearch} onChange={(event) => setClassHistorySearch(event.target.value)} className="w-full rounded-2xl border border-slate-200 bg-slate-50/50 px-5 py-3.5 text-slate-800 outline-none transition-all focus:border-primary focus:bg-white focus:ring-4 focus:ring-primary/10 placeholder:text-slate-400" placeholder="Nama kelas, tahun ajaran, atau status" />
                             </label>
 
-                            <div className="overflow-hidden rounded-2xl border border-slate-200/60 bg-white shadow-sm">
+                            <p className="mb-2 text-xs text-slate-500 italic md:hidden">Geser tabel ke kanan/kiri untuk melihat detail histori kelas.</p>
+                            <div className="overflow-x-auto rounded-2xl border border-slate-200/60 bg-white shadow-sm">
                                 <table className="min-w-full divide-y divide-slate-100 text-left text-sm">
                                     <thead className="bg-slate-50/80 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">
                                         <tr>
@@ -238,7 +239,8 @@ export default function SiswaProfilePage({ session, onLogout }) {
                                 <input value={subjectSearch} onChange={(event) => setSubjectSearch(event.target.value)} className="w-full rounded-2xl border border-slate-200 bg-slate-50/50 px-5 py-3.5 text-slate-800 outline-none transition-all focus:border-primary focus:bg-white focus:ring-4 focus:ring-primary/10 placeholder:text-slate-400" placeholder="Mata pelajaran, guru, atau tahun ajaran" />
                             </label>
 
-                            <div className="overflow-hidden rounded-2xl border border-slate-200/60 bg-white shadow-sm">
+                            <p className="mb-2 text-xs text-slate-500 italic md:hidden">Geser tabel ke kanan/kiri untuk melihat detail mapel aktif.</p>
+                            <div className="overflow-x-auto rounded-2xl border border-slate-200/60 bg-white shadow-sm">
                                 <table className="min-w-full divide-y divide-slate-100 text-left text-sm">
                                     <thead className="bg-slate-50/80 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">
                                         <tr>

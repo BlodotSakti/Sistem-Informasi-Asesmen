@@ -347,46 +347,56 @@ export default function GuruBeritaAcaraPage({ session, onLogout }) {
                     )}
 
                     <div className="mt-6 grid gap-4 md:grid-cols-2">
-                        <label className="space-y-2 text-sm font-medium text-slate-700">
+                        <label className="space-y-2 text-sm font-medium text-slate-700 block min-w-0 md:col-span-2">
                             <span>Kelas</span>
-                            <select
-                                required
-                                value={beritaForm.id_kelas}
-                                onChange={(event) => {
-                                    const classId = event.target.value;
-                                    const firstMapel = (workspace.teaching_assignments || []).find((item) => Number(item.id_kelas) === Number(classId));
-                                    setBeritaForm((current) => ({
-                                        ...current,
-                                        id_kelas: classId,
-                                        id_mapel: firstMapel?.id_mapel || '',
-                                    }));
-                                }}
-                                className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-slate-900"
-                            >
-                                <option value="">Pilih kelas</option>
-                                {(workspace.kelas_options || []).map((item) => (
-                                    <option key={item.id_kelas} value={item.id_kelas}>
-                                        {item.nama_kelas} {item.tahun_ajaran ? `(${item.tahun_ajaran})` : ''}
-                                    </option>
-                                ))}
-                            </select>
+                            <div className="relative">
+                                <select
+                                    required
+                                    value={beritaForm.id_kelas}
+                                    onChange={(event) => {
+                                        const classId = event.target.value;
+                                        const firstMapel = (workspace.teaching_assignments || []).find((item) => Number(item.id_kelas) === Number(classId));
+                                        setBeritaForm((current) => ({
+                                            ...current,
+                                            id_kelas: classId,
+                                            id_mapel: firstMapel?.id_mapel || '',
+                                        }));
+                                    }}
+                                    className="w-full appearance-none rounded-2xl border border-slate-300 bg-slate-50/50 hover:bg-slate-50 pl-3 py-2.5 pr-8 text-[11px] sm:text-sm text-slate-800 outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/20 truncate"
+                                >
+                                    <option value="">Pilih kelas</option>
+                                    {(workspace.kelas_options || []).map((item) => (
+                                        <option key={item.id_kelas} value={item.id_kelas}>
+                                            {item.nama_kelas} {item.tahun_ajaran ? `(${item.tahun_ajaran.replace('Semester ', '')})` : ''}
+                                        </option>
+                                    ))}
+                                </select>
+                                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400">
+                                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 9l4-4 4 4m0 6l-4 4-4-4"></path></svg>
+                                </div>
+                            </div>
                         </label>
 
-                        <label className="space-y-2 text-sm font-medium text-slate-700">
+                        <label className="space-y-2 text-sm font-medium text-slate-700 block min-w-0 md:col-span-2">
                             <span>Mata Pelajaran</span>
-                            <select
-                                required
-                                value={beritaForm.id_mapel}
-                                onChange={(event) => setBeritaForm((current) => ({ ...current, id_mapel: event.target.value }))}
-                                className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-slate-900"
-                            >
-                                <option value="">Pilih mapel</option>
-                                {mapelBySelectedClass.map((item) => (
-                                    <option key={item.id_mapel} value={item.id_mapel}>
-                                        {item.nama_lengkap || item.nama_mapel}
-                                    </option>
-                                ))}
-                            </select>
+                            <div className="relative">
+                                <select
+                                    required
+                                    value={beritaForm.id_mapel}
+                                    onChange={(event) => setBeritaForm((current) => ({ ...current, id_mapel: event.target.value }))}
+                                    className="w-full appearance-none rounded-2xl border border-slate-300 bg-slate-50/50 hover:bg-slate-50 pl-3 py-2.5 pr-8 text-[11px] sm:text-sm text-slate-800 outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/20 truncate"
+                                >
+                                    <option value="">Pilih mapel</option>
+                                    {mapelBySelectedClass.map((item) => (
+                                        <option key={item.id_mapel} value={item.id_mapel}>
+                                            {item.nama_lengkap || item.nama_mapel}
+                                        </option>
+                                    ))}
+                                </select>
+                                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400">
+                                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 9l4-4 4 4m0 6l-4 4-4-4"></path></svg>
+                                </div>
+                            </div>
                         </label>
 
                         <label className="space-y-2 text-sm font-medium text-slate-700">
@@ -584,6 +594,10 @@ export default function GuruBeritaAcaraPage({ session, onLogout }) {
                                         <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" /></svg>
                                     </div>
                                 </summary>
+                                <p className="text-[11px] sm:text-xs text-slate-500 mb-2 italic flex items-center">
+                                    <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path></svg>
+                                    Geser tabel ke kanan/kiri untuk melihat detail selengkapnya
+                                </p>
                                 <div className="overflow-x-auto">
                                     <table className="min-w-full divide-y divide-slate-100 text-left text-sm">
                                         <thead className="bg-white text-[11px] uppercase tracking-[0.2em] text-slate-400">
