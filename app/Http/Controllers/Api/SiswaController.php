@@ -901,6 +901,17 @@ class SiswaController extends Controller
             ->whereIn('id_kelas', $kelasIds)
             ->latest('waktu_mulai')
             ->get()
+            ->filter(function (SesiAsesmen $sesi) use ($siswa) {
+                $isEnded = $sesi->waktu_selesai && \Carbon\Carbon::parse($sesi->waktu_selesai)->isPast();
+                if ($isEnded) {
+                    return true;
+                }
+                
+                $detailIds = $sesi->detailSesiSoal->pluck('id_detail');
+                return JawabanSiswa::where('id_siswa', $siswa->id_siswa)
+                    ->whereIn('id_detail', $detailIds)
+                    ->exists();
+            })
             ->map(function (SesiAsesmen $sesi) use ($siswa) {
                 $detailIds = $sesi->detailSesiSoal->pluck('id_detail');
                 $jawaban = JawabanSiswa::where('id_siswa', $siswa->id_siswa)
