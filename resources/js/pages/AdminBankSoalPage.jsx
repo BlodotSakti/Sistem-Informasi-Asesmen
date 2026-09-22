@@ -33,6 +33,9 @@ export default function AdminBankSoalPage({ session, onLogout }) {
         gambar_soal: null,
         hapus_gambar: false,
         gambar_soal_url: null,
+        keywords: '',
+        rule_weight: 0.4,
+        lsa_weight: 0.6,
     });
 
     const navigation = adminNavigation;
@@ -92,6 +95,9 @@ export default function AdminBankSoalPage({ session, onLogout }) {
             gambar_soal: null,
             hapus_gambar: false,
             gambar_soal_url: soal.gambar_soal_url || null,
+            keywords: soal.jenis_soal === 'esai' && Array.isArray(soal.keywords) ? soal.keywords.join('\n') : '',
+            rule_weight: soal.rule_weight ?? 0.4,
+            lsa_weight: soal.lsa_weight ?? 0.6,
         });
         
         window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -110,6 +116,9 @@ export default function AdminBankSoalPage({ session, onLogout }) {
             gambar_soal: null,
             hapus_gambar: false,
             gambar_soal_url: null,
+            keywords: '',
+            rule_weight: 0.4,
+            lsa_weight: 0.6,
         });
         setEditingBankSoalId(null);
         setIsFormOpen(false);
@@ -150,6 +159,15 @@ export default function AdminBankSoalPage({ session, onLogout }) {
                 });
             } else {
                 formData.append('kunci_jawaban', bankForm.kunci_jawaban);
+            }
+
+            if (bankForm.jenis_soal === 'esai') {
+                const keywordArray = bankForm.keywords.split('\n').map(k => k.trim()).filter(Boolean);
+                keywordArray.forEach(kw => {
+                    formData.append('keywords[]', kw);
+                });
+                formData.append('rule_weight', bankForm.rule_weight);
+                formData.append('lsa_weight', bankForm.lsa_weight);
             }
 
             if (bankForm.gambar_soal instanceof File) {

@@ -162,7 +162,10 @@ export default function SiswaCbtPage({ session, onLogout, idSesi }) {
             const result = await response.json();
 
             // Clear localStorage on success
-            try { localStorage.removeItem(storageKey); } catch { /* ignore */ }
+            try { 
+                localStorage.removeItem(storageKey); 
+                localStorage.removeItem(`${STORAGE_PREFIX}start-${idSesi}`);
+            } catch { /* ignore */ }
 
             setResultData(result);
         } catch (err) {
