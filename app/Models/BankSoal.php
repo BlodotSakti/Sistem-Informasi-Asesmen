@@ -61,11 +61,15 @@ class BankSoal extends Model
         'keywords',
         'rule_weight',
         'lsa_weight',
+        'math_steps',
+        'math_weight',
     ];
 
     protected $casts = [
         'opsi_jawaban' => 'array',
         'keywords' => 'array',
+        'math_steps' => 'array',
+        'math_weight' => 'float',
     ];
 
     public function pembuat(): BelongsTo

@@ -584,7 +584,14 @@ class SiswaController extends Controller
                                 ];
                             }, $keywords),
                             'rule_weight' => (float) ($bankSoal->rule_weight ?? 0.5),
-                            'lsa_weight' => (float) ($bankSoal->lsa_weight ?? 0.5)
+                            'lsa_weight' => (float) ($bankSoal->lsa_weight ?? 0.5),
+                            'math_steps' => array_map(function($eq) {
+                                return [
+                                    'equation' => trim($eq),
+                                    'weight' => 1.0
+                                ];
+                            }, $bankSoal->math_steps ?? []),
+                            'math_weight' => (float) ($bankSoal->math_weight ?? 0.0)
                         ]);
                         
                         if ($response->successful()) {
