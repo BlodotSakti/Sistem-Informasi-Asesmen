@@ -96,6 +96,8 @@ Route::middleware('auth:sanctum')->group(function (): void {
 			Route::patch('/sesi-asesmen/{id_sesi}', [GuruController::class, 'sesiAsesmenUpdate'])->name('sesi-asesmen.update');
 			Route::delete('/sesi-asesmen/{id_sesi}', [GuruController::class, 'sesiAsesmenDestroy'])->name('sesi-asesmen.destroy');
 			Route::get('/sesi-asesmen/{id_sesi}/detail', [GuruController::class, 'sesiAsesmenDetail'])->name('sesi-asesmen.detail');
+			Route::get('/sesi-asesmen/{id_sesi}/log-pelanggaran', [GuruController::class, 'getLogPelanggaran'])->name('sesi-asesmen.log-pelanggaran');
+			Route::post('/sesi-asesmen/{id_sesi}/unlock/{id_siswa}', [GuruController::class, 'unlockSiswaCbt'])->name('sesi-asesmen.unlock');
 			Route::put('/sesi-asesmen/{id_sesi}/jawaban/{id_detail}/siswa/{id_siswa}/score', [GuruController::class, 'updateSkorJawaban'])->name('sesi-asesmen.update-skor');
 			Route::post('/sesi-asesmen/{id_sesi}/validasi-nilai/{id_siswa}', [GuruController::class, 'validasiNilai'])->name('sesi-asesmen.validasi-nilai');
 			Route::get('/berita-acara', [GuruController::class, 'beritaAcaraIndex'])->name('berita-acara.index');
@@ -118,6 +120,7 @@ Route::middleware('auth:sanctum')->group(function (): void {
 			Route::get('/cbt/riwayat', [SiswaController::class, 'cbtHistory'])->name('cbt.history');
 			Route::get('/cbt/{id_sesi}', [SiswaController::class, 'cbtData'])->name('cbt.data');
 			Route::post('/cbt/{id_sesi}/submit', [SiswaController::class, 'cbtSubmit'])->name('cbt.submit');
+			Route::post('/cbt/{id_sesi}/log-pelanggaran', [SiswaController::class, 'logPelanggaran'])->name('cbt.log-pelanggaran');
 			Route::post('/cbt/{id_sesi}/save-answer', [SiswaController::class, 'cbtSaveAnswer'])->name('cbt.save-answer');
 			Route::get('/cbt/{id_sesi}/review', [SiswaController::class, 'cbtReview'])->name('cbt.review');
 			Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');

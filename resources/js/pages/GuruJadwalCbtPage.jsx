@@ -17,6 +17,8 @@ export default function GuruJadwalCbtPage({ session, onLogout }) {
     const [editingSesiId, setEditingSesiId] = useState(null);
     const [sesiDetailData, setSesiDetailData] = useState(null);
     const [sesiDetailLoading, setSesiDetailLoading] = useState(false);
+    const [sesiLogs, setSesiLogs] = useState([]);
+    const [detailActiveTab, setDetailActiveTab] = useState('siswa');
     const [expandedSiswaId, setExpandedSiswaId] = useState(null);
     const [sesiForm, setSesiForm] = useState({
         id_kelas: '',
@@ -27,6 +29,8 @@ export default function GuruJadwalCbtPage({ session, onLogout }) {
         waktu_selesai: '',
         durasi_menit: 60,
         boleh_ulang: false,
+        tampilkan_kunci: true,
+        token: '',
     });
     const [selectedSoalMap, setSelectedSoalMap] = useState({});
     const [sharedBankSoal, setSharedBankSoal] = useState([]);
@@ -43,6 +47,7 @@ export default function GuruJadwalCbtPage({ session, onLogout }) {
     const [pendingAction, setPendingAction] = useState(null);
     const [isUnsavedModalOpen, setIsUnsavedModalOpen] = useState(false);
     const [isValidasiModalOpen, setIsValidasiModalOpen] = useState(false);
+    const [unlockModal, setUnlockModal] = useState({ isOpen: false, id_sesi: null, id_siswa: null, loading: false });
     const [validasiSiswaId, setValidasiSiswaId] = useState(null);
     const [validasiLoading, setValidasiLoading] = useState(false);
 
@@ -190,6 +195,8 @@ export default function GuruJadwalCbtPage({ session, onLogout }) {
                     waktu_selesai: sesiForm.waktu_selesai,
                     durasi_menit: Number(sesiForm.durasi_menit),
                     boleh_ulang: sesiForm.boleh_ulang,
+                    tampilkan_kunci: sesiForm.tampilkan_kunci,
+                    token: sesiForm.token,
                     soal: soalArr,
                 }),
             });
@@ -199,7 +206,7 @@ export default function GuruJadwalCbtPage({ session, onLogout }) {
             setEditingSesiId(null);
             setSelectedSoalMap({});
             setSesiForm({
-                id_kelas: '', id_mapel: '', tipe_soal: '', jenis_asesmen: 'ujian', waktu_mulai: '', waktu_selesai: '', durasi_menit: 60, boleh_ulang: false
+                id_kelas: '', id_mapel: '', tipe_soal: '', jenis_asesmen: 'ujian', waktu_mulai: '', waktu_selesai: '', durasi_menit: 60, boleh_ulang: false, tampilkan_kunci: true, token: ''
             });
             setBankSearch('');
             setBankFilterLevel('');
@@ -221,6 +228,8 @@ export default function GuruJadwalCbtPage({ session, onLogout }) {
             waktu_selesai: item.waktu_selesai ? new Date(new Date(item.waktu_selesai).getTime() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16) : '',
             durasi_menit: item.durasi_menit || 60,
             boleh_ulang: !!item.boleh_ulang,
+            tampilkan_kunci: item.tampilkan_kunci !== undefined ? !!item.tampilkan_kunci : true,
+            token: item.token || '',
         });
 
         const soalMap = {};
@@ -243,14 +252,41 @@ export default function GuruJadwalCbtPage({ session, onLogout }) {
         }
     };
 
+    const handleUnlockSiswa = (id_sesi, id_siswa) => {
+        setUnlockModal({ isOpen: true, id_sesi, id_siswa, loading: false });
+    };
+
+    const confirmUnlockSiswa = async () => {
+        const { id_sesi, id_siswa } = unlockModal;
+        setUnlockModal((prev) => ({ ...prev, loading: true }));
+        try {
+            await apiFetch(`/api/guru/sesi-asesmen/${id_sesi}/unlock/${id_siswa}`, session, { method: 'POST' });
+            showSuccessPopup('Berhasil', 'Status ujian siswa berhasil dibuka kuncinya.');
+            // Refresh detail modal
+            fetchSesiDetail(id_sesi);
+        } catch (err) {
+            showSuccessPopup('Gagal Membuka Kunci', err.message || 'Terjadi kesalahan saat membuka kunci.');
+        } finally {
+            setUnlockModal({ isOpen: false, id_sesi: null, id_siswa: null, loading: false });
+        }
+    };
+
     const fetchSesiDetail = async (idSesi) => {
         requestAction(async () => {
             try {
                 setSesiDetailLoading(true);
                 setSesiDetailData(null);
+                setSesiLogs([]);
+                setDetailActiveTab('siswa');
                 setExpandedSiswaId(null);
-                const data = await apiFetch(`/api/guru/sesi-asesmen/${idSesi}/detail`, session);
+                
+                const [data, logs] = await Promise.all([
+                    apiFetch(`/api/guru/sesi-asesmen/${idSesi}/detail`, session),
+                    apiFetch(`/api/guru/sesi-asesmen/${idSesi}/log-pelanggaran`, session).catch(() => [])
+                ]);
+                
                 setSesiDetailData(data);
+                setSesiLogs(logs || []);
             } catch (err) {
                 console.error("Failed to fetch sesi detail", err);
                 showSuccessPopup('Gagal', err.message || 'Gagal memuat detail sesi.');
@@ -417,10 +453,10 @@ export default function GuruJadwalCbtPage({ session, onLogout }) {
                             <thead className="border-b border-border bg-slate-50 text-xs uppercase tracking-[0.2em] text-slate-500">
                                 <tr>
                                     <th className="px-5 py-4 font-semibold text-center w-16">No</th>
-                                    <th className="px-5 py-4 font-semibold">Tipe Soal</th>
+                                    <th className="px-5 py-4 font-semibold">Label Ujian</th>
                                     <th className="px-5 py-4 font-semibold">Kelas</th>
                                     <th className="px-5 py-4 font-semibold">Mapel</th>
-                                    <th className="px-5 py-4 font-semibold">Tipe</th>
+                                    <th className="px-5 py-4 font-semibold">Jenis Asesmen</th>
                                     <th className="px-5 py-4 font-semibold">Waktu Pelaksanaan</th>
                                     <th className="px-5 py-4 font-semibold">Durasi</th>
                                     <th className="px-5 py-4 font-semibold text-center">Ulang</th>
@@ -497,7 +533,15 @@ export default function GuruJadwalCbtPage({ session, onLogout }) {
                                             <h3 className="text-xl font-bold text-slate-900">
                                                 Detail: {sesiDetailData.sesi.tipe_soal?.toUpperCase()} - {sesiDetailData.sesi.mata_pelajaran} ({formatDateTimeLabel(sesiDetailData.sesi.waktu_mulai)})
                                             </h3>
-                                            <p className="text-sm text-slate-500 capitalize">{sesiDetailData.sesi.jenis_asesmen} — {sesiDetailData.sesi.kelas}</p>
+                                            <p className="text-sm text-slate-500 capitalize">
+                                                {sesiDetailData.sesi.jenis_asesmen} — {sesiDetailData.sesi.kelas}
+                                                {sesiDetailData.sesi.token && (
+                                                    <span className="ml-3 inline-flex items-center gap-1 px-2 py-0.5 bg-primary/10 text-primary rounded-md font-mono text-xs font-bold border border-primary/20">
+                                                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" /></svg>
+                                                        Token: {sesiDetailData.sesi.token}
+                                                    </span>
+                                                )}
+                                            </p>
                                         </div>
                                         <button onClick={() => {
                                             setSesiDetailData(null);
@@ -562,9 +606,30 @@ export default function GuruJadwalCbtPage({ session, onLogout }) {
                                             </div>
                                         </details>
 
-                                        {/* Daftar Siswa */}
-                                        <div>
-                                            <h4 className="text-lg font-bold text-slate-800 mb-3">👥 Status Siswa</h4>
+                                        {/* Tabs Modal */}
+                                        <div className="flex border-b border-border mt-4">
+                                            <button 
+                                                onClick={() => setDetailActiveTab('siswa')}
+                                                className={`px-6 py-3 text-sm font-bold transition-colors border-b-2 ${detailActiveTab === 'siswa' ? 'border-primary text-primary' : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'}`}
+                                            >
+                                                👥 Status Siswa
+                                            </button>
+                                            <button 
+                                                onClick={() => setDetailActiveTab('log')}
+                                                className={`px-6 py-3 text-sm font-bold transition-colors border-b-2 ${detailActiveTab === 'log' ? 'border-primary text-primary' : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'}`}
+                                            >
+                                                ⚠️ Log Pelanggaran CBT
+                                                {sesiLogs.length > 0 && (
+                                                    <span className="ml-2 inline-flex items-center justify-center rounded-full bg-rose-100 px-2 py-0.5 text-xs font-bold text-rose-600">
+                                                        {sesiLogs.length}
+                                                    </span>
+                                                )}
+                                            </button>
+                                        </div>
+
+                                        {/* Daftar Siswa Tab */}
+                                        {detailActiveTab === 'siswa' && (
+                                            <div>
                                             
                                             <div className="flex flex-col sm:flex-row gap-3 mb-4">
                                                 <input 
@@ -769,7 +834,7 @@ export default function GuruJadwalCbtPage({ session, onLogout }) {
                                                         {filteredDetailSiswa.length === 0 && (
                                                             <tr>
                                                                 <td colSpan="6" className="px-4 py-8 text-center text-sm text-slate-500">
-                                                                    Tidak ada siswa yang cocok dengan filter pencarian.
+                                                                    Tidak ada data siswa yang cocok.
                                                                 </td>
                                                             </tr>
                                                         )}
@@ -777,6 +842,72 @@ export default function GuruJadwalCbtPage({ session, onLogout }) {
                                                 </table>
                                             </div>
                                         </div>
+                                        )}
+
+                                        {/* Tab Log Pelanggaran */}
+                                        {detailActiveTab === 'log' && (
+                                            <div>
+                                                <div className="flex items-center justify-between mb-4">
+                                                    <h4 className="text-lg font-bold text-slate-800">⚠️ Log Aktivitas CBT Siswa</h4>
+                                                    <p className="text-sm text-slate-500">Log ini mencatat aktivitas mencurigakan selama ujian.</p>
+                                                </div>
+                                                <div className="overflow-x-auto rounded-2xl border border-border">
+                                                    <table className="min-w-full divide-y divide-slate-200 text-left text-sm">
+                                                        <thead className="bg-slate-50 text-xs uppercase tracking-[0.15em] text-slate-500">
+                                                            <tr>
+                                                                <th className="px-4 py-3 font-semibold">Waktu</th>
+                                                                <th className="px-4 py-3 font-semibold">Siswa</th>
+                                                                <th className="px-4 py-3 font-semibold">Jenis Pelanggaran</th>
+                                                                <th className="px-4 py-3 font-semibold">Keterangan</th>
+                                                                <th className="px-4 py-3 font-semibold text-right">Aksi</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody className="divide-y divide-slate-100">
+                                                            {sesiLogs.map((log) => (
+                                                                <tr key={log.id_log} className="hover:bg-slate-50/70">
+                                                                    <td className="px-4 py-3 text-slate-500 font-mono text-xs whitespace-nowrap">
+                                                                        {new Date(log.created_at).toLocaleString('id-ID')}
+                                                                    </td>
+                                                                    <td className="px-4 py-3 font-semibold text-slate-900">
+                                                                        {log.siswa?.nama_lengkap} <br/>
+                                                                        <span className="font-normal text-slate-500 text-xs">{log.siswa?.nisn}</span>
+                                                                    </td>
+                                                                    <td className="px-4 py-3">
+                                                                        <span className="inline-flex items-center rounded-full bg-rose-100 px-2.5 py-0.5 text-xs font-semibold text-rose-700">
+                                                                            {log.jenis_pelanggaran}
+                                                                        </span>
+                                                                    </td>
+                                                                    <td className="px-4 py-3 text-slate-600 text-xs">
+                                                                        {log.keterangan || '-'}
+                                                                    </td>
+                                                                    <td className="px-4 py-3 text-right">
+                                                                        {!log.is_resolved && (
+                                                                            <button onClick={() => handleUnlockSiswa(sesiDetailData.sesi.id_sesi, log.siswa.id_siswa)} className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-100 transition border border-emerald-200">
+                                                                                <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" /></svg>
+                                                                                Buka Kunci
+                                                                            </button>
+                                                                        )}
+                                                                        {!!log.is_resolved && (
+                                                                            <span className="text-emerald-600 text-xs font-bold inline-flex items-center gap-1">
+                                                                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                                                                                Dipulihkan
+                                                                            </span>
+                                                                        )}
+                                                                    </td>
+                                                                </tr>
+                                                            ))}
+                                                            {sesiLogs.length === 0 && (
+                                                                <tr>
+                                                                    <td colSpan="5" className="px-4 py-8 text-center text-sm text-slate-500">
+                                                                        Tidak ada log pelanggaran yang tercatat untuk sesi ini. (Aman)
+                                                                    </td>
+                                                                </tr>
+                                                            )}
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
                                     <div className="border-t border-border px-6 py-4 text-right">
                                         <button onClick={() => setSesiDetailData(null)} className="rounded-xl bg-slate-900 px-5 py-2 text-sm font-semibold text-white transition hover:bg-primary/85">Tutup</button>
@@ -862,6 +993,15 @@ export default function GuruJadwalCbtPage({ session, onLogout }) {
                                         <span>Durasi (Menit)</span>
                                         <input required type="number" min="1" value={sesiForm.durasi_menit} onChange={e => setSesiForm(c => ({...c, durasi_menit: e.target.value}))} className="w-full rounded-2xl border border-slate-300 px-4 py-3 outline-none transition focus:border-slate-900" />
                                     </label>
+                                    <label className="space-y-2 text-sm font-medium text-slate-700">
+                                        <span>Token Ujian (Opsional)</span>
+                                        <div className="flex gap-2">
+                                            <input type="text" maxLength="10" placeholder="Contoh: CBT123" value={sesiForm.token} onChange={e => setSesiForm(c => ({...c, token: e.target.value.toUpperCase()}))} className="w-full rounded-2xl border border-slate-300 px-4 py-3 outline-none transition focus:border-slate-900 font-mono uppercase" />
+                                            <button type="button" onClick={() => setSesiForm(c => ({...c, token: Math.random().toString(36).substring(2, 8).toUpperCase()}))} className="shrink-0 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-2xl transition border border-slate-200">
+                                                Acak Token
+                                            </button>
+                                        </div>
+                                    </label>
                                 </div>
 
                                 <div className="mt-4 flex items-center justify-between rounded-2xl border border-border bg-slate-50 px-5 py-4">
@@ -877,6 +1017,22 @@ export default function GuruJadwalCbtPage({ session, onLogout }) {
                                         className={`relative inline-flex h-7 w-12 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${sesiForm.boleh_ulang ? 'bg-primary' : 'bg-slate-300'}`}
                                     >
                                         <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${sesiForm.boleh_ulang ? 'translate-x-5' : 'translate-x-0.5'}`} />
+                                    </button>
+                                </div>
+
+                                <div className="mt-4 flex items-center justify-between rounded-2xl border border-border bg-slate-50 px-5 py-4">
+                                    <div>
+                                        <p className="text-sm font-semibold text-slate-900">Tampilkan Kunci Jawaban ke Siswa</p>
+                                        <p className="text-xs text-slate-500">Jika aktif, siswa dapat melihat teks kunci jawaban setelah mereka mengumpulkan ujian (di menu Riwayat).</p>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        role="switch"
+                                        aria-checked={sesiForm.tampilkan_kunci}
+                                        onClick={() => setSesiForm(c => ({...c, tampilkan_kunci: !c.tampilkan_kunci}))}
+                                        className={`relative inline-flex h-7 w-12 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${sesiForm.tampilkan_kunci ? 'bg-primary' : 'bg-slate-300'}`}
+                                    >
+                                        <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${sesiForm.tampilkan_kunci ? 'translate-x-5' : 'translate-x-0.5'}`} />
                                     </button>
                                 </div>
 
@@ -1060,6 +1216,30 @@ export default function GuruJadwalCbtPage({ session, onLogout }) {
                             <button onClick={() => setIsValidasiModalOpen(false)} className="rounded-xl px-5 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 transition" disabled={validasiLoading}>Batal</button>
                             <button onClick={handleValidasiNilai} className="rounded-xl bg-emerald-600 px-5 py-2 text-sm font-semibold text-white hover:bg-emerald-700 transition flex items-center gap-2" disabled={validasiLoading}>
                                 {validasiLoading ? 'Memvalidasi...' : 'Ya, Validasi'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {unlockModal.isOpen && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
+                    <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl">
+                        <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-50 text-amber-600">
+                            <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                            </svg>
+                        </div>
+                        <h3 className="text-xl font-bold text-slate-900 mb-2">Konfirmasi Buka Kunci</h3>
+                        <p className="text-sm text-slate-600 mb-6">
+                            Apakah Anda yakin ingin membuka kunci ujian untuk siswa ini? 
+                            <br/><br/>
+                            <strong>Perhatian:</strong> Riwayat jawaban sebelumnya akan <strong>dihapus</strong> dan siswa harus mengulang ujian dari awal.
+                        </p>
+                        <div className="flex gap-3 justify-end">
+                            <button onClick={() => setUnlockModal({ isOpen: false, id_sesi: null, id_siswa: null, loading: false })} className="rounded-xl px-5 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 transition" disabled={unlockModal.loading}>Batal</button>
+                            <button onClick={confirmUnlockSiswa} className="rounded-xl bg-amber-600 px-5 py-2 text-sm font-semibold text-white hover:bg-amber-700 transition flex items-center gap-2" disabled={unlockModal.loading}>
+                                {unlockModal.loading ? 'Memproses...' : 'Ya, Buka Kunci'}
                             </button>
                         </div>
                     </div>

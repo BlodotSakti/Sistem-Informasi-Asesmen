@@ -53,6 +53,7 @@ class SiswaController extends Controller
                 $sesiDetailIds = $sesi->detailSesiSoal->pluck('id_detail')->toArray();
                 $answeredCount = count(array_intersect($sesiDetailIds, $answeredDetailIds));
                 $sesi->sudah_dikerjakan = $answeredCount > 0 && $answeredCount >= count($sesiDetailIds);
+                $sesi->has_token = !empty($sesi->token);
                 return $sesi;
             });
         }
@@ -444,6 +445,27 @@ class SiswaController extends Controller
             return response()->json(['message' => 'Unauthorized access to this session'], 403);
         }
 
+        // Cek Token Ujian (jika sesi mewajibkan token)
+        if (!empty($sesi->token)) {
+            $token = $request->query('token');
+            if (empty($token) || strtoupper($token) !== strtoupper($sesi->token)) {
+                return response()->json(['message' => 'Token ujian tidak valid. Pastikan Anda memasukkan token yang benar.'], 403);
+            }
+        }
+
+        // Cek Lockout Pelanggaran
+        $isLocked = \App\Models\LogPelanggaranCbt::where('id_siswa', $siswa->id_siswa)
+            ->where('id_sesi', $id_sesi)
+            ->where('is_resolved', false)
+            ->exists();
+            
+        if ($isLocked) {
+            return response()->json([
+                'message' => 'Ujian Terkunci! Anda terdeteksi melakukan pelanggaran dan jawaban telah direset. Hubungi Guru pengawas untuk membuka kunci.',
+                'locked' => true
+            ], 403);
+        }
+
         // Check if session has ended
         if ($sesi->waktu_selesai && now()->gt($sesi->waktu_selesai)) {
             return response()->json([
@@ -539,6 +561,19 @@ class SiswaController extends Controller
 
         if ($sesi->waktu_selesai && now()->gt(\Carbon\Carbon::parse($sesi->waktu_selesai)->addMinutes(5))) {
             return response()->json(['message' => 'Waktu ujian telah berakhir'], 403);
+        }
+
+        // Cek Lockout Pelanggaran
+        $isLocked = \App\Models\LogPelanggaranCbt::where('id_siswa', $siswa->id_siswa)
+            ->where('id_sesi', $id_sesi)
+            ->where('is_resolved', false)
+            ->exists();
+            
+        if ($isLocked) {
+            return response()->json([
+                'message' => 'Gagal mengumpulkan jawaban! Ujian Terkunci karena terdeteksi pelanggaran.',
+                'locked' => true
+            ], 403);
         }
 
         if ($sesi->waktu_mulai && now()->lt($sesi->waktu_mulai)) {
@@ -748,6 +783,9 @@ class SiswaController extends Controller
             'jumlah_soal' => count($resultPerSoal),
             'jumlah_benar' => $jumlahBenar,
             'jumlah_salah' => count($resultPerSoal) - $jumlahBenar,
+            'sesi' => [
+                'tampilkan_kunci' => $sesi->tampilkan_kunci,
+            ],
             'mata_pelajaran' => $sesi->mataPelajaran?->nama_mapel,
             'jenis_asesmen' => $sesi->jenis_asesmen,
             'tipe_soal' => $sesi->tipe_soal,
@@ -776,6 +814,15 @@ class SiswaController extends Controller
 
         if ($sesi->id_kelas !== $siswa->kelasAktifAssignment?->id_kelas) {
             return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        $hasPelanggaran = \App\Models\LogPelanggaranCbt::where('id_siswa', $siswa->id_siswa)
+            ->where('id_sesi', $id_sesi)
+            ->where('is_resolved', false)
+            ->exists();
+
+        if ($hasPelanggaran) {
+            return response()->json(['message' => 'Akun terkunci karena pelanggaran. Auto-save diblokir.'], 403);
         }
 
         // SAFE RETAKE LOGIC:
@@ -881,6 +928,7 @@ class SiswaController extends Controller
                     'has_analisis' => AnalisisDiagnostik::where('id_siswa', $siswa->id_siswa)
                         ->where('id_sesi', $sesi->id_sesi)
                         ->exists(),
+                    'has_token' => !empty($sesi->token),
                 ];
             });
 
@@ -959,6 +1007,7 @@ class SiswaController extends Controller
                 'tipe_soal' => $sesi->tipe_soal,
                 'waktu_mulai' => $sesi->waktu_mulai,
                 'durasi_menit' => $sesi->durasi_menit,
+                'tampilkan_kunci' => $sesi->tampilkan_kunci,
             ],
             'total_skor' => round($totalSkor, 2),
             'total_bobot' => round($totalBobot, 2),
@@ -967,5 +1016,43 @@ class SiswaController extends Controller
             'soal' => $soalReview->values(),
             'analisis_diagnostik' => $analisisDiagnostik,
         ]);
+    }
+
+    public function logPelanggaran(Request $request, $id_sesi): JsonResponse
+    {
+        $siswa = $request->user()->siswa;
+        if (!$siswa) {
+            return response()->json(['message' => 'Unauthorized'], 401);
+        }
+
+        $validator = validator($request->all(), [
+            'jenis_pelanggaran' => ['required', 'string', 'max:50'],
+            'keterangan' => ['nullable', 'string'],
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['message' => 'Invalid data', 'errors' => $validator->errors()], 422);
+        }
+
+        \App\Models\LogPelanggaranCbt::create([
+            'id_sesi' => $id_sesi,
+            'id_siswa' => $siswa->id_siswa,
+            'jenis_pelanggaran' => $request->jenis_pelanggaran,
+            'keterangan' => $request->keterangan,
+            'user_agent' => $request->userAgent(),
+            'is_resolved' => false,
+        ]);
+
+        $sesi = \App\Models\SesiAsesmen::with('detailSesiSoal')->find($id_sesi);
+        if ($sesi) {
+            $detailIds = $sesi->detailSesiSoal->pluck('id_detail')->toArray();
+            if (!empty($detailIds)) {
+                \App\Models\JawabanSiswa::where('id_siswa', $siswa->id_siswa)
+                    ->whereIn('id_detail', $detailIds)
+                    ->delete();
+            }
+        }
+
+        return response()->json(['message' => 'Log recorded successfully']);
     }
 }

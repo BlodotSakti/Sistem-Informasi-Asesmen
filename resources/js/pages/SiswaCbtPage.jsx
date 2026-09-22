@@ -18,10 +18,98 @@ export default function SiswaCbtPage({ session, onLogout, idSesi }) {
     const [timeLeft, setTimeLeft] = useState(0);
     const [resultData, setResultData] = useState(null);
     const [showSummary, setShowSummary] = useState(false);
+    const [showConfirmModal, setShowConfirmModal] = useState(false);
+
+    const [isLockdownActive, setIsLockdownActive] = useState(false);
+    const [lockdownWarning, setLockdownWarning] = useState(null);
+    const [isLockedOut, setIsLockedOut] = useState(false);
+    const [lockdownMessage, setLockdownMessage] = useState(null);
+
+    const reportCheating = useCallback(async (jenis, keterangan) => {
+        setIsLockdownActive(false); // Matikan event listener agar tidak trigger berulang
+        setIsLockedOut(true);
+        setLockdownMessage(keterangan);
+
+        try {
+            await fetch(apiBase(`/api/siswa/cbt/${idSesi}/log-pelanggaran`), {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Accept: 'application/json',
+                    Authorization: `Bearer ${session.token}`,
+                    'X-CSRF-TOKEN': window.__APP_CSRF__ || '',
+                },
+                body: JSON.stringify({ jenis_pelanggaran: jenis, keterangan }),
+            });
+
+            // Hapus jawaban tersimpan dari local storage karena jawaban telah direset oleh backend
+            try { 
+                localStorage.removeItem(`${STORAGE_PREFIX}${idSesi}`); 
+                localStorage.removeItem(`${STORAGE_PREFIX}start-${idSesi}`);
+            } catch { /* ignore */ }
+        } catch { /* silent fail */ }
+    }, [idSesi, session.token]);
 
     const saveTimerRef = useRef({});
     const activeSoal = soalData[currentIndex];
     const storageKey = `${STORAGE_PREFIX}${idSesi}`;
+
+    // Browser Lockdown Event Listeners
+    useEffect(() => {
+        if (!isLockdownActive || resultData) return;
+
+        const handleVisibilityChange = () => {
+            if (document.hidden) {
+                reportCheating('tab_switch', 'Anda terdeteksi berpindah tab atau meminimalkan browser.');
+            }
+        };
+
+        const handleBlur = () => {
+            reportCheating('blur', 'Jendela ujian kehilangan fokus. Pastikan Anda tidak membuka aplikasi lain.');
+        };
+
+        const handleContextMenu = (e) => {
+            e.preventDefault();
+            reportCheating('right_click', 'Klik kanan dinonaktifkan selama ujian.');
+        };
+
+        const handleCopyPaste = (e) => {
+            e.preventDefault();
+            reportCheating('copy_paste', 'Tindakan menyalin (copy) atau menempel (paste) dinonaktifkan.');
+        };
+
+        const handleFullscreenChange = () => {
+            if (!document.fullscreenElement && !document.webkitIsFullScreen && !document.mozFullScreen) {
+                reportCheating('fullscreen_exit', 'Anda keluar dari mode layar penuh.');
+                // Opsional: paksa masuk kembali jika memungkinkan, atau berhentikan ujian
+                // window.alert("Anda dilarang keluar dari mode layar penuh selama ujian!");
+            }
+        };
+
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+        window.addEventListener('blur', handleBlur);
+        document.addEventListener('contextmenu', handleContextMenu);
+        document.addEventListener('copy', handleCopyPaste);
+        document.addEventListener('paste', handleCopyPaste);
+        document.addEventListener('cut', handleCopyPaste);
+        document.addEventListener('fullscreenchange', handleFullscreenChange);
+        document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+        document.addEventListener('mozfullscreenchange', handleFullscreenChange);
+        document.addEventListener('MSFullscreenChange', handleFullscreenChange);
+
+        return () => {
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+            window.removeEventListener('blur', handleBlur);
+            document.removeEventListener('contextmenu', handleContextMenu);
+            document.removeEventListener('copy', handleCopyPaste);
+            document.removeEventListener('paste', handleCopyPaste);
+            document.removeEventListener('cut', handleCopyPaste);
+            document.removeEventListener('fullscreenchange', handleFullscreenChange);
+            document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
+            document.removeEventListener('mozfullscreenchange', handleFullscreenChange);
+            document.removeEventListener('MSFullscreenChange', handleFullscreenChange);
+        };
+    }, [isLockdownActive, resultData, reportCheating]);
 
     // Persist jawaban to localStorage whenever it changes
     useEffect(() => {
@@ -38,7 +126,13 @@ export default function SiswaCbtPage({ session, onLogout, idSesi }) {
 
         async function fetchData() {
             try {
-                const response = await fetch(apiBase(`/api/siswa/cbt/${idSesi}`), {
+                const url = new URL(apiBase(`/api/siswa/cbt/${idSesi}`));
+                const searchParams = new URLSearchParams(window.location.search);
+                if (searchParams.has('token')) {
+                    url.searchParams.append('token', searchParams.get('token'));
+                }
+
+                const response = await fetch(url.toString(), {
                     headers: {
                         Accept: 'application/json',
                         Authorization: `Bearer ${session.token}`,
@@ -47,6 +141,12 @@ export default function SiswaCbtPage({ session, onLogout, idSesi }) {
 
                 if (!response.ok) {
                     const errorBody = await response.json().catch(() => ({}));
+                    if (response.status === 403 && errorBody.locked) {
+                        setIsLockedOut(true);
+                        setLockdownMessage(errorBody.message || 'Ujian Terkunci karena terdeteksi pelanggaran.');
+                        setLoading(false);
+                        return;
+                    }
                     if (errorBody.sudah_dikerjakan) {
                         throw new Error('SUDAH_DIKERJAKAN');
                     }
@@ -156,7 +256,13 @@ export default function SiswaCbtPage({ session, onLogout, idSesi }) {
             });
 
             if (!response.ok) {
-                throw new Error('Gagal menyimpan jawaban ujian');
+                const errorBody = await response.json().catch(() => ({}));
+                if (response.status === 403 && errorBody.locked) {
+                    setIsLockedOut(true);
+                    setLockdownMessage(errorBody.message || 'Ujian Terkunci karena terdeteksi pelanggaran saat menyimpan.');
+                    return; // Stop submission
+                }
+                throw new Error(errorBody.message || 'Gagal menyimpan jawaban ujian');
             }
 
             const result = await response.json();
@@ -176,7 +282,7 @@ export default function SiswaCbtPage({ session, onLogout, idSesi }) {
 
     // Timer
     useEffect(() => {
-        if (loading || submitting || resultData) return;
+        if (loading || submitting || resultData || error || isLockedOut) return;
 
         if (timeLeft <= 0) {
             // Jika waktu sudah habis di awal, otomatis kumpulkan
@@ -322,15 +428,21 @@ export default function SiswaCbtPage({ session, onLogout, idSesi }) {
                                             if (isChosenOption && isCorrectOption) {
                                                 style = 'border-emerald-300 bg-emerald-50 text-emerald-800 shadow-sm';
                                                 icon = '✓';
-                                                label = 'Pilihan Anda (Benar)';
+                                                label = resultData.sesi?.tampilkan_kunci !== false ? 'Pilihan Anda (Kunci Jawaban)' : 'Pilihan Anda (Benar)';
                                             } else if (isChosenOption && !isCorrectOption) {
                                                 style = 'border-rose-300 bg-rose-50 text-rose-800 shadow-sm';
                                                 icon = '✗';
                                                 label = 'Pilihan Anda (Salah)';
                                             } else if (!isChosenOption && isCorrectOption) {
-                                                style = 'border-emerald-300 bg-emerald-50/40 text-emerald-700 border-dashed';
-                                                icon = '✓';
-                                                label = 'Kunci Jawaban';
+                                                if (resultData.sesi?.tampilkan_kunci !== false) {
+                                                    style = 'border-emerald-300 bg-emerald-50/40 text-emerald-700 border-dashed';
+                                                    icon = '✓';
+                                                    label = 'Kunci Jawaban';
+                                                } else {
+                                                    style = 'border-border bg-white text-slate-600';
+                                                    icon = '○';
+                                                    label = '';
+                                                }
                                             } else {
                                                 icon = '○';
                                             }
@@ -349,15 +461,17 @@ export default function SiswaCbtPage({ session, onLogout, idSesi }) {
                                 )}
 
                                 {(!item.opsi_jawaban || item.opsi_jawaban.length === 0) && (
-                                    <div className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
+                                    <div className={`mt-3 grid gap-2 text-sm ${resultData.sesi?.tampilkan_kunci !== false ? 'sm:grid-cols-2' : ''}`}>
                                         <div className="rounded-xl bg-white/80 px-4 py-2 border border-border">
                                             <span className="font-medium text-slate-500">Jawaban Anda:</span>
                                             <p className="mt-1 text-slate-800">{formatJawaban(item.jawaban_siswa, item.jenis_soal) || <em className="text-slate-400">Tidak dijawab</em>}</p>
                                         </div>
-                                        <div className="rounded-xl bg-white/80 px-4 py-2 border border-border">
-                                            <span className="font-medium text-slate-500">Kunci Jawaban:</span>
-                                            <p className="mt-1 text-slate-800">{formatJawaban(item.kunci_jawaban, item.jenis_soal)}</p>
-                                        </div>
+                                        {resultData.sesi?.tampilkan_kunci !== false && (
+                                            <div className="rounded-xl bg-white/80 px-4 py-2 border border-border">
+                                                <span className="font-medium text-slate-500">Kunci Jawaban:</span>
+                                                <p className="mt-1 text-slate-800">{formatJawaban(item.kunci_jawaban, item.jenis_soal)}</p>
+                                            </div>
+                                        )}
                                     </div>
                                 )}
                             </div>
@@ -424,9 +538,94 @@ export default function SiswaCbtPage({ session, onLogout, idSesi }) {
         );
     }
 
+    // --- LOCKDOWN REQUIREMENT ---
+    if (isLockedOut) {
+        return (
+            <div className="flex min-h-screen items-center justify-center bg-slate-900 p-4 font-sans text-slate-100">
+                <div className="w-full max-w-md overflow-hidden rounded-3xl bg-white shadow-2xl animate-pulse">
+                    <div className="bg-rose-600 p-6 text-center">
+                        <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-white text-rose-600 shadow-inner">
+                            <svg className="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                            </svg>
+                        </div>
+                        <h2 className="text-2xl font-black text-white">UJIAN TERKUNCI</h2>
+                    </div>
+                    <div className="p-8 text-center text-slate-700">
+                        <p className="mb-4 text-base font-medium">Anda terdeteksi melakukan tindakan pelanggaran:</p>
+                        <div className="mb-6 rounded-xl bg-rose-50 p-4 border border-rose-100">
+                            <p className="text-sm font-semibold text-rose-700">"{lockdownMessage}"</p>
+                        </div>
+                        <p className="text-sm text-slate-500 mb-6">Ujian dihentikan dan seluruh jawaban sebelumnya telah direset. Silakan lapor kepada Guru pengawas untuk meminta akses ulang ujian (Buka Kunci).</p>
+                        <a href="/siswa/dashboard" className="inline-flex items-center justify-center rounded-xl bg-slate-800 px-6 py-3 text-sm font-bold text-white shadow transition hover:bg-slate-700 w-full">
+                            Kembali ke Dashboard
+                        </a>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    if (!isLockdownActive) {
+        return (
+            <div className="flex min-h-screen items-center justify-center bg-slate-50 p-4">
+                <div className="rounded-3xl border border-border bg-white px-8 py-10 shadow-lg max-w-lg text-center space-y-6">
+                    <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-rose-100">
+                        <svg className="h-10 w-10 text-rose-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                        </svg>
+                    </div>
+                    <div>
+                        <h2 className="text-2xl font-bold text-slate-900 mb-2">Mode Keamanan Ujian</h2>
+                        <p className="text-slate-600 leading-relaxed text-sm">
+                            Ujian ini membutuhkan mode layar penuh (Fullscreen) untuk mencegah kecurangan. 
+                            Anda dilarang berpindah aplikasi, membuka tab baru, menyalin/menempel jawaban, atau menekan tombol klik kanan. 
+                            Segala bentuk pelanggaran akan dicatat secara otomatis.
+                        </p>
+                    </div>
+                    <button
+                        onClick={async () => {
+                            try {
+                                const elem = document.documentElement;
+                                if (elem.requestFullscreen) {
+                                    await elem.requestFullscreen();
+                                } else if (elem.webkitRequestFullscreen) { /* Safari */
+                                    await elem.webkitRequestFullscreen();
+                                } else if (elem.msRequestFullscreen) { /* IE11 */
+                                    await elem.msRequestFullscreen();
+                                }
+                            } catch (e) {
+                                console.warn('Fullscreen API gagal atau tidak didukung:', e);
+                            }
+                            setIsLockdownActive(true);
+                        }}
+                        className="w-full rounded-2xl bg-primary px-6 py-4 text-base font-bold text-white shadow-md transition hover:bg-primary/90 focus:outline-none focus:ring-4 focus:ring-primary/30"
+                    >
+                        Saya Mengerti, Mulai Ujian
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
     // --- EXAM SCREEN ---
     return (
         <div className="min-h-screen bg-slate-100 font-sans text-slate-900 flex flex-col selection:bg-primary/10">
+            {/* Lockdown Warning Modal */}
+            {lockdownWarning && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+                    <div className="rounded-3xl border-2 border-rose-500 bg-white p-8 max-w-sm text-center shadow-2xl animate-bounce">
+                        <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-rose-100 text-rose-600">
+                            <svg className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                            </svg>
+                        </div>
+                        <h3 className="text-xl font-bold text-slate-900 mb-2">Peringatan!</h3>
+                        <p className="text-rose-600 font-medium">{lockdownWarning}</p>
+                    </div>
+                </div>
+            )}
+            
             {/* Header */}
             <header className="sticky top-0 z-10 flex flex-col sm:flex-row items-center justify-between border-b border-border bg-secondary px-3 py-3 sm:py-0 sm:px-6 sm:h-16 backdrop-blur-md shadow-sm gap-3 sm:gap-0">
                 <div className="flex w-full sm:w-auto items-center space-x-3 justify-center sm:justify-start">
@@ -542,11 +741,7 @@ export default function SiswaCbtPage({ session, onLogout, idSesi }) {
                                     Kembali ke Soal
                                 </button>
                                 <button
-                                    onClick={() => {
-                                        if (window.confirm('Anda yakin ingin mengakhiri ujian? Jawaban tidak dapat diubah lagi setelah dikumpulkan.')) {
-                                            handleSubmit();
-                                        }
-                                    }}
+                                    onClick={() => setShowConfirmModal(true)}
                                     disabled={submitting}
                                     className="rounded-xl bg-primary px-8 py-3 text-sm font-semibold text-accent shadow-sm transition hover:bg-primary/85 disabled:opacity-50 flex items-center"
                                 >
@@ -712,6 +907,37 @@ export default function SiswaCbtPage({ session, onLogout, idSesi }) {
                     </div>
                 </aside>
             </main>
+
+            {/* Custom Confirm Modal */}
+            {showConfirmModal && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+                    <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl animate-in fade-in zoom-in-95">
+                        <h3 className="mb-2 text-xl font-bold text-slate-800">Akhiri Ujian?</h3>
+                        <p className="mb-6 text-slate-600">
+                            Anda yakin ingin mengakhiri ujian? Jawaban tidak dapat diubah lagi setelah dikumpulkan.
+                        </p>
+                        <div className="flex items-center justify-end space-x-3">
+                            <button
+                                onClick={() => setShowConfirmModal(false)}
+                                disabled={submitting}
+                                className="rounded-xl px-4 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-100"
+                            >
+                                Batal
+                            </button>
+                            <button
+                                onClick={() => {
+                                    setShowConfirmModal(false);
+                                    handleSubmit();
+                                }}
+                                disabled={submitting}
+                                className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-primary/90 disabled:opacity-50 flex items-center"
+                            >
+                                {submitting ? 'Menyimpan...' : 'Ya, Kumpulkan'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

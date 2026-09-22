@@ -9,6 +9,25 @@ export default function SiswaSessionsPage({ session, onLogout }) {
     const { summary, activeSessions, loading, error } = useSiswaData(session, { includeActiveSessions: true });
     const sessions = activeSessions?.data || [];
     const [sessionSearch, setSessionSearch] = useState('');
+    const [tokenModalOpen, setTokenModalOpen] = useState(false);
+    const [selectedSession, setSelectedSession] = useState(null);
+    const [tokenInput, setTokenInput] = useState('');
+
+    const handleStartExam = (item) => {
+        if (item.has_token) {
+            setSelectedSession(item);
+            setTokenInput('');
+            setTokenModalOpen(true);
+        } else {
+            window.location.href = `/siswa/cbt/${item.id_sesi}`;
+        }
+    };
+
+    const submitToken = (e) => {
+        e.preventDefault();
+        if (!tokenInput.trim()) return;
+        window.location.href = `/siswa/cbt/${selectedSession.id_sesi}?token=${tokenInput.trim().toUpperCase()}`;
+    };
 
     const filteredSessions = useMemo(() => {
         const search = sessionSearch.trim().toLowerCase();
@@ -103,7 +122,7 @@ export default function SiswaSessionsPage({ session, onLogout }) {
                                     <th className="px-4 py-3 font-semibold text-center w-12">No.</th>
                                     <th className="px-4 py-3 font-semibold">Mata Pelajaran</th>
                                     <th className="px-4 py-3 font-semibold">Kelas</th>
-                                    <th className="px-4 py-3 font-semibold">Jenis</th>
+                                    <th className="px-4 py-3 font-semibold">Jenis Asesmen</th>
                                     <th className="px-4 py-3 font-semibold">Durasi</th>
                                     <th className="px-4 py-3 font-semibold">Waktu Pelaksanaan</th>
                                     <th className="px-4 py-3 font-semibold">Status</th>
@@ -163,12 +182,12 @@ export default function SiswaSessionsPage({ session, onLogout }) {
                                                     Sesi Belum Dimulai
                                                 </span>
                                             ) : (
-                                                <a
-                                                    href={`/siswa/cbt/${item.id_sesi}`}
+                                                <button
+                                                    onClick={() => handleStartExam(item)}
                                                     className="inline-flex items-center justify-center rounded-xl bg-primary px-6 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:bg-primary/85 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
                                                 >
                                                     {sudahDikerjakan ? 'Kerjakan Ulang' : 'Kerjakan'}
-                                                </a>
+                                                </button>
                                             )}
                                         </td>
                                     </tr>
@@ -184,6 +203,49 @@ export default function SiswaSessionsPage({ session, onLogout }) {
                     </div>
                 </section>
             </div>
+
+            {tokenModalOpen && selectedSession && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-sm">
+                    <form onSubmit={submitToken} className="w-full max-w-sm rounded-3xl bg-white p-6 shadow-2xl">
+                        <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-600">
+                            <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+                            </svg>
+                        </div>
+                        <h3 className="text-xl font-bold text-slate-900">Token Ujian Dibutuhkan</h3>
+                        <p className="mt-1 text-sm text-slate-500">Silakan masukkan token untuk memulai sesi ujian <strong>{selectedSession.mata_pelajaran?.nama_lengkap || selectedSession.mata_pelajaran?.nama_mapel || selectedSession.mataPelajaran?.nama_lengkap || selectedSession.mataPelajaran?.nama_mapel || 'Mata Pelajaran'} - {selectedSession.tipe_soal} ({selectedSession.jenis_asesmen})</strong>.</p>
+                        
+                        <div className="mt-5 mb-6">
+                            <input
+                                type="text"
+                                autoFocus
+                                required
+                                value={tokenInput}
+                                onChange={(e) => setTokenInput(e.target.value.toUpperCase())}
+                                placeholder="Masukkan Token CBT"
+                                className="w-full rounded-2xl border border-slate-300 px-4 py-3 text-center font-mono text-lg font-bold tracking-widest outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 uppercase"
+                            />
+                        </div>
+                        
+                        <div className="flex gap-3">
+                            <button
+                                type="button"
+                                onClick={() => { setTokenModalOpen(false); setSelectedSession(null); }}
+                                className="w-full rounded-2xl bg-slate-100 py-3 text-sm font-semibold text-slate-600 transition hover:bg-slate-200"
+                            >
+                                Batal
+                            </button>
+                            <button
+                                type="submit"
+                                disabled={!tokenInput.trim()}
+                                className="w-full rounded-2xl bg-primary py-3 text-sm font-semibold text-white transition hover:bg-primary/90 disabled:opacity-50"
+                            >
+                                Mulai Ujian
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            )}
         </DashboardLayout>
     );
 }

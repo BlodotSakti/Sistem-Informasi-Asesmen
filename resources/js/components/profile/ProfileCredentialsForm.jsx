@@ -40,9 +40,11 @@ export default function ProfileCredentialsForm({ session }) {
                 throw new Error('Konfirmasi password tidak cocok dengan password baru.');
             }
 
-            const payload = {
-                username: form.username,
-            };
+            const payload = {};
+
+            if (session?.user?.role === 'admin') {
+                payload.username = form.username;
+            }
 
             if (form.password.trim() !== '') {
                 payload.password = form.password;
@@ -82,12 +84,13 @@ export default function ProfileCredentialsForm({ session }) {
 
             <div className="mt-6 space-y-4">
                 <label className="block space-y-2 text-sm font-medium text-slate-700">
-                    <span>Username</span>
+                    <span>Username {session?.user?.role !== 'admin' && <span className="text-slate-400 font-normal ml-1">(Tidak dapat diubah)</span>}</span>
                     <input
-                        required
+                        required={session?.user?.role === 'admin'}
+                        disabled={session?.user?.role !== 'admin'}
                         value={form.username}
                         onChange={(event) => setForm((current) => ({ ...current, username: event.target.value }))}
-                        className="w-full rounded-2xl border border-slate-200 bg-slate-50/50 px-5 py-3.5 text-slate-800 outline-none transition-all focus:border-primary focus:bg-white focus:ring-4 focus:ring-primary/10 placeholder:text-slate-400"
+                        className={`w-full rounded-2xl border px-5 py-3.5 text-slate-800 outline-none transition-all placeholder:text-slate-400 ${session?.user?.role !== 'admin' ? 'border-transparent bg-slate-100 cursor-not-allowed opacity-70 text-slate-500' : 'border-slate-200 bg-slate-50/50 focus:border-primary focus:bg-white focus:ring-4 focus:ring-primary/10'}`}
                         placeholder="Masukkan username login"
                     />
                 </label>

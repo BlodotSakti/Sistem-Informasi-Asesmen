@@ -57,6 +57,8 @@ class SesiAsesmen extends Model
         'waktu_selesai',
         'durasi_menit',
         'boleh_ulang',
+        'tampilkan_kunci',
+        'token'
     ];
 
     protected $casts = [
@@ -64,6 +66,7 @@ class SesiAsesmen extends Model
         'waktu_selesai' => 'datetime',
         'durasi_menit' => 'integer',
         'boleh_ulang' => 'boolean',
+        'tampilkan_kunci' => 'boolean',
     ];
 
     public function kelas(): BelongsTo

@@ -649,9 +649,11 @@ class GuruController extends Controller
             'waktu_selesai' => ['required', 'date', 'after:waktu_mulai'],
             'durasi_menit' => ['required', 'integer', 'min:1'],
             'boleh_ulang' => ['sometimes', 'boolean'],
+            'tampilkan_kunci' => ['sometimes', 'boolean'],
             'soal' => ['required', 'array', 'min:1'],
             'soal.*.id_soal' => ['required', 'integer', 'exists:bank_soal,id_soal'],
             'soal.*.bobot_nilai' => ['required', 'numeric', 'min:0'],
+            'token' => ['nullable', 'string', 'max:10'],
         ]);
 
         $guruId = $request->user()->guru->id_guru;
@@ -667,6 +669,8 @@ class GuruController extends Controller
                 'waktu_selesai' => $data['waktu_selesai'],
                 'durasi_menit' => $data['durasi_menit'],
                 'boleh_ulang' => $data['boleh_ulang'] ?? false,
+                'tampilkan_kunci' => $data['tampilkan_kunci'] ?? true,
+                'token' => $data['token'] ?? strtoupper(\Illuminate\Support\Str::random(6)),
             ]);
 
             foreach ($data['soal'] as $soal) {
@@ -846,9 +850,11 @@ class GuruController extends Controller
             'waktu_selesai' => ['required', 'date', 'after:waktu_mulai'],
             'durasi_menit' => ['required', 'integer', 'min:1'],
             'boleh_ulang' => ['sometimes', 'boolean'],
+            'tampilkan_kunci' => ['sometimes', 'boolean'],
             'soal' => ['required', 'array', 'min:1'],
             'soal.*.id_soal' => ['required', 'integer', 'exists:bank_soal,id_soal'],
             'soal.*.bobot_nilai' => ['required', 'numeric', 'min:0'],
+            'token' => ['nullable', 'string', 'max:10'],
         ]);
 
         $guruId = $request->user()->guru->id_guru;
@@ -864,6 +870,8 @@ class GuruController extends Controller
                 'waktu_selesai' => $data['waktu_selesai'],
                 'durasi_menit' => $data['durasi_menit'],
                 'boleh_ulang' => $data['boleh_ulang'] ?? $sesi->boleh_ulang,
+                'tampilkan_kunci' => $data['tampilkan_kunci'] ?? $sesi->tampilkan_kunci,
+                'token' => $data['token'] ?? $sesi->token,
             ]);
 
             $newSoalIds = collect($data['soal'])->pluck('id_soal')->toArray();
@@ -1239,6 +1247,50 @@ class GuruController extends Controller
             'message' => 'Nilai KKM berhasil diperbarui.',
             'penugasan' => $penugasan
         ]);
+    }
+
+    public function getLogPelanggaran(Request $request, int $id_sesi): JsonResponse
+    {
+        $guruId = $request->user()->guru->id_guru;
+        $query = SesiAsesmen::where('id_sesi', $id_sesi);
+        $this->scopeGuruSesiAsesmen($query, $guruId);
+        $query->firstOrFail();
+
+        $logs = \App\Models\LogPelanggaranCbt::with(['siswa', 'sesiAsesmen'])
+            ->where('id_sesi', $id_sesi)
+            ->latest()
+            ->get();
+
+        return response()->json($logs);
+    }
+
+    public function unlockSiswaCbt(Request $request, int $id_sesi, int $id_siswa): JsonResponse
+    {
+        $guruId = $request->user()->guru->id_guru;
+        $query = SesiAsesmen::where('id_sesi', $id_sesi);
+        $this->scopeGuruSesiAsesmen($query, $guruId);
+        $query->firstOrFail();
+
+        \App\Models\LogPelanggaranCbt::where('id_sesi', $id_sesi)
+            ->where('id_siswa', $id_siswa)
+            ->update(['is_resolved' => true]);
+
+        // Reset progress ujian siswa (Hapus skor dan jawaban)
+        \App\Models\AnalisisDiagnostik::where('id_sesi', $id_sesi)
+            ->where('id_siswa', $id_siswa)
+            ->delete();
+
+        $sesi = SesiAsesmen::with('detailSesiSoal')->find($id_sesi);
+        if ($sesi) {
+            $detailIds = $sesi->detailSesiSoal->pluck('id_detail')->toArray();
+            if (!empty($detailIds)) {
+                \App\Models\JawabanSiswa::where('id_siswa', $id_siswa)
+                    ->whereIn('id_detail', $detailIds)
+                    ->delete();
+            }
+        }
+
+        return response()->json(['message' => 'Status ujian siswa berhasil dibuka kuncinya.']);
     }
 
     protected function ensureGuruMengampuMapel(int $guruId, int $idMapel): void

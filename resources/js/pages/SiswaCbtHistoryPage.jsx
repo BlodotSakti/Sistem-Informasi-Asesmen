@@ -111,8 +111,8 @@ export default function SiswaCbtHistoryPage({ session, onLogout }) {
                         />
                         <StatCard 
                             label="Rata-Rata" 
-                            value={loading ? '...' : `${stats.rataRata}%`} 
-                            description="Persentase rata-rata skor" 
+                            value={loading ? '...' : stats.rataRata} 
+                            description="Nilai rata-rata keseluruhan" 
                             tone="amber" 
                             className="!bg-[#EEDCC8] !border-transparent" 
                             icon={
@@ -125,8 +125,8 @@ export default function SiswaCbtHistoryPage({ session, onLogout }) {
                         />
                         <StatCard 
                             label="Tertinggi" 
-                            value={loading ? '...' : `${stats.tertinggi}%`} 
-                            description="Persentase skor tertinggi" 
+                            value={loading ? '...' : stats.tertinggi} 
+                            description="Nilai skor tertinggi yang diraih" 
                             tone="slate" 
                             className="!bg-[#EEDCC8] !border-transparent" 
                             icon={
@@ -298,15 +298,21 @@ export default function SiswaCbtHistoryPage({ session, onLogout }) {
                                                                 if (isChosenOption && isCorrectOption) {
                                                                     style = 'border-emerald-300 bg-emerald-50 text-emerald-800 shadow-sm';
                                                                     icon = '✓';
-                                                                    label = 'Pilihan Anda (Benar)';
+                                                                    label = reviewData.sesi?.tampilkan_kunci !== false ? 'Pilihan Anda (Kunci Jawaban)' : 'Pilihan Anda (Benar)';
                                                                 } else if (isChosenOption && !isCorrectOption) {
                                                                     style = 'border-rose-300 bg-rose-50 text-rose-800 shadow-sm';
                                                                     icon = '✗';
                                                                     label = 'Pilihan Anda (Salah)';
                                                                 } else if (!isChosenOption && isCorrectOption) {
-                                                                    style = 'border-emerald-300 bg-emerald-50/40 text-emerald-700 border-dashed';
-                                                                    icon = '✓';
-                                                                    label = 'Kunci Jawaban';
+                                                                    if (reviewData.sesi?.tampilkan_kunci !== false) {
+                                                                        style = 'border-emerald-300 bg-emerald-50/40 text-emerald-700 border-dashed';
+                                                                        icon = '✓';
+                                                                        label = 'Kunci Jawaban';
+                                                                    } else {
+                                                                        style = 'border-border bg-white text-slate-600';
+                                                                        icon = '○';
+                                                                        label = '';
+                                                                    }
                                                                 } else {
                                                                     icon = '○';
                                                                 }
@@ -327,15 +333,17 @@ export default function SiswaCbtHistoryPage({ session, onLogout }) {
                                                     {/* Essay answers */}
                                                     {/* Essay answers */}
                                                     {(item.jenis_soal === 'essay' || item.jenis_soal === 'esai') && (
-                                                        <div className="grid gap-2 text-sm sm:grid-cols-2">
+                                                        <div className={`grid gap-2 text-sm ${reviewData.sesi?.tampilkan_kunci !== false ? 'sm:grid-cols-2' : ''}`}>
                                                             <div className="rounded-xl bg-white/80 border border-border px-4 py-2">
                                                                 <span className="font-medium text-slate-500">Jawaban Anda:</span>
                                                                 <p className="mt-1 text-slate-700 whitespace-pre-wrap">{item.jawaban_siswa || <em className="text-slate-400">Tidak dijawab</em>}</p>
                                                             </div>
-                                                            <div className="rounded-xl bg-white/80 border border-border px-4 py-2">
-                                                                <span className="font-medium text-slate-500">Kunci Jawaban:</span>
-                                                                <p className="mt-1 text-slate-700 whitespace-pre-wrap">{formatJawaban(item.kunci_jawaban, item.jenis_soal)}</p>
-                                                            </div>
+                                                            {reviewData.sesi?.tampilkan_kunci !== false && (
+                                                                <div className="rounded-xl bg-white/80 border border-border px-4 py-2">
+                                                                    <span className="font-medium text-slate-500">Kunci Jawaban:</span>
+                                                                    <p className="mt-1 text-slate-700 whitespace-pre-wrap">{formatJawaban(item.kunci_jawaban, item.jenis_soal)}</p>
+                                                                </div>
+                                                            )}
                                                         </div>
                                                     )}
                                                 </div>
