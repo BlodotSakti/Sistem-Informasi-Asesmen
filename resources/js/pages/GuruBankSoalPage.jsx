@@ -562,7 +562,7 @@ export default function GuruBankSoalPage({ session, onLogout }) {
                                         <input type="checkbox" checked={bankForm.use_math} onChange={(e) => setBankForm(c => ({...c, use_math: e.target.checked}))} className="h-5 w-5 rounded border-slate-300 text-primary focus:ring-primary" />
                                         <div>
                                             <span className="block text-sm font-bold text-slate-800">Gunakan Penilaian Matematis (SymPy AI)</span>
-                                            <span className="block text-xs font-normal text-slate-500 mt-0.5">Aktifkan hanya untuk soal eksakta (Matematika/Fisika/Kimia) yang butuh evaluasi rumus secara mutlak.</span>
+                                            <span className="block text-xs font-normal text-slate-500 mt-0.5">Aktifkan untuk soal yang butuh evaluasi kebenaran rumus/persamaan secara mutlak.</span>
                                         </div>
                                     </label>
                                 </div>
