@@ -1,4 +1,4 @@
 providers = ["php"]
 
 [phases.setup]
-nixPkgs = ["...", "mysql"]
+aptPkgs = ["...", "default-mysql-client"]
