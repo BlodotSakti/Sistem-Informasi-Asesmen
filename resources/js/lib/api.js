@@ -24,7 +24,7 @@ export async function apiFetch(path, session, options = {}) {
             window.location.replace('/login');
             return;
         }
-        const message = typeof payload === 'string' ? payload : payload?.message || 'Request gagal.';
+        const message = typeof payload === 'string' ? payload : payload?.message || payload?.error || 'Request gagal.';
         throw new Error(message);
     }
 

@@ -46,7 +46,12 @@ class BackupController extends Controller
         try {
             $this->setBackupFilenamePrefix();
             // Run the backup command
-            Artisan::call('backup:run', ['--only-db' => true]);
+            $exitCode = Artisan::call('backup:run', ['--only-db' => true]);
+            
+            if ($exitCode !== 0) {
+                $output = Artisan::output();
+                throw new \Exception("Gagal menjalankan perintah backup (Exit code: $exitCode). " . $output);
+            }
             
             LogAktivitas::create([
                 'id_pengguna_aktor' => request()->user()->id_pengguna,
@@ -68,7 +73,12 @@ class BackupController extends Controller
         try {
             $this->setBackupFilenamePrefix();
             // Run full backup
-            Artisan::call('backup:run');
+            $exitCode = Artisan::call('backup:run');
+
+            if ($exitCode !== 0) {
+                $output = Artisan::output();
+                throw new \Exception("Gagal menjalankan perintah backup (Exit code: $exitCode). " . $output);
+            }
             
             LogAktivitas::create([
                 'id_pengguna_aktor' => request()->user()->id_pengguna,

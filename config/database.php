@@ -63,7 +63,7 @@ return [
                 Mysql::ATTR_SSL_CA => env('MYSQL_ATTR_SSL_CA'),
             ]) : [],
             'dump' => [
-                'dump_binary_path' => env('DUMP_BINARY_PATH', ''),
+                'dump_binary_path' => 'D:/laragon/bin/mysql/mysql-8.4.3-winx64/bin',
                 'use_single_transaction',
                 'timeout' => 60 * 5,
             ],

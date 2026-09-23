@@ -36,6 +36,9 @@ export default function AdminBankSoalPage({ session, onLogout }) {
         keywords: '',
         rule_weight: 0.4,
         lsa_weight: 0.6,
+        use_math: false,
+        math_steps: '',
+        math_weight: 0,
     });
 
     const navigation = adminNavigation;
@@ -98,6 +101,9 @@ export default function AdminBankSoalPage({ session, onLogout }) {
             keywords: soal.jenis_soal === 'esai' && Array.isArray(soal.keywords) ? soal.keywords.join('\n') : '',
             rule_weight: soal.rule_weight ?? 0.4,
             lsa_weight: soal.lsa_weight ?? 0.6,
+            use_math: soal.use_math === 1,
+            math_steps: soal.math_steps || '',
+            math_weight: soal.math_weight || 0,
         });
         
         window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -119,6 +125,9 @@ export default function AdminBankSoalPage({ session, onLogout }) {
             keywords: '',
             rule_weight: 0.4,
             lsa_weight: 0.6,
+            use_math: false,
+            math_steps: '',
+            math_weight: 0,
         });
         setEditingBankSoalId(null);
         setIsFormOpen(false);
@@ -168,6 +177,12 @@ export default function AdminBankSoalPage({ session, onLogout }) {
                 });
                 formData.append('rule_weight', bankForm.rule_weight);
                 formData.append('lsa_weight', bankForm.lsa_weight);
+                
+                formData.append('use_math', bankForm.use_math ? '1' : '0');
+                if (bankForm.use_math) {
+                    formData.append('math_steps', bankForm.math_steps);
+                    formData.append('math_weight', bankForm.math_weight);
+                }
             }
 
             if (bankForm.gambar_soal instanceof File) {
