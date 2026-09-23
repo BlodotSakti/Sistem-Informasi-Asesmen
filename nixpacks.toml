@@ -1,4 +1,4 @@
 providers = ["php"]
 
 [phases.setup]
-aptPkgs = ["...", "mariadb-client", "default-mysql-client"]
+nixPkgs = ["...", "mariadb"]
