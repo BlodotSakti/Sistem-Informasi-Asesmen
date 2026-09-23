@@ -1,0 +1,14 @@
+node_modules
+vendor
+.git
+.env
+storage/logs/*
+storage/framework/cache/*
+storage/framework/sessions/*
+storage/framework/views/*
+storage/app/private/*
+public/build
+public/hot
+tests
+.github
+.vscode

@@ -1,0 +1,36 @@
+services:
+  - type: web
+    name: sistem-informasi-asesmen
+    runtime: docker
+    plan: free
+    branch: render-deploy
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /
+    envVars:
+      - key: APP_NAME
+        value: "Sistem Informasi Asesmen"
+      - key: APP_ENV
+        value: production
+      - key: APP_DEBUG
+        value: "false"
+      - key: APP_KEY
+        generateValue: true
+      - key: APP_URL
+        fromService:
+          name: sistem-informasi-asesmen
+          type: web
+          property: host
+      - key: DB_CONNECTION
+        value: mysql
+      - key: DB_HOST
+        sync: false
+      - key: DB_PORT
+        value: "3306"
+      - key: DB_DATABASE
+        sync: false
+      - key: DB_USERNAME
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: DUMP_BINARY_PATH
+        value: ""
