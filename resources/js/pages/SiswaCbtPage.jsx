@@ -43,9 +43,8 @@ export default function SiswaCbtPage({ session, onLogout, idSesi }) {
                 body: JSON.stringify({ jenis_pelanggaran: jenis, keterangan }),
             });
 
-            // Hapus jawaban tersimpan dari local storage karena jawaban telah direset oleh backend
+            // (Kita tidak lagi menghapus jawaban dari local storage agar progress tersimpan)
             try { 
-                localStorage.removeItem(`${STORAGE_PREFIX}${idSesi}`); 
                 localStorage.removeItem(`${STORAGE_PREFIX}start-${idSesi}`);
             } catch { /* ignore */ }
         } catch { /* silent fail */ }
@@ -557,7 +556,7 @@ export default function SiswaCbtPage({ session, onLogout, idSesi }) {
                         <div className="mb-6 rounded-xl bg-rose-50 p-4 border border-rose-100">
                             <p className="text-sm font-semibold text-rose-700">"{lockdownMessage}"</p>
                         </div>
-                        <p className="text-sm text-slate-500 mb-6">Ujian dihentikan dan seluruh jawaban sebelumnya telah direset. Silakan lapor kepada Guru pengawas untuk meminta akses ulang ujian (Buka Kunci).</p>
+                        <p className="text-sm text-slate-500 mb-6">Ujian dihentikan sementara. Silakan lapor kepada Guru pengawas untuk meminta akses ulang ujian (Buka Kunci).</p>
                         <a href="/siswa/dashboard" className="inline-flex items-center justify-center rounded-xl bg-slate-800 px-6 py-3 text-sm font-bold text-white shadow transition hover:bg-slate-700 w-full">
                             Kembali ke Dashboard
                         </a>

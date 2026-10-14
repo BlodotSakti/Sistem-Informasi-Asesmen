@@ -461,7 +461,7 @@ class SiswaController extends Controller
             
         if ($isLocked) {
             return response()->json([
-                'message' => 'Ujian Terkunci! Anda terdeteksi melakukan pelanggaran dan jawaban telah direset. Hubungi Guru pengawas untuk membuka kunci.',
+                'message' => 'Ujian Terkunci! Anda terdeteksi melakukan pelanggaran. Hubungi Guru pengawas untuk membuka kunci.',
                 'locked' => true
             ], 403);
         }
@@ -682,27 +682,9 @@ class SiswaController extends Controller
                         $isCorrect = $teksJawaban === $bankSoal->kunci_jawaban;
                         $skorDiperoleh = $isCorrect ? $detail->bobot_nilai : 0;
                     } elseif ($bankSoal->jenis_soal === 'pilihan_ganda_kompleks') {
-                        $kunciArr = json_decode($bankSoal->kunci_jawaban, true) ?? [];
-                        $jawabArr = json_decode($teksJawaban, true);
-
-                        if (!is_array($jawabArr)) {
-                            $jawabArr = [$teksJawaban];
-                        }
-
-                        if (count($kunciArr) > 0) {
-                            $truePositives = 0;
-                            $falsePositives = 0;
-                            foreach ($jawabArr as $j) {
-                                if (in_array($j, $kunciArr)) {
-                                    $truePositives++;
-                                } else {
-                                    $falsePositives++;
-                                }
-                            }
-                            $calculatedScore = $truePositives / count($kunciArr);
-                            $skorDiperoleh = round($calculatedScore * $detail->bobot_nilai, 4);
-                            $isCorrect = ($truePositives == count($kunciArr) && $falsePositives == 0);
-                        }
+                        $eval = $this->evaluatePgKompleks($bankSoal->kunci_jawaban, $teksJawaban, (float) $detail->bobot_nilai);
+                        $isCorrect = $eval['is_correct'];
+                        $skorDiperoleh = $eval['skor_diperoleh'];
                     } elseif ($bankSoal->jenis_soal === 'esai') {
                         if (isset($essayGrades[$detail->id_detail])) {
                             $skorDiperoleh = $essayGrades[$detail->id_detail]['score'];
@@ -849,24 +831,9 @@ class SiswaController extends Controller
                     $isCorrect = $teksJawaban === $bankSoal->kunci_jawaban;
                     $skorDiperoleh = $isCorrect ? $detail->bobot_nilai : 0;
                 } elseif ($bankSoal->jenis_soal === 'pilihan_ganda_kompleks') {
-                    $kunciArr = json_decode($bankSoal->kunci_jawaban, true) ?? [];
-                    $jawabArr = json_decode($teksJawaban, true);
-
-                    if (!is_array($jawabArr)) {
-                        $jawabArr = [$teksJawaban];
-                    }
-
-                    if (count($kunciArr) > 0) {
-                        $truePositives = 0;
-                        $falsePositives = 0;
-                        foreach ($jawabArr as $j) {
-                            if (in_array($j, $kunciArr)) $truePositives++;
-                            else $falsePositives++;
-                        }
-                        $calculatedScore = $truePositives / count($kunciArr);
-                        $skorDiperoleh = round($calculatedScore * $detail->bobot_nilai, 4);
-                        $isCorrect = ($truePositives == count($kunciArr) && $falsePositives == 0);
-                    }
+                    $eval = $this->evaluatePgKompleks($bankSoal->kunci_jawaban, $teksJawaban, (float) $detail->bobot_nilai);
+                    $isCorrect = $eval['is_correct'];
+                    $skorDiperoleh = $eval['skor_diperoleh'];
                 }
             }
         }
@@ -1054,16 +1021,37 @@ class SiswaController extends Controller
             'is_resolved' => false,
         ]);
 
-        $sesi = \App\Models\SesiAsesmen::with('detailSesiSoal')->find($id_sesi);
-        if ($sesi) {
-            $detailIds = $sesi->detailSesiSoal->pluck('id_detail')->toArray();
-            if (!empty($detailIds)) {
-                \App\Models\JawabanSiswa::where('id_siswa', $siswa->id_siswa)
-                    ->whereIn('id_detail', $detailIds)
-                    ->delete();
-            }
-        }
+        return response()->json(['message' => 'Pelanggaran dicatat']);
+    }
 
-        return response()->json(['message' => 'Log recorded successfully']);
+    /**
+     * Evaluasi jawaban pilihan ganda kompleks (exact match).
+     * Siswa hanya dinilai benar (bobot penuh) jika menjawab sama persis dengan kunci jawaban:
+     * tidak boleh kurang dan tidak boleh lebih.
+     */
+    public function evaluatePgKompleks(?string $kunciJawaban, ?string $teksJawaban, float $bobotNilai): array
+    {
+        $kunciRaw = json_decode($kunciJawaban, true);
+        if (!is_array($kunciRaw)) {
+            $kunciRaw = array_filter(array_map('trim', explode(',', (string) $kunciJawaban)));
+        }
+        $kunciArr = array_values(array_unique(array_filter(array_map('trim', (array) $kunciRaw))));
+
+        $jawabRaw = json_decode($teksJawaban, true);
+        if (!is_array($jawabRaw)) {
+            $jawabRaw = ($teksJawaban !== '' && $teksJawaban !== null) ? [$teksJawaban] : [];
+        }
+        $jawabArr = array_values(array_unique(array_filter(array_map('trim', (array) $jawabRaw))));
+
+        sort($kunciArr);
+        sort($jawabArr);
+
+        $isCorrect = (count($kunciArr) > 0 && $kunciArr === $jawabArr);
+        $skorDiperoleh = $isCorrect ? $bobotNilai : 0.0;
+
+        return [
+            'is_correct' => $isCorrect,
+            'skor_diperoleh' => $skorDiperoleh,
+        ];
     }
 }

@@ -18,6 +18,8 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class GuruController extends Controller
 {
@@ -551,6 +553,75 @@ class GuruController extends Controller
             ],
             'siswa' => $siswaResults,
         ]);
+    }
+
+    /**
+     * Download soal-soal dalam satu Sesi CBT sebagai PDF (untuk dicetak / dibahas di kelas).
+     * Query param ?kunci=1 untuk menyertakan kunci jawaban (versi pembahasan guru).
+     */
+    public function exportSoalPdf(Request $request, int $id_sesi)
+    {
+        $guruId = $request->user()->guru->id_guru;
+
+        $sesi = SesiAsesmen::query()
+            ->with(['kelas', 'mataPelajaran', 'detailSesiSoal.bankSoal'])
+            ->findOrFail($id_sesi);
+
+        $this->ensureGuruMengampuMapel($guruId, (int) $sesi->id_mapel);
+
+        $withKunci = $request->boolean('kunci');
+
+        $soalList = $sesi->detailSesiSoal
+            ->filter(fn($detail) => $detail->bankSoal !== null)
+            ->values()
+            ->map(function ($detail) {
+                $bs = $detail->bankSoal;
+
+                // Gambar di-embed sebagai base64 agar dompdf tidak perlu akses file/URL eksternal
+                $gambar = null;
+                if ($bs->gambar_soal && Storage::disk('public')->exists($bs->gambar_soal)) {
+                    $mime = Storage::disk('public')->mimeType($bs->gambar_soal) ?: 'image/png';
+                    $gambar = 'data:' . $mime . ';base64,' . base64_encode(Storage::disk('public')->get($bs->gambar_soal));
+                }
+
+                $kunci = $bs->kunci_jawaban;
+                if ($bs->jenis_soal === 'pilihan_ganda_kompleks') {
+                    $decoded = json_decode((string) $kunci, true);
+                    $kunci = is_array($decoded) ? $decoded : [$kunci];
+                }
+
+                return [
+                    'isi_soal' => $bs->isi_soal,
+                    'jenis_soal' => $bs->jenis_soal,
+                    'opsi_jawaban' => is_array($bs->opsi_jawaban) ? $bs->opsi_jawaban : [],
+                    'kunci_jawaban' => $kunci,
+                    'gambar' => $gambar,
+                    'bobot_nilai' => $detail->bobot_nilai,
+                ];
+            });
+
+        $mapel = $sesi->mataPelajaran?->nama_mapel ?? 'Mapel';
+        $kelas = $sesi->kelas?->nama_kelas ?? 'Kelas';
+
+        $pdf = Pdf::loadView('pdf.soal-sesi-cbt', [
+            'sesi' => $sesi,
+            'mapel' => $mapel,
+            'kelas' => $kelas,
+            'soalList' => $soalList,
+            'withKunci' => $withKunci,
+            'totalBobot' => $sesi->detailSesiSoal->sum('bobot_nilai'),
+        ])->setPaper('a4', 'portrait');
+
+        $filename = sprintf(
+            'Soal_%s_%s_%s%s.pdf',
+            $mapel,
+            $kelas,
+            optional($sesi->waktu_mulai)->format('Y-m-d') ?? $sesi->id_sesi,
+            $withKunci ? '_Kunci' : ''
+        );
+        $filename = preg_replace('/[^A-Za-z0-9_\-\.]+/', '_', $filename);
+
+        return $pdf->download($filename);
     }
 
     public function updateSkorJawaban(Request $request, int $id_sesi, int $id_detail, int $id_siswa): JsonResponse

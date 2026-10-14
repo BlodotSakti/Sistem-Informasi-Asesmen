@@ -259,7 +259,7 @@ PROMPT;
     protected function geminiUrl(): string
     {
         $apiKey = (string) env('GEMINI_API_KEY', '');
-        $model = (string) env('GEMINI_MODEL', 'gemini-3.5-flash');
+        $model = (string) env('GEMINI_MODEL', 'gemini-3.5-flash-lite');
 
         return sprintf(
             'https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent?key=%s',

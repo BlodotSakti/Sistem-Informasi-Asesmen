@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import DashboardLayout from '../components/layout/DashboardLayout';
 import StatCard from '../components/ui/StatCard';
-import { apiFetch } from '../lib/api';
+import { apiFetch, apiBase } from '../lib/api';
+import * as XLSX from 'xlsx';
 import { formatDateTimeLabel } from '../lib/date';
 import useGuruWorkspace from '../hooks/useGuruWorkspace';
 import { guruNavigation } from './guru/guruNavigation';
@@ -55,6 +56,164 @@ export default function GuruJadwalCbtPage({ session, onLogout }) {
     const [detailSiswaSearch, setDetailSiswaSearch] = useState('');
     const [detailSiswaStatus, setDetailSiswaStatus] = useState('');
     const [detailSiswaSort, setDetailSiswaSort] = useState('');
+    const [downloadingPdf, setDownloadingPdf] = useState(null); // 'siswa' | 'kunci' | null
+
+    const buildExportBaseName = (sesi) => {
+        const tanggal = sesi?.waktu_mulai ? new Date(sesi.waktu_mulai).toISOString().slice(0, 10) : sesi?.id_sesi;
+        return `${sesi?.mata_pelajaran || 'Mapel'}_${sesi?.kelas || 'Kelas'}_${tanggal}`.replace(/[^A-Za-z0-9_\-]+/g, '_');
+    };
+
+    const handleDownloadSoalPdf = async (withKunci) => {
+        const sesi = sesiDetailData?.sesi;
+        if (!sesi) return;
+        setDownloadingPdf(withKunci ? 'kunci' : 'siswa');
+        try {
+            const response = await fetch(apiBase(`/api/guru/sesi-asesmen/${sesi.id_sesi}/export-soal-pdf?kunci=${withKunci ? 1 : 0}`), {
+                headers: {
+                    Accept: 'application/pdf',
+                    ...(session?.token ? { Authorization: `Bearer ${session.token}` } : {}),
+                },
+            });
+            if (!response.ok) {
+                let message = 'Gagal mengunduh PDF soal.';
+                try { const json = await response.json(); message = json.message || message; } catch { /* ignore */ }
+                throw new Error(message);
+            }
+            const blob = await response.blob();
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `Soal_${buildExportBaseName(sesi)}${withKunci ? '_Kunci' : ''}.pdf`;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            URL.revokeObjectURL(url);
+        } catch (err) {
+            showSuccessPopup('Gagal', err.message || 'Gagal mengunduh PDF soal.');
+        } finally {
+            setDownloadingPdf(null);
+        }
+    };
+
+    const handleDownloadAnalisisExcel = () => {
+        if (!sesiDetailData) return;
+        const { sesi, soal = [], siswa = [] } = sesiDetailData;
+        const isEsai = (jenis) => jenis === 'esai' || jenis === 'essay';
+        const jenisSingkat = (jenis) => (isEsai(jenis) ? 'Esai' : jenis === 'pilihan_ganda_kompleks' ? 'PGK' : 'PG');
+        const soalHeaders = soal.map((s, idx) => `Soal ${idx + 1} (${jenisSingkat(s.jenis_soal)})`);
+        const jumlahPg = soal.filter((s) => !isEsai(s.jenis_soal)).length;
+
+        const formatOpsiTerpilih = (jawabanSiswa, jenisSoal) => {
+            if (!jawabanSiswa) return '-';
+            if (jenisSoal === 'pilihan_ganda_kompleks') {
+                try {
+                    const arr = JSON.parse(jawabanSiswa);
+                    if (Array.isArray(arr)) return arr.join(', ');
+                } catch {}
+            }
+            return String(jawabanSiswa).trim() || '-';
+        };
+
+        // --- SHEET 1: ANALISIS BUTIR SOAL (0 / 1 & Esai) ---
+        const header1 = ['No', 'NISN', 'Nama Siswa', 'Status', ...soalHeaders, `Jumlah Benar PG (dari ${jumlahPg})`, 'Total Skor'];
+        const rows1 = [header1];
+
+        const sortedSiswa = [...siswa].sort((a, b) => (a.nama_lengkap || '').localeCompare(b.nama_lengkap || ''));
+        const benarPerSoal = soal.map(() => 0);
+        let jumlahPeserta = 0;
+
+        sortedSiswa.forEach((s, i) => {
+            const sudah = s.status === 'sudah';
+            const jawabanMap = {};
+            (s.detail_jawaban || []).forEach((d) => { jawabanMap[d.id_detail] = d; });
+            if (sudah) jumlahPeserta++;
+
+            let benarPg = 0;
+            const cells = soal.map((q, qIdx) => {
+                if (!sudah) return '';
+                const jawab = jawabanMap[q.id_detail];
+                if (isEsai(q.jenis_soal)) {
+                    const teks = (jawab?.jawaban_siswa || '').trim();
+                    return teks !== '' ? teks : '-';
+                }
+                const nilai = jawab?.is_correct ? 1 : 0;
+                benarPg += nilai;
+                benarPerSoal[qIdx] += nilai;
+                return nilai;
+            });
+
+            rows1.push([
+                i + 1,
+                s.nisn || '',
+                s.nama_lengkap || '',
+                sudah ? 'Sudah' : 'Belum Mengerjakan',
+                ...cells,
+                sudah ? benarPg : '',
+                sudah ? Number(s.total_skor || 0) : '',
+            ]);
+        });
+
+        // Baris ringkasan per butir soal (hanya untuk PG / PG Kompleks)
+        const persenPerSoal = soal.map((q, idx) => (isEsai(q.jenis_soal) || jumlahPeserta === 0 ? null : Math.round((benarPerSoal[idx] / jumlahPeserta) * 10000) / 100));
+        const tingkatKesukaran = (p) => (p === null ? '-' : p > 70 ? 'Mudah' : p >= 30 ? 'Sedang' : 'Sukar');
+        rows1.push([]);
+        rows1.push(['', '', 'Jumlah Siswa Benar', '', ...soal.map((q, idx) => (isEsai(q.jenis_soal) ? '-' : benarPerSoal[idx])), '', '']);
+        rows1.push(['', '', 'Persentase Benar (%)', '', ...persenPerSoal.map((p) => (p === null ? '-' : p)), '', '']);
+        rows1.push(['', '', 'Tingkat Kesukaran', '', ...persenPerSoal.map(tingkatKesukaran), '', '']);
+        rows1.push(['', '', `Catatan: 1 = Benar, 0 = Salah. Untuk esai berisi teks jawaban siswa. Peserta mengerjakan: ${jumlahPeserta} dari ${sortedSiswa.length} siswa`]);
+
+        const wsAnalisis = XLSX.utils.aoa_to_sheet(rows1);
+        wsAnalisis['!cols'] = [
+            { wch: 5 }, { wch: 14 }, { wch: 30 }, { wch: 18 },
+            ...soal.map((q) => ({ wch: isEsai(q.jenis_soal) ? 35 : 12 })),
+            { wch: 22 }, { wch: 12 },
+        ];
+
+        // --- SHEET 2: REKAP PILIHAN JAWABAN SISWA ---
+        const header2 = ['No', 'NISN', 'Nama Siswa', 'Status', ...soalHeaders, 'Total Skor'];
+        const rows2 = [header2];
+        sortedSiswa.forEach((s, i) => {
+            const sudah = s.status === 'sudah';
+            const jawabanMap = {};
+            (s.detail_jawaban || []).forEach((d) => { jawabanMap[d.id_detail] = d; });
+
+            const cellsOpsi = soal.map((q) => {
+                if (!sudah) return '';
+                const jawab = jawabanMap[q.id_detail];
+                return formatOpsiTerpilih(jawab?.jawaban_siswa, q.jenis_soal);
+            });
+
+            rows2.push([
+                i + 1,
+                s.nisn || '',
+                s.nama_lengkap || '',
+                sudah ? 'Sudah' : 'Belum Mengerjakan',
+                ...cellsOpsi,
+                sudah ? Number(s.total_skor || 0) : '',
+            ]);
+        });
+        const wsPilihan = XLSX.utils.aoa_to_sheet(rows2);
+        wsPilihan['!cols'] = [
+            { wch: 5 }, { wch: 14 }, { wch: 30 }, { wch: 18 },
+            ...soal.map(() => ({ wch: 25 })),
+            { wch: 12 },
+        ];
+
+        // --- SHEET 3: DAFTAR SOAL & KUNCI ---
+        const formatKunci = (k) => { try { const arr = JSON.parse(k); if (Array.isArray(arr)) return arr.join(', '); } catch {} return k ?? ''; };
+        const soalRows = [['No', 'Jenis Soal', 'Level Kognitif', 'Isi Soal', 'Kunci Jawaban', 'Bobot']];
+        soal.forEach((q, idx) => {
+            soalRows.push([idx + 1, jenisSingkat(q.jenis_soal), q.level_kognitif || '', q.isi_soal || '', formatKunci(q.kunci_jawaban), Number(q.bobot_nilai || 0)]);
+        });
+        const wsSoal = XLSX.utils.aoa_to_sheet(soalRows);
+        wsSoal['!cols'] = [{ wch: 5 }, { wch: 10 }, { wch: 14 }, { wch: 70 }, { wch: 40 }, { wch: 8 }];
+
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, wsAnalisis, 'Analisis Butir Soal');
+        XLSX.utils.book_append_sheet(wb, wsPilihan, 'Pilihan Jawaban Siswa');
+        XLSX.utils.book_append_sheet(wb, wsSoal, 'Daftar Kunci & Soal');
+        XLSX.writeFile(wb, `Analisis_Soal_${buildExportBaseName(sesi)}.xlsx`);
+    };
 
     const showSuccessPopup = (title, message) => setSuccessPopup({ title, message });
     const closeSuccessPopup = () => setSuccessPopup(null);
@@ -551,6 +710,47 @@ export default function GuruJadwalCbtPage({ session, onLogout }) {
                                         }} className="text-2xl text-slate-400 hover:text-slate-600">&times;</button>
                                     </div>
                                     <div className="p-6 space-y-6 overflow-y-auto">
+                                        {/* Download / Export */}
+                                        <div className="flex flex-col gap-3 rounded-2xl border border-border bg-slate-50/60 p-4 sm:flex-row sm:items-center sm:justify-between">
+                                            <div>
+                                                <p className="text-sm font-bold text-slate-800">Unduh Dokumen Sesi</p>
+                                                <p className="text-xs text-slate-500">Cetak soal untuk pembahasan di kelas, atau unduh analisis jawaban per soal (1 = benar, 0 = salah, esai berisi jawaban siswa).</p>
+                                            </div>
+                                            <div className="flex flex-wrap gap-2">
+                                                <button
+                                                    id="btn-download-soal-pdf"
+                                                    type="button"
+                                                    disabled={downloadingPdf !== null}
+                                                    onClick={() => handleDownloadSoalPdf(false)}
+                                                    className="inline-flex items-center gap-2 rounded-xl border border-rose-200 bg-white px-4 py-2 text-xs font-bold text-rose-700 shadow-sm transition hover:bg-rose-50 disabled:opacity-60"
+                                                >
+                                                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3M6 20h12a2 2 0 002-2V8l-6-6H6a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>
+                                                    {downloadingPdf === 'siswa' ? 'Menyiapkan...' : 'Soal (PDF)'}
+                                                </button>
+                                                <button
+                                                    id="btn-download-soal-kunci-pdf"
+                                                    type="button"
+                                                    disabled={downloadingPdf !== null}
+                                                    onClick={() => handleDownloadSoalPdf(true)}
+                                                    className="inline-flex items-center gap-2 rounded-xl border border-rose-200 bg-white px-4 py-2 text-xs font-bold text-rose-700 shadow-sm transition hover:bg-rose-50 disabled:opacity-60"
+                                                >
+                                                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" /></svg>
+                                                    {downloadingPdf === 'kunci' ? 'Menyiapkan...' : 'Soal + Kunci (PDF)'}
+                                                </button>
+                                                <button
+                                                    id="btn-download-analisis-excel"
+                                                    type="button"
+                                                    onClick={handleDownloadAnalisisExcel}
+                                                    disabled={!sesiDetailData.statistik?.sudah_mengerjakan}
+                                                    title={!sesiDetailData.statistik?.sudah_mengerjakan ? 'Belum ada siswa yang mengerjakan' : ''}
+                                                    className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                                                >
+                                                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M3 14h18M10 3v18M14 3v18M5 3h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2z" /></svg>
+                                                    Analisis Soal (Excel)
+                                                </button>
+                                            </div>
+                                        </div>
+
                                         {/* Statistik */}
                                         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
                                             <div className="rounded-2xl bg-primary/5 px-4 py-4 text-center">
