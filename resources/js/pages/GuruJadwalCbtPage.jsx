@@ -49,6 +49,7 @@ export default function GuruJadwalCbtPage({ session, onLogout }) {
     const [isUnsavedModalOpen, setIsUnsavedModalOpen] = useState(false);
     const [isValidasiModalOpen, setIsValidasiModalOpen] = useState(false);
     const [unlockModal, setUnlockModal] = useState({ isOpen: false, id_sesi: null, id_siswa: null, loading: false });
+    const [deleteModal, setDeleteModal] = useState({ isOpen: false, item: null, loading: false });
     const [validasiSiswaId, setValidasiSiswaId] = useState(null);
     const [validasiLoading, setValidasiLoading] = useState(false);
 
@@ -400,13 +401,27 @@ export default function GuruJadwalCbtPage({ session, onLogout }) {
         setIsSesiModalOpen(true);
     };
 
-    const handleDeleteSesiAsesmen = async (id) => {
-        if (!window.confirm('Yakin ingin menghapus jadwal CBT ini?')) return;
+    const handleDeleteSesiAsesmen = (id) => {
+        const item = sesiAsesmenHistory.find((s) => s.id_sesi === id) || { id_sesi: id };
+        setDeleteModal({ isOpen: true, item, loading: false });
+    };
+
+    const closeDeleteModal = () => {
+        if (deleteModal.loading) return;
+        setDeleteModal({ isOpen: false, item: null, loading: false });
+    };
+
+    const confirmDeleteSesiAsesmen = async () => {
+        const id = deleteModal.item?.id_sesi;
+        if (!id) return;
+        setDeleteModal((prev) => ({ ...prev, loading: true }));
         try {
             await apiFetch(`/api/guru/sesi-asesmen/${id}`, session, { method: 'DELETE' });
+            setDeleteModal({ isOpen: false, item: null, loading: false });
             showSuccessPopup('Berhasil', 'Jadwal CBT berhasil dihapus.');
             await reloadWorkspace();
         } catch (err) {
+            setDeleteModal({ isOpen: false, item: null, loading: false });
             showSuccessPopup('Gagal Menghapus', err.message || 'Jadwal tidak dapat dihapus karena siswa sudah mulai mengerjakan.');
         }
     };
@@ -1440,6 +1455,37 @@ export default function GuruJadwalCbtPage({ session, onLogout }) {
                             <button onClick={() => setUnlockModal({ isOpen: false, id_sesi: null, id_siswa: null, loading: false })} className="rounded-xl px-5 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 transition" disabled={unlockModal.loading}>Batal</button>
                             <button onClick={confirmUnlockSiswa} className="rounded-xl bg-amber-600 px-5 py-2 text-sm font-semibold text-white hover:bg-amber-700 transition flex items-center gap-2" disabled={unlockModal.loading}>
                                 {unlockModal.loading ? 'Memproses...' : 'Ya, Buka Kunci'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {deleteModal.isOpen && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm" onClick={closeDeleteModal}>
+                    <div id="modal-hapus-jadwal-cbt" role="dialog" aria-modal="true" className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+                        <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-rose-50 text-rose-600">
+                            <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                        </div>
+                        <h3 className="text-xl font-bold text-slate-900 mb-2">Hapus Jadwal CBT?</h3>
+                        <p className="text-sm text-slate-600 mb-4">Jadwal yang dihapus tidak dapat dikembalikan.</p>
+                        {deleteModal.item?.tipe_soal && (
+                            <div className="mb-6 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm">
+                                <p className="font-semibold text-slate-900">{deleteModal.item.tipe_soal}</p>
+                                <p className="mt-0.5 text-slate-500">
+                                    {deleteModal.item.mata_pelajaran?.nama_lengkap || deleteModal.item.mata_pelajaran?.nama_mapel || '-'} • {deleteModal.item.kelas?.nama_kelas || '-'}
+                                </p>
+                                {deleteModal.item.waktu_mulai && (
+                                    <p className="mt-0.5 text-xs text-slate-400">{formatDateTimeLabel(deleteModal.item.waktu_mulai)}</p>
+                                )}
+                            </div>
+                        )}
+                        <div className="flex gap-3 justify-end">
+                            <button id="btn-batal-hapus-jadwal" type="button" onClick={closeDeleteModal} className="rounded-xl px-5 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 transition disabled:opacity-50" disabled={deleteModal.loading}>Batal</button>
+                            <button id="btn-konfirmasi-hapus-jadwal" type="button" onClick={confirmDeleteSesiAsesmen} className="rounded-xl bg-rose-600 px-5 py-2 text-sm font-semibold text-white hover:bg-rose-700 transition flex items-center gap-2 disabled:opacity-70" disabled={deleteModal.loading}>
+                                {deleteModal.loading ? 'Menghapus...' : 'Ya, Hapus'}
                             </button>
                         </div>
                     </div>

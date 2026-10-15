@@ -590,11 +590,35 @@ class GuruController extends Controller
                     $kunci = is_array($decoded) ? $decoded : [$kunci];
                 }
 
+                // Normalisasi keywords untuk soal esai
+                $rawKeywords = $bs->keywords;
+                if (is_string($rawKeywords)) {
+                    $decodedKw = json_decode($rawKeywords, true);
+                    $rawKeywords = is_array($decodedKw) ? $decodedKw : preg_split('/\r\n|\r|\n/', $rawKeywords);
+                } elseif (!is_array($rawKeywords)) {
+                    $rawKeywords = [];
+                }
+
+                $keywords = [];
+                foreach ((array) $rawKeywords as $kw) {
+                    if (is_string($kw)) {
+                        foreach (preg_split('/\r\n|\r|\n/', $kw) as $line) {
+                            $trimmed = trim($line);
+                            if ($trimmed !== '') {
+                                $keywords[] = $trimmed;
+                            }
+                        }
+                    }
+                }
+
                 return [
                     'isi_soal' => $bs->isi_soal,
                     'jenis_soal' => $bs->jenis_soal,
                     'opsi_jawaban' => is_array($bs->opsi_jawaban) ? $bs->opsi_jawaban : [],
                     'kunci_jawaban' => $kunci,
+                    'keywords' => $keywords,
+                    'rule_weight' => $bs->rule_weight,
+                    'lsa_weight' => $bs->lsa_weight,
                     'gambar' => $gambar,
                     'bobot_nilai' => $detail->bobot_nilai,
                 ];

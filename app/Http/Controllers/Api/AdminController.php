@@ -527,11 +527,13 @@ class AdminController extends Controller
                 continue;
             }
 
+            $isAktif = $this->normalizeBoolean($row['status_aktif'] ?? $row['status aktif'] ?? $row['is_aktif'] ?? $row['status'] ?? true);
+
             $payload = [
                 'id_kelas' => $kelas->id_kelas,
                 'id_siswa' => $siswa->id_siswa,
                 'tahun_ajaran' => $tahunAjaran !== '' ? $tahunAjaran : $kelas->tahun_ajaran,
-                'is_aktif' => $this->normalizeBoolean($row['is_aktif'] ?? true),
+                'is_aktif' => $isAktif,
                 'tanggal_masuk' => $this->normalizeDate($row['tanggal_masuk'] ?? null),
                 'tanggal_keluar' => $this->normalizeDate($row['tanggal_keluar'] ?? null),
             ];
@@ -639,12 +641,14 @@ class AdminController extends Controller
                 continue;
             }
 
+            $isAktif = $this->normalizeBoolean($row['status_aktif'] ?? $row['status aktif'] ?? $row['is_aktif'] ?? $row['status'] ?? true);
+
             $payload = [
                 'id_kelas' => $kelas->id_kelas,
                 'id_mapel' => $mapel->id_mapel,
                 'id_guru' => $guru->id_guru,
                 'tahun_ajaran' => $tahunAjaran !== '' ? $tahunAjaran : $kelas->tahun_ajaran,
-                'is_aktif' => $this->normalizeBoolean($row['is_aktif'] ?? true),
+                'is_aktif' => $isAktif,
             ];
 
             $record = PenugasanPembelajaran::query()->updateOrCreate(
@@ -680,13 +684,13 @@ class AdminController extends Controller
         $definitions = [
             'kelas-siswa' => [
                 'filename' => 'template-relasi-siswa-kelas',
-                'headers' => ['nama_kelas', 'nama_siswa', 'tahun_ajaran', 'is_aktif', 'tanggal_masuk', 'tanggal_keluar'],
-                'sample' => ['XI IPA 1', 'Rani Putri', '2026/2027 - Semester Ganjil', 'true', '2026-07-10', ''],
+                'headers' => ['nama_kelas', 'nama_siswa', 'tahun_ajaran', 'status_aktif', 'tanggal_masuk', 'tanggal_keluar'],
+                'sample' => ['XI IPA 1', 'Rani Putri', '2026/2027 - Semester Ganjil', 'Aktif', '2026-07-10', ''],
             ],
             'penugasan-pembelajaran' => [
                 'filename' => 'template-penugasan-pembelajaran',
-                'headers' => ['nama_kelas', 'nama_mapel', 'nama_guru', 'tahun_ajaran', 'is_aktif'],
-                'sample' => ['XI IPA 1', 'Bahasa Indonesia (X)', 'Andi Pratama', '2026/2027 - Semester Ganjil', 'true'],
+                'headers' => ['nama_kelas', 'nama_mapel', 'nama_guru', 'tahun_ajaran', 'status_aktif'],
+                'sample' => ['XI IPA 1', 'Bahasa Indonesia (X)', 'Andi Pratama', '2026/2027 - Semester Ganjil', 'Aktif'],
             ],
         ];
 
@@ -704,6 +708,10 @@ class AdminController extends Controller
 
         foreach ($definition['sample'] as $columnIndex => $value) {
             $sheet->setCellValue(Coordinate::stringFromColumnIndex($columnIndex + 1) . '2', $value);
+        }
+
+        foreach (range(1, count($definition['headers'])) as $col) {
+            $sheet->getColumnDimension(Coordinate::stringFromColumnIndex($col))->setAutoSize(true);
         }
 
         if ($format === 'csv') {
@@ -1189,6 +1197,20 @@ class AdminController extends Controller
     {
         if (is_bool($value)) {
             return $value;
+        }
+
+        if ($value === null || $value === '') {
+            return true;
+        }
+
+        $str = strtolower(trim((string) $value));
+
+        if (in_array($str, ['0', 'false', 'tidak aktif', 'tidak_aktif', 'tidakaktif', 'nonaktif', 'non-aktif', 'non aktif', 'tidak', 't', 'no', 'off', 'inactive'], true)) {
+            return false;
+        }
+
+        if (in_array($str, ['1', 'true', 'aktif', 'active', 'ya', 'y', 'yes', 'on'], true)) {
+            return true;
         }
 
         $normalized = filter_var($value, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);

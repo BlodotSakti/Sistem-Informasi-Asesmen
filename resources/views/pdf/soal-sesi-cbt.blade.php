@@ -32,7 +32,60 @@
         .box-check.checked { background: #047857; border-color: #047857; }
         .opsi-benar { font-weight: bold; color: #047857; }
         .garis { border-bottom: 1px dotted #94a3b8; height: 20px; }
-        .kunci-box { margin-top: 4px; padding: 4px 8px; background: #ecfdf5; border-left: 3px solid #10b981; font-size: 10px; white-space: pre-wrap; }
+        .kunci-box {
+            margin-top: 6px;
+            padding: 5px 8px;
+            background: #f0fdf4;
+            border-left: 3px solid #10b981;
+            font-size: 10px;
+        }
+        table.tbl-kunci {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        table.tbl-kunci td {
+            vertical-align: top;
+            padding: 2px 0;
+        }
+        table.tbl-kunci td.kunci-lbl {
+            width: 95px;
+            font-weight: bold;
+            color: #065f46;
+            white-space: nowrap;
+        }
+        table.tbl-kunci td.kunci-val {
+            color: #1e293b;
+        }
+        .kunci-teks-pg {
+            font-weight: bold;
+            color: #047857;
+        }
+        .kunci-teks-esai {
+            color: #1e293b;
+            line-height: 1.45;
+            background: #ffffff;
+            border: 1px solid #d1fae5;
+            padding: 5px 8px;
+            border-radius: 3px;
+            margin-bottom: 3px;
+        }
+        .keyword-badge {
+            display: inline-block;
+            background: #e0f2fe;
+            color: #0369a1;
+            border: 1px solid #bae6fd;
+            padding: 1px 6px;
+            border-radius: 3px;
+            margin-right: 3px;
+            margin-bottom: 2px;
+            font-size: 9px;
+            line-height: 1.3;
+        }
+        .bobot-ai-info {
+            font-size: 9px;
+            color: #64748b;
+            margin-top: 2px;
+        }
         .footer { position: fixed; bottom: -24px; left: 0; right: 0; text-align: center; font-size: 9px; color: #94a3b8; }
         .footer .page:after { content: counter(page); }
     </style>
@@ -123,7 +176,6 @@
 
                         @if ($withKunci)
                             <div class="kunci-box">
-                                <strong>Kunci:</strong>
                                 @if (in_array($soal['jenis_soal'], ['pilihan_ganda', 'pilihan_ganda_kompleks']))
                                     @php
                                         $labels = [];
@@ -134,9 +186,41 @@
                                         }
                                         if (empty($labels)) { $labels = $kunciArr; }
                                     @endphp
-                                    {{ implode(';  ', $labels) }}
+                                    <table class="tbl-kunci">
+                                        <tr>
+                                            <td class="kunci-lbl" style="width: 55px;">Kunci:</td>
+                                            <td class="kunci-val"><span class="kunci-teks-pg">{{ implode(';  ', $labels) }}</span></td>
+                                        </tr>
+                                    </table>
                                 @else
-                                    {{ $kunciArr[0] ?? '-' }}
+                                    <table class="tbl-kunci">
+                                        <tr>
+                                            <td class="kunci-lbl">Kunci Jawaban:</td>
+                                            <td class="kunci-val">
+                                                <div class="kunci-teks-esai">{!! nl2br(e($kunciArr[0] ?? '-')) !!}</div>
+                                            </td>
+                                        </tr>
+                                        @if (!empty($soal['keywords']) && count($soal['keywords']) > 0)
+                                            <tr>
+                                                <td class="kunci-lbl">Kata Kunci (AI):</td>
+                                                <td class="kunci-val">
+                                                    @foreach ($soal['keywords'] as $kw)
+                                                        <span class="keyword-badge">{{ $kw }}</span>
+                                                    @endforeach
+                                                </td>
+                                            </tr>
+                                        @endif
+                                        @if ((isset($soal['rule_weight']) && (float) $soal['rule_weight'] > 0) || (isset($soal['lsa_weight']) && (float) $soal['lsa_weight'] > 0))
+                                            <tr>
+                                                <td class="kunci-lbl">Bobot Penilaian:</td>
+                                                <td class="kunci-val bobot-ai-info">
+                                                    Aturan (Rule): <strong>{{ number_format((float) ($soal['rule_weight'] ?? 0) * 100, 0) }}%</strong>
+                                                    &nbsp;&bull;&nbsp;
+                                                    Makna (LSA): <strong>{{ number_format((float) ($soal['lsa_weight'] ?? 0) * 100, 0) }}%</strong>
+                                                </td>
+                                            </tr>
+                                        @endif
+                                    </table>
                                 @endif
                             </div>
                         @endif
