@@ -52,6 +52,7 @@ export default function GuruJadwalCbtPage({ session, onLogout }) {
     const [deleteModal, setDeleteModal] = useState({ isOpen: false, item: null, loading: false });
     const [validasiSiswaId, setValidasiSiswaId] = useState(null);
     const [validasiLoading, setValidasiLoading] = useState(false);
+    const [selectedAttemptBySiswa, setSelectedAttemptBySiswa] = useState({});
 
     // Detail Siswa Modal States
     const [detailSiswaSearch, setDetailSiswaSearch] = useState('');
@@ -903,25 +904,71 @@ export default function GuruJadwalCbtPage({ session, onLogout }) {
                                                                     <td className="px-4 py-3 font-semibold text-slate-900">{sw.nama_lengkap}</td>
                                                                     <td className="px-4 py-3 text-slate-500">{sw.nisn}</td>
                                                                     <td className="px-4 py-3">
-                                                                        <span className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-semibold ${sw.status === 'sudah' ? 'bg-emerald-100/80 text-emerald-700' : 'bg-slate-100 text-slate-600'}`}>
-                                                                            {sw.status === 'sudah' ? (
-                                                                                <>
-                                                                                    <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                                                                        <div className="flex flex-col gap-1 items-start">
+                                                                            <span className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-semibold ${sw.status === 'sudah' ? 'bg-emerald-100/80 text-emerald-700' : 'bg-slate-100 text-slate-600'}`}>
+                                                                                {sw.status === 'sudah' ? (
+                                                                                    <>
+                                                                                        <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                                                                                        </svg>
+                                                                                        Sudah
+                                                                                    </>
+                                                                                ) : (
+                                                                                    <>
+                                                                                        <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M20 12H4" />
+                                                                                        </svg>
+                                                                                        Belum
+                                                                                    </>
+                                                                                )}
+                                                                            </span>
+                                                                            {sw.status === 'sudah' && (
+                                                                                <span className="inline-flex items-center gap-1 rounded-md bg-blue-50 px-2 py-0.5 text-[11px] font-semibold text-blue-700 border border-blue-200">
+                                                                                    <svg className="w-3 h-3 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                                                                                     </svg>
-                                                                                    Sudah
-                                                                                </>
-                                                                            ) : (
-                                                                                <>
-                                                                                    <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M20 12H4" />
-                                                                                    </svg>
-                                                                                    Belum
-                                                                                </>
+                                                                                    {sw.jumlah_percobaan || 1}x Pengerjaan
+                                                                                </span>
                                                                             )}
-                                                                        </span>
+                                                                        </div>
                                                                     </td>
-                                                                    <td className="px-4 py-3 text-slate-600">{sw.status === 'sudah' ? `${sw.total_skor}/${sesiDetailData.total_bobot}` : '-'}</td>
+                                                                    <td className="px-4 py-3 text-slate-600">
+                                                                        {sw.status === 'sudah' ? (
+                                                                             <div>
+                                                                                <div className="flex items-center gap-1.5">
+                                                                                    <span className="font-semibold text-slate-900">{sw.total_skor}/{sesiDetailData.total_bobot}</span>
+                                                                                    {sw.riwayat_percobaan && sw.riwayat_percobaan.length > 1 && (
+                                                                                        <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded-full border border-emerald-200" title="Nilai tertinggi yang digunakan untuk penilaian">
+                                                                                            Tertinggi
+                                                                                        </span>
+                                                                                    )}
+                                                                                </div>
+                                                                                {sw.riwayat_percobaan && sw.riwayat_percobaan.length > 1 && (
+                                                                                    <div className="mt-1 flex flex-col gap-0.5">
+                                                                                        <span className="text-[10px] text-slate-400 font-medium">Nilai Percobaan:</span>
+                                                                                        <div className="flex flex-wrap gap-1">
+                                                                                            {sw.riwayat_percobaan.map((p) => {
+                                                                                                const isHighest = Number(p.total_skor) === Number(sw.total_skor);
+                                                                                                return (
+                                                                                                    <span 
+                                                                                                        key={p.percobaan_ke} 
+                                                                                                        className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold ${
+                                                                                                            isHighest 
+                                                                                                                ? 'bg-emerald-100 text-emerald-800 border border-emerald-300 font-bold' 
+                                                                                                                : 'bg-slate-100 text-slate-700 border border-slate-200'
+                                                                                                        }`}
+                                                                                                        title={`Percobaan ke-${p.percobaan_ke}: ${p.total_skor}/${p.total_bobot} • ${p.jumlah_benar} Benar${isHighest ? ' (Nilai Tertinggi Digunakan)' : ''}`}
+                                                                                                    >
+                                                                                                        P{p.percobaan_ke}: {p.total_skor}{isHighest ? ' ★' : ''}
+                                                                                                    </span>
+                                                                                                );
+                                                                                            })}
+                                                                                        </div>
+                                                                                    </div>
+                                                                                )}
+                                                                            </div>
+                                                                        ) : '-'}
+                                                                    </td>
                                                                     <td className="px-4 py-3 text-slate-600">{sw.status === 'sudah' ? `${sw.jumlah_benar}/${sesiDetailData.soal.length}` : '-'}</td>
                                                                     <td className="px-4 py-3 text-right">
                                                                         {sw.status === 'sudah' && (
@@ -931,27 +978,115 @@ export default function GuruJadwalCbtPage({ session, onLogout }) {
                                                                         )}
                                                                     </td>
                                                                 </tr>
-                                                                {expandedSiswaId === sw.id_siswa && sw.detail_jawaban && (
-                                                                    <tr>
-                                                                        <td colSpan="6" className="bg-slate-50 px-4 py-4">
-                                                                            <div className="space-y-2">
-                                                                                {sesiDetailData.soal.map((soal, sIdx) => {
-                                                                                    const dj = sw.detail_jawaban.find(d => d.id_detail === soal.id_detail);
-                                                                                    const jawSiswa = dj?.jawaban_siswa || '-';
-                                                                                    const kunci = soal.kunci_jawaban;
-                                                                                    const isCorrect = dj?.is_correct;
-                                                                                    const formatVal = (v) => { 
-                                                                                        if (Array.isArray(v)) return v.join(', ');
-                                                                                        try { const a = JSON.parse(v); if (Array.isArray(a)) return a.join(', '); } catch {} 
-                                                                                        return v || '-'; 
-                                                                                    };
-                                                                                    const isEsai = soal.jenis_soal === 'esai' || soal.jenis_soal === 'essay';
-                                                                                    const kemiripan = (dj?.skor_diperoleh || 0) / soal.bobot_nilai;
-                                                                                    return (
-                                                                                        <div key={soal.id_detail} className={`rounded-xl border px-4 py-3 text-xs ${isCorrect ? 'border-emerald-200 bg-emerald-50/50' : 'border-rose-200 bg-rose-50/50'}`}>
-                                                                                            <div className="flex items-center justify-between mb-3 border-b border-slate-200/50 pb-2">
-                                                                                                <div className="flex flex-col">
-                                                                                                    <span className="font-bold text-slate-700">Soal {sIdx + 1}</span>
+                                                                {expandedSiswaId === sw.id_siswa && sw.detail_jawaban && (() => {
+                                                                    const highestAttemptNum = sw.percobaan_tertinggi ?? sw.riwayat_percobaan?.reduce((prev, curr) => (Number(curr.total_skor) > Number(prev.total_skor) ? curr : prev), sw.riwayat_percobaan[0])?.percobaan_ke;
+                                                                    const currentAttemptNum = selectedAttemptBySiswa[sw.id_siswa] ?? (highestAttemptNum || sw.riwayat_percobaan?.length || 1);
+                                                                    const activeAttempt = sw.riwayat_percobaan?.find(p => p.percobaan_ke === currentAttemptNum) || sw.riwayat_percobaan?.[sw.riwayat_percobaan.length - 1];
+                                                                    const isViewingLatest = activeAttempt && activeAttempt.percobaan_ke === sw.riwayat_percobaan?.length;
+                                                                    const isViewingHighest = activeAttempt && activeAttempt.percobaan_ke === highestAttemptNum;
+
+                                                                    return (
+                                                                        <tr>
+                                                                            <td colSpan="6" className="bg-slate-50 px-4 py-4">
+                                                                                {sw.riwayat_percobaan && sw.riwayat_percobaan.length > 1 && (
+                                                                                    <div className="mb-4 rounded-xl border border-blue-200 bg-blue-50/70 p-3 sm:p-4">
+                                                                                        <div className="flex items-center justify-between mb-2">
+                                                                                            <h4 className="text-xs font-bold uppercase tracking-wider text-blue-900 flex items-center gap-1.5">
+                                                                                                <svg className="w-4 h-4 text-blue-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                                                                </svg>
+                                                                                                Riwayat Nilai Setiap Percobaan ({sw.jumlah_percobaan}x Pengerjaan)
+                                                                                            </h4>
+                                                                                            <span className="text-[11px] text-blue-700 font-semibold bg-blue-100 px-2 py-0.5 rounded-full">
+                                                                                                Klik kartu untuk melihat jawaban percobaan
+                                                                                            </span>
+                                                                                        </div>
+                                                                                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
+                                                                                            {sw.riwayat_percobaan.map((p) => {
+                                                                                                const isHighest = p.percobaan_ke === highestAttemptNum;
+                                                                                                const isLatest = p.percobaan_ke === sw.riwayat_percobaan.length;
+                                                                                                const isSelected = p.percobaan_ke === currentAttemptNum;
+                                                                                                const persentase = p.total_bobot > 0 ? ((p.total_skor / p.total_bobot) * 100).toFixed(1) : 0;
+                                                                                                return (
+                                                                                                    <button
+                                                                                                        key={p.percobaan_ke}
+                                                                                                        type="button"
+                                                                                                        onClick={() => setSelectedAttemptBySiswa(prev => ({ ...prev, [sw.id_siswa]: p.percobaan_ke }))}
+                                                                                                        className={`text-left rounded-lg border p-2.5 transition-all cursor-pointer ${
+                                                                                                            isSelected
+                                                                                                                ? 'bg-white border-primary shadow-sm ring-2 ring-primary/60'
+                                                                                                                : 'bg-white/80 border-slate-200 hover:bg-white hover:border-slate-300'
+                                                                                                        }`}
+                                                                                                    >
+                                                                                                        <div className="flex items-center justify-between">
+                                                                                                            <span className="text-xs font-bold text-slate-800">
+                                                                                                                Percobaan ke-{p.percobaan_ke}
+                                                                                                                {isHighest && <span className="ml-1 text-[10px] text-emerald-700 font-extrabold bg-emerald-100 px-1.5 py-0.5 rounded-full">🏆 Tertinggi</span>}
+                                                                                                                {isLatest && !isHighest && <span className="ml-1 text-[10px] text-blue-700 font-semibold bg-blue-100 px-1.5 py-0.5 rounded-full">Terbaru</span>}
+                                                                                                                {isSelected && <span className="ml-1 text-[10px] text-primary font-bold bg-primary/10 px-1.5 py-0.5 rounded-full">Sedang Dilihat</span>}
+                                                                                                            </span>
+                                                                                                            <span className="text-xs font-extrabold text-primary">{p.total_skor} / {p.total_bobot} ({persentase}%)</span>
+                                                                                                        </div>
+                                                                                                        <div className="mt-1 flex items-center justify-between text-[11px] text-slate-500">
+                                                                                                            <span>Benar: <strong className="text-emerald-700">{p.jumlah_benar}</strong> / {p.jumlah_soal}</span>
+                                                                                                            <span>{p.tanggal ? new Date(p.tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '-'}</span>
+                                                                                                        </div>
+                                                                                                    </button>
+                                                                                                );
+                                                                                            })}
+                                                                                        </div>
+                                                                                    </div>
+                                                                                )}
+
+                                                                                {sw.riwayat_percobaan && sw.riwayat_percobaan.length > 1 && (
+                                                                                    <div className="flex items-center justify-between px-1 py-1 mb-2 bg-slate-100/80 rounded-lg px-3 py-2 border border-slate-200">
+                                                                                        <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                                                                                            📝 Menampilkan Jawaban: <strong className="text-primary">Percobaan ke-{currentAttemptNum}</strong>
+                                                                                            {isViewingHighest && (
+                                                                                                <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded-full">Nilai Tertinggi (Digunakan)</span>
+                                                                                            )}
+                                                                                            {isViewingLatest && !isViewingHighest && (
+                                                                                                <span className="text-[10px] font-semibold text-blue-700 bg-blue-100 px-1.5 py-0.5 rounded-full">Pengerjaan Terbaru</span>
+                                                                                            )}
+                                                                                        </span>
+                                                                                        <span className="text-xs font-semibold text-slate-600">
+                                                                                            Skor: <strong className="text-primary">{activeAttempt ? activeAttempt.total_skor : sw.total_skor}</strong> / {activeAttempt ? activeAttempt.total_bobot : sesiDetailData.total_bobot} ({activeAttempt ? activeAttempt.jumlah_benar : sw.jumlah_benar} Benar)
+                                                                                        </span>
+                                                                                    </div>
+                                                                                )}
+
+                                                                                <div className="space-y-2">
+                                                                                    {sesiDetailData.soal.map((soal, sIdx) => {
+                                                                                        let dj = null;
+                                                                                        if (activeAttempt?.data_jawaban && Array.isArray(activeAttempt.data_jawaban)) {
+                                                                                            const fromAtt = activeAttempt.data_jawaban.find(d => d.id_detail === soal.id_detail);
+                                                                                            if (fromAtt) {
+                                                                                                dj = {
+                                                                                                    id_detail: fromAtt.id_detail,
+                                                                                                    jawaban_siswa: fromAtt.jawaban_siswa,
+                                                                                                    is_correct: fromAtt.is_correct,
+                                                                                                    skor_diperoleh: fromAtt.skor_diperoleh,
+                                                                                                };
+                                                                                            }
+                                                                                        }
+                                                                                        if (!dj) {
+                                                                                            dj = sw.detail_jawaban.find(d => d.id_detail === soal.id_detail);
+                                                                                        }
+                                                                                        const jawSiswa = dj?.jawaban_siswa || '-';
+                                                                                        const kunci = soal.kunci_jawaban;
+                                                                                        const isCorrect = dj?.is_correct;
+                                                                                        const formatVal = (v) => { 
+                                                                                            if (Array.isArray(v)) return v.join(', ');
+                                                                                            try { const a = JSON.parse(v); if (Array.isArray(a)) return a.join(', '); } catch {} 
+                                                                                            return v || '-'; 
+                                                                                        };
+                                                                                        const isEsai = soal.jenis_soal === 'esai' || soal.jenis_soal === 'essay';
+                                                                                        const kemiripan = (dj?.skor_diperoleh || 0) / soal.bobot_nilai;
+                                                                                        return (
+                                                                                            <div key={soal.id_detail} className={`rounded-xl border px-4 py-3 text-xs ${isCorrect ? 'border-emerald-200 bg-emerald-50/50' : 'border-rose-200 bg-rose-50/50'}`}>
+                                                                                                <div className="flex items-center justify-between mb-3 border-b border-slate-200/50 pb-2">
+                                                                                                    <div className="flex flex-col">
+                                                                                                        <span className="font-bold text-slate-700">Soal {sIdx + 1}</span>
                                                                                                     <span className="text-[10px] text-slate-400 mt-0.5">{soal.level_kognitif ? `Taksonomi Bloom: ${soal.level_kognitif}` : 'Level Kognitif tidak disetel'}</span>
                                                                                                 </div>
                                                                                                 <div className="text-right">
@@ -1025,9 +1160,14 @@ export default function GuruJadwalCbtPage({ session, onLogout }) {
                                                                             </div>
                                                                             {sw.analisis_diagnostik && (
                                                                                 <div className="mt-4 rounded-xl border border-primary/20 bg-primary/5 p-4">
-                                                                                    <div className="flex items-center gap-2 mb-2">
-                                                                                        <span className="text-sm">🤖</span>
-                                                                                        <span className="text-xs font-bold text-primary">Analisis Diagnostik AI</span>
+                                                                                    <div className="flex items-center justify-between mb-2">
+                                                                                        <div className="flex items-center gap-2">
+                                                                                            <span className="text-sm">🤖</span>
+                                                                                            <span className="text-xs font-bold text-primary">Analisis Diagnostik AI</span>
+                                                                                        </div>
+                                                                                        <span className="text-[10px] text-slate-400 italic">
+                                                                                            *Berdasarkan hasil terbaik (Percobaan ke-{highestAttemptNum || sw.riwayat_percobaan?.length || 1})
+                                                                                        </span>
                                                                                     </div>
                                                                                     <div className="grid gap-3 sm:grid-cols-2">
                                                                                         <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3">
@@ -1043,7 +1183,8 @@ export default function GuruJadwalCbtPage({ session, onLogout }) {
                                                                             )}
                                                                         </td>
                                                                     </tr>
-                                                                )}
+                                                                );
+                                                            })()}
                                                             </React.Fragment>
                                                         ))}
                                                         {filteredDetailSiswa.length === 0 && (

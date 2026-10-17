@@ -10,6 +10,7 @@ use App\Models\CatatanPrivat;
 use App\Models\KelasSiswa;
 use App\Models\JawabanSiswa;
 use App\Models\PenugasanPembelajaran;
+use App\Models\PercobaanCbt;
 use App\Models\SesiAsesmen;
 use App\Jobs\GenerateAnalisisDiagnostikJob;
 use App\Services\GeminiService;
@@ -719,10 +720,33 @@ class SiswaController extends Controller
         });
 
         $jumlahBenar = collect($resultPerSoal)->where('is_correct', true)->count();
+        $jumlahSalah = count($resultPerSoal) - $jumlahBenar;
+
+        // --- Catat Riwayat Percobaan CBT (Multi-attempt Tracking) ---
+        $lastAttempt = PercobaanCbt::where('id_siswa', $siswa->id_siswa)
+            ->where('id_sesi', $id_sesi)
+            ->max('percobaan_ke') ?? 0;
+        $percobaanKe = $lastAttempt + 1;
+
+        $newPercobaan = PercobaanCbt::create([
+            'id_siswa' => $siswa->id_siswa,
+            'id_sesi' => $id_sesi,
+            'percobaan_ke' => $percobaanKe,
+            'total_skor' => round($totalSkor, 2),
+            'total_bobot' => round($totalBobot, 2),
+            'jumlah_soal' => count($resultPerSoal),
+            'jumlah_benar' => $jumlahBenar,
+            'jumlah_salah' => $jumlahSalah,
+            'data_jawaban' => $resultPerSoal,
+        ]);
+
+        // --- Logic Nilai Tertinggi: Sinkronkan ke percobaan terbaik ---
+        $highestAttempt = PercobaanCbt::syncHighestAttempt($siswa->id_siswa, $id_sesi);
 
         // --- Trigger Gemini AI Analisis Diagnostik (Asinkron) ---
         $analisisDiagnostik = null;
         try {
+            $effectiveScore = $highestAttempt ? (float)$highestAttempt->total_skor : $totalSkor;
             // 1. Simpan AnalisisDiagnostik awal (instan)
             $analisis = AnalisisDiagnostik::updateOrCreate(
                 [
@@ -730,7 +754,7 @@ class SiswaController extends Controller
                     'id_sesi' => $id_sesi,
                 ],
                 [
-                    'skor_total' => $totalSkor,
+                    'skor_total' => $effectiveScore,
                     'tanggal_generate' => now(),
                     'narasi_kekuatan' => 'Sedang diproses oleh AI...',
                     'narasi_kelemahan' => 'Sedang diproses oleh AI...',
@@ -760,11 +784,14 @@ class SiswaController extends Controller
 
         return response()->json([
             'message' => 'Ujian berhasil disubmit',
-            'total_skor' => round($totalSkor, 4),
+            'total_skor' => round($highestAttempt ? (float)$highestAttempt->total_skor : $totalSkor, 4),
+            'skor_percobaan_ini' => round($totalSkor, 4),
             'total_bobot' => round($totalBobot, 4),
             'jumlah_soal' => count($resultPerSoal),
-            'jumlah_benar' => $jumlahBenar,
-            'jumlah_salah' => count($resultPerSoal) - $jumlahBenar,
+            'jumlah_benar' => $highestAttempt ? $highestAttempt->jumlah_benar : $jumlahBenar,
+            'jumlah_salah' => $highestAttempt ? $highestAttempt->jumlah_salah : $jumlahSalah,
+            'percobaan_ke' => $percobaanKe,
+            'percobaan_tertinggi' => $highestAttempt ? $highestAttempt->percobaan_ke : $percobaanKe,
             'sesi' => [
                 'tampilkan_kunci' => $sesi->tampilkan_kunci,
             ],
@@ -863,31 +890,77 @@ class SiswaController extends Controller
             return response()->json(['data' => []]);
         }
 
+        $allPercobaan = PercobaanCbt::where('id_siswa', $siswa->id_siswa)
+            ->orderBy('percobaan_ke', 'asc')
+            ->get()
+            ->groupBy('id_sesi');
+
         $sessions = SesiAsesmen::query()
             ->with(['kelas', 'mataPelajaran', 'detailSesiSoal'])
             ->whereIn('id_kelas', $kelasIds)
             ->latest('waktu_mulai')
             ->get()
-            ->filter(function (SesiAsesmen $sesi) use ($siswa) {
+            ->filter(function (SesiAsesmen $sesi) use ($siswa, $allPercobaan) {
                 $isEnded = $sesi->waktu_selesai && \Carbon\Carbon::parse($sesi->waktu_selesai)->isPast();
                 if ($isEnded) {
                     return true;
                 }
                 
+                if ($allPercobaan->has($sesi->id_sesi) && $allPercobaan->get($sesi->id_sesi)->isNotEmpty()) {
+                    return true;
+                }
+
                 $detailIds = $sesi->detailSesiSoal->pluck('id_detail');
                 return JawabanSiswa::where('id_siswa', $siswa->id_siswa)
                     ->whereIn('id_detail', $detailIds)
                     ->exists();
             })
-            ->map(function (SesiAsesmen $sesi) use ($siswa) {
+            ->map(function (SesiAsesmen $sesi) use ($siswa, $allPercobaan) {
                 $detailIds = $sesi->detailSesiSoal->pluck('id_detail');
                 $jawaban = JawabanSiswa::where('id_siswa', $siswa->id_siswa)
                     ->whereIn('id_detail', $detailIds)
                     ->get();
 
-                $totalSkor = $jawaban->sum('skor_diperoleh');
                 $totalBobot = $sesi->detailSesiSoal->sum('bobot_nilai');
-                $jumlahBenar = $jawaban->where('is_correct', true)->count();
+                $percobaanList = $allPercobaan->get($sesi->id_sesi, collect());
+                $percobaanTertinggi = 1;
+
+                if ($percobaanList->isNotEmpty()) {
+                    $highest = $percobaanList->sort(function ($a, $b) {
+                        $skorA = (float) $a->total_skor;
+                        $skorB = (float) $b->total_skor;
+                        if ($skorA == $skorB) {
+                            return $b->percobaan_ke <=> $a->percobaan_ke;
+                        }
+                        return $skorB <=> $skorA;
+                    })->first();
+
+                    $totalSkor = (float) $highest->total_skor;
+                    $totalBobot = (float) $highest->total_bobot;
+                    $jumlahBenar = $highest->jumlah_benar;
+                    $percobaanTertinggi = $highest->percobaan_ke;
+                } else {
+                    $totalSkor = $jawaban->sum('skor_diperoleh');
+                    $jumlahBenar = $jawaban->where('is_correct', true)->count();
+                }
+
+                $riwayatPercobaan = $percobaanList->map(function ($p) {
+                    return [
+                        'id_percobaan' => $p->id_percobaan,
+                        'percobaan_ke' => $p->percobaan_ke,
+                        'total_skor' => (float) $p->total_skor,
+                        'total_bobot' => (float) $p->total_bobot,
+                        'jumlah_soal' => $p->jumlah_soal,
+                        'jumlah_benar' => $p->jumlah_benar,
+                        'jumlah_salah' => $p->jumlah_salah,
+                        'submitted_at' => $p->created_at?->format('Y-m-d H:i:s'),
+                    ];
+                })->values();
+
+                $jumlahPercobaan = $riwayatPercobaan->count();
+                if ($jumlahPercobaan === 0 && $jawaban->isNotEmpty()) {
+                    $jumlahPercobaan = 1;
+                }
 
                 return [
                     'id_sesi' => $sesi->id_sesi,
@@ -897,12 +970,16 @@ class SiswaController extends Controller
                     'jenis_asesmen' => $sesi->jenis_asesmen,
                     'waktu_mulai' => $sesi->waktu_mulai,
                     'durasi_menit' => $sesi->durasi_menit,
+                    'boleh_ulang' => (bool) $sesi->boleh_ulang,
                     'jumlah_soal' => $sesi->detailSesiSoal->count(),
                     'jumlah_dijawab' => $jawaban->count(),
                     'jumlah_benar' => $jumlahBenar,
                     'total_skor' => round($totalSkor, 2),
                     'total_bobot' => round($totalBobot, 2),
-                    'submitted_at' => $jawaban->max('updated_at'),
+                    'jumlah_percobaan' => $jumlahPercobaan,
+                    'percobaan_tertinggi' => $percobaanTertinggi,
+                    'riwayat_percobaan' => $riwayatPercobaan,
+                    'submitted_at' => $jawaban->max('updated_at') ?? ($percobaanList->last()?->created_at?->toIso8601String()),
                     'has_analisis' => AnalisisDiagnostik::where('id_siswa', $siswa->id_siswa)
                         ->where('id_sesi', $sesi->id_sesi)
                         ->exists(),
@@ -976,6 +1053,44 @@ class SiswaController extends Controller
             ];
         }
 
+        $riwayatPercobaanRaw = PercobaanCbt::where('id_siswa', $siswa->id_siswa)
+            ->where('id_sesi', $id_sesi)
+            ->orderBy('percobaan_ke', 'asc')
+            ->get();
+
+        $percobaanTertinggi = 1;
+        if ($riwayatPercobaanRaw->isNotEmpty()) {
+            $highest = $riwayatPercobaanRaw->sort(function ($a, $b) {
+                $skorA = (float) $a->total_skor;
+                $skorB = (float) $b->total_skor;
+                if ($skorA == $skorB) {
+                    return $b->percobaan_ke <=> $a->percobaan_ke;
+                }
+                return $skorB <=> $skorA;
+            })->first();
+
+            $totalSkor = (float) $highest->total_skor;
+            $totalBobot = (float) $highest->total_bobot;
+            $jumlahBenar = $highest->jumlah_benar;
+            $percobaanTertinggi = $highest->percobaan_ke;
+        } else {
+            $jumlahBenar = $soalReview->where('is_correct', true)->count();
+        }
+
+        $riwayatPercobaan = $riwayatPercobaanRaw->map(function ($p) {
+            return [
+                'id_percobaan' => $p->id_percobaan,
+                'percobaan_ke' => $p->percobaan_ke,
+                'total_skor' => (float) $p->total_skor,
+                'total_bobot' => (float) $p->total_bobot,
+                'jumlah_soal' => $p->jumlah_soal,
+                'jumlah_benar' => $p->jumlah_benar,
+                'jumlah_salah' => $p->jumlah_salah,
+                'data_jawaban' => $p->data_jawaban,
+                'submitted_at' => $p->created_at?->format('Y-m-d H:i:s'),
+            ];
+        })->values();
+
         return response()->json([
             'sesi' => [
                 'id_sesi' => $sesi->id_sesi,
@@ -985,12 +1100,16 @@ class SiswaController extends Controller
                 'tipe_soal' => $sesi->tipe_soal,
                 'waktu_mulai' => $sesi->waktu_mulai,
                 'durasi_menit' => $sesi->durasi_menit,
+                'boleh_ulang' => (bool) $sesi->boleh_ulang,
                 'tampilkan_kunci' => $sesi->tampilkan_kunci,
             ],
             'total_skor' => round($totalSkor, 2),
             'total_bobot' => round($totalBobot, 2),
-            'jumlah_benar' => $soalReview->where('is_correct', true)->count(),
+            'jumlah_benar' => $jumlahBenar,
             'jumlah_soal' => $soalReview->count(),
+            'percobaan_tertinggi' => $percobaanTertinggi,
+            'jumlah_percobaan' => $riwayatPercobaan->count() > 0 ? $riwayatPercobaan->count() : 1,
+            'riwayat_percobaan' => $riwayatPercobaan,
             'soal' => $soalReview->values(),
             'analisis_diagnostik' => $analisisDiagnostik,
         ]);

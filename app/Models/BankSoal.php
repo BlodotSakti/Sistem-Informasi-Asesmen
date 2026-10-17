@@ -72,6 +72,15 @@ class BankSoal extends Model
         'math_weight' => 'float',
     ];
 
+    protected $appends = [
+        'gambar_soal_url',
+    ];
+
+    public function getGambarSoalUrlAttribute(): ?string
+    {
+        return $this->gambar_soal ? asset('storage/' . $this->gambar_soal) : null;
+    }
+
     public function pembuat(): BelongsTo
     {
         return $this->belongsTo(Pengguna::class, 'created_by', 'id_pengguna');

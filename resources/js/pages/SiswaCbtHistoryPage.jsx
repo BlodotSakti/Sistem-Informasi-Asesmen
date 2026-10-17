@@ -11,6 +11,7 @@ export default function SiswaCbtHistoryPage({ session, onLogout }) {
     const [error, setError] = useState('');
     const [reviewData, setReviewData] = useState(null);
     const [reviewLoading, setReviewLoading] = useState(false);
+    const [selectedAttemptNumber, setSelectedAttemptNumber] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
 
     useEffect(() => {
@@ -69,6 +70,7 @@ export default function SiswaCbtHistoryPage({ session, onLogout }) {
         try {
             setReviewLoading(true);
             setReviewData(null);
+            setSelectedAttemptNumber(null);
             const data = await apiFetch(`/api/siswa/cbt/${idSesi}/review`, session);
             setReviewData(data);
         } catch (err) {
@@ -173,7 +175,17 @@ export default function SiswaCbtHistoryPage({ session, onLogout }) {
                                     return (
                                         <tr key={item.id_sesi} className="align-top hover:bg-slate-50/70">
                                             <td className="px-4 py-3 font-semibold text-slate-500 text-center">{index + 1}</td>
-                                            <td className="px-4 py-3 font-semibold text-slate-900">{item.mata_pelajaran || '-'}</td>
+                                            <td className="px-4 py-3 font-semibold text-slate-900">
+                                                <div>{item.mata_pelajaran || '-'}</div>
+                                                {item.jumlah_percobaan > 1 && (
+                                                    <span className="inline-flex items-center gap-1 rounded-md bg-blue-50 px-2 py-0.5 text-[10px] font-semibold text-blue-700 border border-blue-200 mt-1">
+                                                        <svg className="w-3 h-3 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                                        </svg>
+                                                        {item.jumlah_percobaan}x Dikerjakan
+                                                    </span>
+                                                )}
+                                            </td>
                                             <td className="px-4 py-3 text-slate-600">{item.kelas || '-'}</td>
                                             <td className="px-4 py-3 text-slate-600">{item.tipe_soal || '-'}</td>
                                             <td className="px-4 py-3 text-slate-600 capitalize">{item.jenis_asesmen}</td>
@@ -185,9 +197,31 @@ export default function SiswaCbtHistoryPage({ session, onLogout }) {
                                                         Terlewat
                                                     </span>
                                                 ) : (
-                                                    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-bold ${persen >= 70 ? 'bg-emerald-100 text-emerald-700' : persen >= 50 ? 'bg-amber-100 text-amber-700' : 'bg-rose-100 text-rose-700'}`}>
-                                                        {Number(item.total_skor).toFixed(2)}/{item.total_bobot} ({persen}%)
-                                                    </span>
+                                                    <div className="flex flex-col items-center gap-1">
+                                                        <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-bold ${persen >= 70 ? 'bg-emerald-100 text-emerald-700' : persen >= 50 ? 'bg-amber-100 text-amber-700' : 'bg-rose-100 text-rose-700'}`}>
+                                                            {Number(item.total_skor).toFixed(2)}/{item.total_bobot} ({persen}%)
+                                                        </span>
+                                                        {item.riwayat_percobaan && item.riwayat_percobaan.length > 1 && (
+                                                            <div className="flex flex-wrap justify-center gap-1 mt-0.5" title="Nilai setiap percobaan">
+                                                                {item.riwayat_percobaan.map((p) => {
+                                                                    const isHighest = Number(p.total_skor) === Number(item.total_skor);
+                                                                    return (
+                                                                        <span 
+                                                                            key={p.percobaan_ke} 
+                                                                            className={`px-1.5 py-0.5 rounded text-[10px] font-semibold ${
+                                                                                isHighest 
+                                                                                    ? 'bg-emerald-100 text-emerald-800 border border-emerald-300 font-bold' 
+                                                                                    : 'bg-slate-100 text-slate-600 border border-slate-200'
+                                                                            }`}
+                                                                            title={`Percobaan ke-${p.percobaan_ke}: ${p.total_skor} (${isHighest ? 'Nilai Tertinggi Digunakan' : 'Riwayat'})`}
+                                                                        >
+                                                                            P{p.percobaan_ke}: {p.total_skor}{isHighest ? ' ★' : ''}
+                                                                        </span>
+                                                                    );
+                                                                })}
+                                                            </div>
+                                                        )}
+                                                    </div>
                                                 )}
                                             </td>
                                             <td className="px-4 py-3 text-center">
@@ -233,125 +267,233 @@ export default function SiswaCbtHistoryPage({ session, onLogout }) {
                                         <button onClick={() => setReviewData(null)} className="text-2xl text-slate-400 hover:text-slate-600">&times;</button>
                                     </div>
                                     <div className="px-6 py-4">
-                                        {/* Score summary */}
-                                        <div className="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
-                                            <div className="rounded-2xl bg-primary/5 px-4 py-4 text-center">
-                                                <p className="text-2xl font-bold text-primary">{Number(reviewData.total_skor).toFixed(2)}/{reviewData.total_bobot}</p>
-                                                <p className="text-xs text-primary">Total Skor</p>
-                                            </div>
-                                            <div className="rounded-2xl bg-emerald-50 px-4 py-4 text-center">
-                                                <p className="text-2xl font-bold text-emerald-700">{reviewData.jumlah_benar}</p>
-                                                <p className="text-xs text-emerald-500">Benar</p>
-                                            </div>
-                                            <div className="rounded-2xl bg-rose-50 px-4 py-4 text-center">
-                                                <p className="text-2xl font-bold text-rose-700">{reviewData.jumlah_soal - reviewData.jumlah_benar}</p>
-                                                <p className="text-xs text-error">Salah</p>
-                                            </div>
-                                            <div className="rounded-2xl bg-amber-50 px-4 py-4 text-center">
-                                                <p className="text-2xl font-bold text-amber-700">
-                                                    {reviewData.total_bobot > 0 ? Number(((reviewData.total_skor / reviewData.total_bobot) * 100).toFixed(2)) : 0}%
-                                                </p>
-                                                <p className="text-xs text-accent">Persentase</p>
-                                            </div>
-                                        </div>
+                                        {(() => {
+                                            const highestAttemptNum = reviewData.percobaan_tertinggi ?? reviewData.riwayat_percobaan?.reduce((prev, curr) => (Number(curr.total_skor) > Number(prev.total_skor) ? curr : prev), reviewData.riwayat_percobaan[0])?.percobaan_ke;
+                                            const currentAttemptNum = selectedAttemptNumber ?? (highestAttemptNum || reviewData.riwayat_percobaan?.length || 1);
+                                            const activeAttempt = reviewData.riwayat_percobaan?.find(p => p.percobaan_ke === currentAttemptNum) || reviewData.riwayat_percobaan?.[reviewData.riwayat_percobaan.length - 1];
+                                            const isViewingLatest = activeAttempt && activeAttempt.percobaan_ke === reviewData.riwayat_percobaan?.length;
+                                            const isViewingHighest = activeAttempt && activeAttempt.percobaan_ke === highestAttemptNum;
 
-                                        {/* Questions */}
-                                        <div className="space-y-4">
-                                            {(reviewData.soal || []).map((item, idx) => (
-                                                <div key={item.id_detail} className={`rounded-2xl border p-4 ${item.is_correct ? 'border-emerald-200 bg-emerald-50/30' : 'border-rose-200 bg-rose-50/30'}`}>
-                                                    <div className="flex items-start justify-between mb-2">
-                                                        <div className="flex items-center gap-2">
-                                                            <h4 className="font-semibold text-slate-800">Soal {idx + 1}</h4>
-                                                            {item.taksonomi_bloom && (
-                                                                <span className="rounded bg-indigo-50 border border-indigo-200 px-2 py-0.5 text-xs font-bold text-indigo-700">
-                                                                    {item.taksonomi_bloom.toUpperCase()}
-                                                                </span>
-                                                            )}
+                                            const displaySkor = activeAttempt ? activeAttempt.total_skor : reviewData.total_skor;
+                                            const displayBobot = activeAttempt ? activeAttempt.total_bobot : reviewData.total_bobot;
+                                            const displayBenar = activeAttempt ? activeAttempt.jumlah_benar : reviewData.jumlah_benar;
+                                            const displaySalah = activeAttempt ? activeAttempt.jumlah_salah : (reviewData.jumlah_soal - reviewData.jumlah_benar);
+                                            const displayPersen = displayBobot > 0 ? Number(((displaySkor / displayBobot) * 100).toFixed(2)) : 0;
+
+                                            return (
+                                                <>
+                                                    {/* Score summary */}
+                                                    <div className="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
+                                                        <div className="rounded-2xl bg-primary/5 px-4 py-4 text-center">
+                                                            <p className="text-2xl font-bold text-primary">{Number(displaySkor).toFixed(2)}/{displayBobot}</p>
+                                                            <p className="text-xs text-primary">Total Skor</p>
                                                         </div>
-                                                        <span className={`rounded-full px-3 py-1 text-xs font-bold ${item.is_correct ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
-                                                            {item.is_correct ? '✓ Benar' : '✗ Salah'} — {item.skor_diperoleh}/{item.bobot_nilai}
-                                                        </span>
+                                                        <div className="rounded-2xl bg-emerald-50 px-4 py-4 text-center">
+                                                            <p className="text-2xl font-bold text-emerald-700">{displayBenar}</p>
+                                                            <p className="text-xs text-emerald-500">Benar</p>
+                                                        </div>
+                                                        <div className="rounded-2xl bg-rose-50 px-4 py-4 text-center">
+                                                            <p className="text-2xl font-bold text-rose-700">{displaySalah}</p>
+                                                            <p className="text-xs text-error">Salah</p>
+                                                        </div>
+                                                        <div className="rounded-2xl bg-amber-50 px-4 py-4 text-center">
+                                                            <p className="text-2xl font-bold text-amber-700">
+                                                                {displayPersen}%
+                                                            </p>
+                                                            <p className="text-xs text-accent">Persentase</p>
+                                                        </div>
                                                     </div>
-                                                    <p className="text-sm text-slate-600 mb-3 whitespace-pre-wrap">{item.isi_soal}</p>
-                                                    {item.gambar_soal && (
-                                                        <div className="mb-3">
-                                                            <img src={`/storage/${item.gambar_soal}`} alt="Gambar Soal" className="max-h-40 rounded-lg border border-border object-contain shadow-sm" />
-                                                        </div>
-                                                    )}
 
-                                                    {/* Options with highlights */}
-                                                    {item.opsi_jawaban && item.opsi_jawaban.length > 0 && (
-                                                        <div className="grid gap-2 mb-3">
-                                                            {item.opsi_jawaban.map((opsi, oIdx) => {
-                                                                let kunciArr = [item.kunci_jawaban];
-                                                                try { const p = JSON.parse(item.kunci_jawaban); if (Array.isArray(p)) kunciArr = p; } catch {}
-                                                                let jawabanArr = [item.jawaban_siswa];
-                                                                try { const p = JSON.parse(item.jawaban_siswa); if (Array.isArray(p)) jawabanArr = p; } catch {}
-
-                                                                const isCorrectOption = kunciArr.includes(opsi);
-                                                                const isChosenOption = jawabanArr.includes(opsi);
-
-                                                                let style = 'border-border bg-white text-slate-600';
-                                                                let label = '';
-                                                                let icon = '○';
-
-                                                                if (isChosenOption && isCorrectOption) {
-                                                                    style = 'border-emerald-300 bg-emerald-50 text-emerald-800 shadow-sm';
-                                                                    icon = '✓';
-                                                                    label = reviewData.sesi?.tampilkan_kunci !== false ? 'Pilihan Anda (Kunci Jawaban)' : 'Pilihan Anda (Benar)';
-                                                                } else if (isChosenOption && !isCorrectOption) {
-                                                                    style = 'border-rose-300 bg-rose-50 text-rose-800 shadow-sm';
-                                                                    icon = '✗';
-                                                                    label = 'Pilihan Anda (Salah)';
-                                                                } else if (!isChosenOption && isCorrectOption) {
-                                                                    if (reviewData.sesi?.tampilkan_kunci !== false) {
-                                                                        style = 'border-emerald-300 bg-emerald-50/40 text-emerald-700 border-dashed';
-                                                                        icon = '✓';
-                                                                        label = 'Kunci Jawaban';
-                                                                    } else {
-                                                                        style = 'border-border bg-white text-slate-600';
-                                                                        icon = '○';
-                                                                        label = '';
-                                                                    }
-                                                                } else {
-                                                                    icon = '○';
-                                                                }
-
-                                                                return (
-                                                                    <div key={oIdx} className={`rounded-xl border px-4 py-3 text-sm flex items-center justify-between transition-all ${style}`}>
-                                                                        <div className="flex items-center gap-3">
-                                                                            <span className={`text-lg font-bold ${icon === '○' ? 'text-slate-300' : ''}`}>{icon}</span>
-                                                                            <span className="font-medium">{opsi}</span>
-                                                                        </div>
-                                                                        {label && <span className="text-xs font-bold uppercase tracking-wider opacity-80">{label}</span>}
-                                                                    </div>
-                                                                );
-                                                            })}
-                                                        </div>
-                                                    )}
-
-                                                    {/* Essay answers */}
-                                                    {/* Essay answers */}
-                                                    {(item.jenis_soal === 'essay' || item.jenis_soal === 'esai') && (
-                                                        <div className={`grid gap-2 text-sm ${reviewData.sesi?.tampilkan_kunci !== false ? 'sm:grid-cols-2' : ''}`}>
-                                                            <div className="rounded-xl bg-white/80 border border-border px-4 py-2">
-                                                                <span className="font-medium text-slate-500">Jawaban Anda:</span>
-                                                                <p className="mt-1 text-slate-700 whitespace-pre-wrap">{item.jawaban_siswa || <em className="text-slate-400">Tidak dijawab</em>}</p>
+                                                    {/* Riwayat Nilai Setiap Percobaan */}
+                                                    {reviewData.riwayat_percobaan && reviewData.riwayat_percobaan.length > 1 && (
+                                                        <div className="mb-6 rounded-2xl border border-blue-200 bg-blue-50/70 p-4">
+                                                            <div className="flex items-center justify-between mb-3">
+                                                                <h4 className="text-xs font-bold uppercase tracking-wider text-blue-900 flex items-center gap-1.5">
+                                                                    <svg className="w-4 h-4 text-blue-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                                    </svg>
+                                                                    Riwayat Nilai Setiap Percobaan Anda ({reviewData.riwayat_percobaan.length}x Pengerjaan)
+                                                                </h4>
+                                                                <span className="text-[11px] text-blue-700 font-semibold bg-blue-100 px-2.5 py-0.5 rounded-full">
+                                                                    Klik kartu untuk melihat jawaban percobaan
+                                                                </span>
                                                             </div>
-                                                            {reviewData.sesi?.tampilkan_kunci !== false && (
-                                                                <div className="rounded-xl bg-white/80 border border-border px-4 py-2">
-                                                                    <span className="font-medium text-slate-500">Kunci Jawaban:</span>
-                                                                    <p className="mt-1 text-slate-700 whitespace-pre-wrap">{formatJawaban(item.kunci_jawaban, item.jenis_soal)}</p>
-                                                                </div>
-                                                            )}
+                                                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                                                                {reviewData.riwayat_percobaan.map((p) => {
+                                                                    const isHighest = p.percobaan_ke === highestAttemptNum;
+                                                                    const isLatest = p.percobaan_ke === reviewData.riwayat_percobaan.length;
+                                                                    const isSelected = p.percobaan_ke === currentAttemptNum;
+                                                                    const persentase = p.total_bobot > 0 ? ((p.total_skor / p.total_bobot) * 100).toFixed(1) : 0;
+                                                                    return (
+                                                                        <button
+                                                                            key={p.percobaan_ke}
+                                                                            type="button"
+                                                                            onClick={() => setSelectedAttemptNumber(p.percobaan_ke)}
+                                                                            className={`text-left rounded-xl border p-3 transition-all cursor-pointer ${
+                                                                                isSelected
+                                                                                    ? 'bg-white border-primary shadow-sm ring-2 ring-primary/60'
+                                                                                    : 'bg-white/80 border-slate-200 hover:bg-white hover:border-slate-300'
+                                                                            }`}
+                                                                        >
+                                                                            <div className="flex items-center justify-between">
+                                                                                <span className="text-xs font-bold text-slate-800">
+                                                                                    Percobaan ke-{p.percobaan_ke}
+                                                                                    {isHighest && <span className="ml-1 text-[10px] text-emerald-700 font-extrabold bg-emerald-100 px-1.5 py-0.5 rounded-full">🏆 Tertinggi</span>}
+                                                                                    {isLatest && !isHighest && <span className="ml-1 text-[10px] text-blue-700 font-semibold bg-blue-100 px-1.5 py-0.5 rounded-full">Terbaru</span>}
+                                                                                    {isSelected && <span className="ml-1 text-[10px] text-primary font-bold bg-primary/10 px-1.5 py-0.5 rounded-full">Sedang Dilihat</span>}
+                                                                                </span>
+                                                                                <span className="text-xs font-extrabold text-primary">{p.total_skor} / {p.total_bobot} ({persentase}%)</span>
+                                                                            </div>
+                                                                            <div className="mt-2 flex items-center justify-between text-[11px] text-slate-500">
+                                                                                <span>Benar: <strong className="text-emerald-700">{p.jumlah_benar}</strong> / {p.jumlah_soal}</span>
+                                                                                <span>{p.submitted_at ? new Date(p.submitted_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '-'}</span>
+                                                                            </div>
+                                                                        </button>
+                                                                    );
+                                                                })}
+                                                            </div>
                                                         </div>
                                                     )}
-                                                </div>
-                                            ))}
-                                        </div>
 
-                                        {/* Analisis Diagnostik AI */}
-                                        <AnalisisDiagnostikCard analisis={reviewData.analisis_diagnostik} />
+                                                    {reviewData.riwayat_percobaan && reviewData.riwayat_percobaan.length > 1 && (
+                                                        <div className="mb-4 flex items-center justify-between rounded-xl border border-slate-200 bg-slate-100/80 px-4 py-2.5">
+                                                            <span className="text-xs font-bold text-slate-700 flex items-center gap-2">
+                                                                <span>📝 Menampilkan Jawaban:</span>
+                                                                <strong className="text-primary font-extrabold">Percobaan ke-{currentAttemptNum}</strong>
+                                                                {isViewingHighest && (
+                                                                    <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">Nilai Tertinggi (Digunakan)</span>
+                                                                )}
+                                                                {isViewingLatest && !isViewingHighest && (
+                                                                    <span className="text-[10px] font-semibold text-blue-700 bg-blue-100 px-2 py-0.5 rounded-full">Pengerjaan Terbaru</span>
+                                                                )}
+                                                            </span>
+                                                            <span className="text-xs font-semibold text-slate-600">
+                                                                Skor: <strong className="text-primary">{displaySkor}</strong> / {displayBobot} ({displayBenar} Benar)
+                                                            </span>
+                                                        </div>
+                                                    )}
+
+                                                    {/* Questions */}
+                                                    <div className="space-y-4">
+                                                        {(reviewData.soal || []).map((item, idx) => {
+                                                            let dj = null;
+                                                            if (activeAttempt?.data_jawaban && Array.isArray(activeAttempt.data_jawaban)) {
+                                                                const fromAtt = activeAttempt.data_jawaban.find(d => d.id_detail === item.id_detail);
+                                                                if (fromAtt) {
+                                                                    dj = fromAtt;
+                                                                }
+                                                            }
+                                                            const jawabanSiswa = dj ? dj.jawaban_siswa : item.jawaban_siswa;
+                                                            const isCorrect = dj ? dj.is_correct : item.is_correct;
+                                                            const skorDiperoleh = dj ? dj.skor_diperoleh : item.skor_diperoleh;
+
+                                                            return (
+                                                                <div key={item.id_detail} className={`rounded-2xl border p-4 ${isCorrect ? 'border-emerald-200 bg-emerald-50/30' : 'border-rose-200 bg-rose-50/30'}`}>
+                                                                    <div className="flex items-start justify-between mb-2">
+                                                                        <div className="flex items-center gap-2">
+                                                                            <h4 className="font-semibold text-slate-800">Soal {idx + 1}</h4>
+                                                                            {item.taksonomi_bloom && (
+                                                                                <span className="rounded bg-indigo-50 border border-indigo-200 px-2 py-0.5 text-xs font-bold text-indigo-700">
+                                                                                    {item.taksonomi_bloom.toUpperCase()}
+                                                                                </span>
+                                                                            )}
+                                                                        </div>
+                                                                        <span className={`rounded-full px-3 py-1 text-xs font-bold ${isCorrect ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
+                                                                            {isCorrect ? '✓ Benar' : '✗ Salah'} — {skorDiperoleh}/{item.bobot_nilai}
+                                                                        </span>
+                                                                    </div>
+                                                                    <p className="text-sm text-slate-600 mb-3 whitespace-pre-wrap">{item.isi_soal}</p>
+                                                                    {item.gambar_soal && (
+                                                                        <div className="mb-3">
+                                                                            <img src={`/storage/${item.gambar_soal}`} alt="Gambar Soal" className="max-h-40 rounded-lg border border-border object-contain shadow-sm" />
+                                                                        </div>
+                                                                    )}
+
+                                                                    {/* Options with highlights */}
+                                                                    {item.opsi_jawaban && item.opsi_jawaban.length > 0 && (
+                                                                        <div className="grid gap-2 mb-3">
+                                                                            {item.opsi_jawaban.map((opsi, oIdx) => {
+                                                                                let kunciArr = [item.kunci_jawaban];
+                                                                                try { const p = JSON.parse(item.kunci_jawaban); if (Array.isArray(p)) kunciArr = p; } catch {}
+                                                                                let jawabanArr = [jawabanSiswa];
+                                                                                try { const p = JSON.parse(jawabanSiswa); if (Array.isArray(p)) jawabanArr = p; } catch {}
+
+                                                                                const isCorrectOption = kunciArr.includes(opsi);
+                                                                                const isChosenOption = jawabanArr.includes(opsi);
+
+                                                                                let style = 'border-border bg-white text-slate-600';
+                                                                                let label = '';
+                                                                                let icon = '○';
+
+                                                                                if (isChosenOption && isCorrectOption) {
+                                                                                    style = 'border-emerald-300 bg-emerald-50 text-emerald-800 shadow-sm';
+                                                                                    icon = '✓';
+                                                                                    label = reviewData.sesi?.tampilkan_kunci !== false ? 'Pilihan Anda (Kunci Jawaban)' : 'Pilihan Anda (Benar)';
+                                                                                } else if (isChosenOption && !isCorrectOption) {
+                                                                                    style = 'border-rose-300 bg-rose-50 text-rose-800 shadow-sm';
+                                                                                    icon = '✗';
+                                                                                    label = 'Pilihan Anda (Salah)';
+                                                                                } else if (!isChosenOption && isCorrectOption) {
+                                                                                    if (reviewData.sesi?.tampilkan_kunci !== false) {
+                                                                                        style = 'border-emerald-300 bg-emerald-50/40 text-emerald-700 border-dashed';
+                                                                                        icon = '✓';
+                                                                                        label = 'Kunci Jawaban';
+                                                                                    } else {
+                                                                                        style = 'border-border bg-white text-slate-600';
+                                                                                        icon = '○';
+                                                                                        label = '';
+                                                                                    }
+                                                                                } else {
+                                                                                    icon = '○';
+                                                                                }
+
+                                                                                return (
+                                                                                    <div key={oIdx} className={`rounded-xl border px-4 py-3 text-sm flex items-center justify-between transition-all ${style}`}>
+                                                                                        <div className="flex items-center gap-3">
+                                                                                            <span className={`text-lg font-bold ${icon === '○' ? 'text-slate-300' : ''}`}>{icon}</span>
+                                                                                            <span className="font-medium">{opsi}</span>
+                                                                                        </div>
+                                                                                        {label && <span className="text-xs font-bold uppercase tracking-wider opacity-80">{label}</span>}
+                                                                                    </div>
+                                                                                );
+                                                                            })}
+                                                                        </div>
+                                                                    )}
+
+                                                                    {/* Essay answers */}
+                                                                    {(item.jenis_soal === 'essay' || item.jenis_soal === 'esai') && (
+                                                                        <div className={`grid gap-2 text-sm ${reviewData.sesi?.tampilkan_kunci !== false ? 'sm:grid-cols-2' : ''}`}>
+                                                                            <div className="rounded-xl bg-white/80 border border-border px-4 py-2">
+                                                                                <span className="font-medium text-slate-500">Jawaban Anda:</span>
+                                                                                <p className="mt-1 text-slate-700 whitespace-pre-wrap">{jawabanSiswa || <em className="text-slate-400">Tidak dijawab</em>}</p>
+                                                                            </div>
+                                                                            {reviewData.sesi?.tampilkan_kunci !== false && (
+                                                                                <div className="rounded-xl bg-white/80 border border-border px-4 py-2">
+                                                                                    <span className="font-medium text-slate-500">Kunci Jawaban:</span>
+                                                                                    <p className="mt-1 text-slate-700 whitespace-pre-wrap">{formatJawaban(item.kunci_jawaban, item.jenis_soal)}</p>
+                                                                                </div>
+                                                                            )}
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
+
+                                                    {/* Analisis Diagnostik AI */}
+                                                    {reviewData.analisis_diagnostik && (
+                                                        <div className="mt-8">
+                                                            <div className="flex items-center justify-end px-1 mb-1">
+                                                                <span className="text-[11px] text-slate-400 italic">
+                                                                    *Laporan Analisis Diagnostik AI didasarkan pada hasil pengerjaan terbaik (Percobaan ke-{highestAttemptNum || reviewData.riwayat_percobaan?.length || 1})
+                                                                </span>
+                                                            </div>
+                                                            <AnalisisDiagnostikCard analisis={reviewData.analisis_diagnostik} />
+                                                        </div>
+                                                    )}
+                                                </>
+                                            );
+                                        })()}
                                     </div>
                                     <div className="border-t border-border px-6 py-4 text-right">
                                         <button onClick={() => setReviewData(null)} className="rounded-xl bg-slate-900 px-5 py-2 text-sm font-semibold text-white transition hover:bg-primary/85">Tutup</button>

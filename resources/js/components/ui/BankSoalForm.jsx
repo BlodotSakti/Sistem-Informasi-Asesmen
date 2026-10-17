@@ -27,7 +27,7 @@ export default function BankSoalForm({
                         <option value="">Pilih mapel</option>
                         {mapelOptions.map((item) => (
                             <option key={item.id_mapel} value={item.id_mapel}>
-                                {item.nama_lengkap || item.nama_mapel} {item.tingkat ? `(Kelas ${item.tingkat})` : ''}
+                                {item.nama_lengkap || (item.tingkat ? `${item.nama_mapel} (Kelas ${item.tingkat})` : item.nama_mapel)}
                             </option>
                         ))}
                     </select>
