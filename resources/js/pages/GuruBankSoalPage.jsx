@@ -31,6 +31,7 @@ export default function GuruBankSoalPage({ session, onLogout }) {
         use_math: false,
         math_steps: '',
         math_weight: 0.0,
+        tgate: 0,
     });
     const [bankSearch, setBankSearch] = useState('');
     const [bankFilterMapel, setBankFilterMapel] = useState('');
@@ -109,6 +110,7 @@ export default function GuruBankSoalPage({ session, onLogout }) {
             use_math: item.math_steps && item.math_steps.length > 0,
             math_steps: item.math_steps ? item.math_steps.join('\n') : '',
             math_weight: item.math_weight || 0.0,
+            tgate: item.tgate ?? 0,
         });
         
         // Smooth scroll ke arah form
@@ -136,6 +138,7 @@ export default function GuruBankSoalPage({ session, onLogout }) {
             use_math: false,
             math_steps: '',
             math_weight: 0.0,
+            tgate: 0,
         }));
     };
 
@@ -193,6 +196,7 @@ export default function GuruBankSoalPage({ session, onLogout }) {
                 });
                 formData.append('rule_weight', bankForm.rule_weight);
                 formData.append('lsa_weight', bankForm.lsa_weight);
+                formData.append('tgate', bankForm.tgate === '' ? 0 : bankForm.tgate);
 
                 if (bankForm.use_math) {
                     const mathStepsArray = bankForm.math_steps.split('\n').map(k => k.trim()).filter(Boolean);
@@ -302,6 +306,7 @@ export default function GuruBankSoalPage({ session, onLogout }) {
                         keywords: keywords,
                         rule_weight: row.rule_weight !== undefined && row.rule_weight !== '' ? parseFloat(row.rule_weight) : 0,
                         lsa_weight: row.lsa_weight !== undefined && row.lsa_weight !== '' ? parseFloat(row.lsa_weight) : 0,
+                        tgate: row.tgate !== undefined && row.tgate !== '' ? parseFloat(row.tgate) : 0,
                     });
                 });
 
@@ -344,7 +349,7 @@ export default function GuruBankSoalPage({ session, onLogout }) {
         const headers = [
             "nama_mapel", "isi_soal", "opsi_a", "opsi_b", "opsi_c", "opsi_d", "opsi_e", 
             "kunci_jawaban", "jenis_soal", "topik_materi", "level_kognitif",
-            "keywords", "rule_weight", "lsa_weight"
+            "keywords", "rule_weight", "lsa_weight", "tgate"
         ];
         
         const exampleData = [
@@ -362,7 +367,8 @@ export default function GuruBankSoalPage({ session, onLogout }) {
                 "level_kognitif": "C1",
                 "keywords": "",
                 "rule_weight": "",
-                "lsa_weight": ""
+                "lsa_weight": "",
+                "tgate": ""
             },
             {
                 "nama_mapel": "Bahasa Indonesia (X)",
@@ -378,7 +384,8 @@ export default function GuruBankSoalPage({ session, onLogout }) {
                 "level_kognitif": "C3",
                 "keywords": "majas, gaya bahasa, sifat manusia, benda mati",
                 "rule_weight": 0.4,
-                "lsa_weight": 0.6
+                "lsa_weight": 0.6,
+                "tgate": 40
             },
             {
                 "nama_mapel": "Bahasa Indonesia (X)",
@@ -394,7 +401,8 @@ export default function GuruBankSoalPage({ session, onLogout }) {
                 "level_kognitif": "C2",
                 "keywords": "",
                 "rule_weight": "",
-                "lsa_weight": ""
+                "lsa_weight": "",
+                "tgate": ""
             }
         ];
 
@@ -404,7 +412,7 @@ export default function GuruBankSoalPage({ session, onLogout }) {
 
         const wscols = [
             {wch: 25}, {wch: 40}, {wch: 20}, {wch: 20}, {wch: 20}, {wch: 20}, {wch: 20}, 
-            {wch: 30}, {wch: 15}, {wch: 20}, {wch: 15}, {wch: 30}, {wch: 15}, {wch: 15}
+            {wch: 30}, {wch: 15}, {wch: 20}, {wch: 15}, {wch: 30}, {wch: 15}, {wch: 15}, {wch: 10}
         ];
         worksheet['!cols'] = wscols;
 
@@ -555,6 +563,11 @@ export default function GuruBankSoalPage({ session, onLogout }) {
                                 <label className="space-y-2 text-sm font-medium text-slate-700">
                                     <span>Bobot Makna (LSA)</span>
                                     <input type="number" step="0.1" min="0" max="1" value={bankForm.lsa_weight} onChange={(event) => setBankForm((current) => ({ ...current, lsa_weight: event.target.value }))} className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-slate-900" />
+                                </label>
+                                <label className="space-y-2 text-sm font-medium text-slate-700 md:col-span-2">
+                                    <span>Ambang Minimal Kata Kunci / Tgate (%)</span>
+                                    <p className="text-xs font-normal text-slate-500">Persentase minimal kata kunci (dan langkah matematis) yang harus disebut siswa agar penilaian makna (LSA) diaktifkan. Di bawah ambang ini, nilai dipotong penalti. Isi <code>0</code> untuk menonaktifkan.</p>
+                                    <input type="number" step="5" min="0" max="100" value={bankForm.tgate} onChange={(event) => setBankForm((current) => ({ ...current, tgate: event.target.value }))} className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-slate-900" />
                                 </label>
                                 
                                 <div className="md:col-span-2 mt-4 pt-4 border-t border-slate-200">

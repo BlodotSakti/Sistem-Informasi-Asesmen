@@ -216,6 +216,11 @@ export default function BankSoalForm({
                             <span>Bobot Makna (LSA)</span>
                             <input type="number" step="0.1" min="0" max="1" value={bankForm.lsa_weight} onChange={(event) => setBankForm((current) => ({ ...current, lsa_weight: event.target.value }))} className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-slate-900" />
                         </label>
+                        <label className="space-y-2 text-sm font-medium text-slate-700 md:col-span-2">
+                            <span>Ambang Minimal Kata Kunci / Tgate (%)</span>
+                            <p className="text-xs font-normal text-slate-500">Persentase minimal kata kunci (dan langkah matematis) yang harus disebut siswa agar penilaian makna (LSA) diaktifkan. Di bawah ambang ini, nilai dipotong penalti. Isi <code>0</code> untuk menonaktifkan.</p>
+                            <input type="number" step="5" min="0" max="100" value={bankForm.tgate} onChange={(event) => setBankForm((current) => ({ ...current, tgate: event.target.value }))} className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-slate-900" />
+                        </label>
 
                         <div className="md:col-span-2 mt-4 pt-4 border-t border-slate-200">
                             <label className="flex items-center gap-3 cursor-pointer p-4 rounded-2xl border border-slate-200 bg-slate-50 hover:bg-slate-100 transition">

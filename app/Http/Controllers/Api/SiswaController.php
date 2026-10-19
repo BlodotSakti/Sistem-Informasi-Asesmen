@@ -591,7 +591,8 @@ class SiswaController extends Controller
 
         // --- Auto-Grading Essay API Calls ---
         $essayGrades = [];
-        $apiUrl = env('ESSAY_GRADER_API_URL');
+        $apiUrl = config('services.essay_grader.url');
+        $apiTimeout = (int) config('services.essay_grader.timeout', 10);
         
         foreach ($jawabanByDetail as $jawab) {
             $detail = $details->get($jawab['id_detail']);
@@ -611,7 +612,7 @@ class SiswaController extends Controller
 
                 if ($apiUrl) {
                     try {
-                        $response = \Illuminate\Support\Facades\Http::timeout(10)->post($apiUrl . '/grade', [
+                        $response = \Illuminate\Support\Facades\Http::timeout($apiTimeout)->post(rtrim($apiUrl, '/') . '/grade', [
                             'student_answer' => $teksJawaban,
                             'reference_answers' => array_values(array_filter(array_map('trim', explode('|', $bankSoal->kunci_jawaban ?? '')))),
                             'keywords' => array_map(function($kw) {
@@ -638,7 +639,8 @@ class SiswaController extends Controller
                                     'weight' => 1.0
                                 ];
                             }, $bankSoal->math_steps ?? []),
-                            'math_weight' => (float) ($bankSoal->math_weight ?? 0.0)
+                            'math_weight' => (float) ($bankSoal->math_weight ?? 0.0),
+                            'tgate' => (float) ($bankSoal->tgate ?? 0.0)
                         ]);
                         
                         if ($response->successful()) {
