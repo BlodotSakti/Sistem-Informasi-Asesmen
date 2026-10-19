@@ -40,6 +40,7 @@ export default function AdminBankSoalPage({ session, onLogout }) {
         math_steps: '',
         math_weight: 0,
         tgate: 0,
+        required_keywords_count: '',
     });
 
     const navigation = adminNavigation;
@@ -106,6 +107,7 @@ export default function AdminBankSoalPage({ session, onLogout }) {
             math_steps: Array.isArray(soal.math_steps) ? soal.math_steps.join('\n') : (soal.math_steps || ''),
             math_weight: soal.math_weight || 0,
             tgate: soal.tgate ?? 0,
+            required_keywords_count: soal.required_keywords_count ?? '',
         });
         
         window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -131,6 +133,7 @@ export default function AdminBankSoalPage({ session, onLogout }) {
             math_steps: '',
             math_weight: 0,
             tgate: 0,
+            required_keywords_count: '',
         });
         setEditingBankSoalId(null);
         setIsFormOpen(false);
@@ -181,6 +184,9 @@ export default function AdminBankSoalPage({ session, onLogout }) {
                 formData.append('rule_weight', bankForm.rule_weight);
                 formData.append('lsa_weight', bankForm.lsa_weight);
                 formData.append('tgate', bankForm.tgate === '' ? 0 : bankForm.tgate);
+                if (bankForm.required_keywords_count !== '' && bankForm.required_keywords_count !== null) {
+                    formData.append('required_keywords_count', bankForm.required_keywords_count);
+                }
                 
                 if (bankForm.use_math) {
                     const mathStepsArray = bankForm.math_steps.split('\n').map(k => k.trim()).filter(Boolean);
@@ -223,7 +229,7 @@ export default function AdminBankSoalPage({ session, onLogout }) {
         const headers = [
             "nama_mapel", "isi_soal", "opsi_a", "opsi_b", "opsi_c", "opsi_d", "opsi_e",
             "kunci_jawaban", "jenis_soal", "topik_materi", "level_kognitif",
-            "keywords", "rule_weight", "lsa_weight", "tgate"
+            "keywords", "rule_weight", "lsa_weight", "tgate", "required_keywords_count"
         ];
 
         const exampleData = [
@@ -242,7 +248,8 @@ export default function AdminBankSoalPage({ session, onLogout }) {
                 "keywords": "",
                 "rule_weight": "",
                 "lsa_weight": "",
-                "tgate": ""
+                "tgate": "",
+                "required_keywords_count": ""
             },
             {
                 "nama_mapel": "Bahasa Indonesia (X)",
@@ -259,7 +266,8 @@ export default function AdminBankSoalPage({ session, onLogout }) {
                 "keywords": "majas, gaya bahasa, sifat manusia, benda mati",
                 "rule_weight": 0.4,
                 "lsa_weight": 0.6,
-                "tgate": 40
+                "tgate": 40,
+                "required_keywords_count": ""
             },
             {
                 "nama_mapel": "Bahasa Indonesia (X)",
@@ -276,7 +284,8 @@ export default function AdminBankSoalPage({ session, onLogout }) {
                 "keywords": "",
                 "rule_weight": "",
                 "lsa_weight": "",
-                "tgate": ""
+                "tgate": "",
+                "required_keywords_count": ""
             }
         ];
 
@@ -375,6 +384,7 @@ export default function AdminBankSoalPage({ session, onLogout }) {
                         rule_weight: row.rule_weight !== undefined && row.rule_weight !== '' ? parseFloat(row.rule_weight) : 0,
                         lsa_weight: row.lsa_weight !== undefined && row.lsa_weight !== '' ? parseFloat(row.lsa_weight) : 0,
                         tgate: row.tgate !== undefined && row.tgate !== '' ? parseFloat(row.tgate) : 0,
+                        required_keywords_count: row.required_keywords_count !== undefined && row.required_keywords_count !== '' ? parseInt(row.required_keywords_count) : null,
                     });
                 });
 

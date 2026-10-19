@@ -64,6 +64,7 @@ class BankSoal extends Model
         'math_steps',
         'math_weight',
         'tgate',
+        'required_keywords_count',
     ];
 
     protected $casts = [
@@ -72,6 +73,7 @@ class BankSoal extends Model
         'math_steps' => 'array',
         'math_weight' => 'float',
         'tgate' => 'float',
+        'required_keywords_count' => 'integer',
     ];
 
     protected $appends = [

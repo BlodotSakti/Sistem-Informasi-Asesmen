@@ -625,9 +625,17 @@ class SiswaController extends Controller
                                         $kw = trim(substr($kw, 0, -2));
                                     }
                                 }
+                                $weight = 1.0;
+                                if (str_contains($kw, ':')) {
+                                    $parts = explode(':', $kw, 2);
+                                    $kw = trim($parts[0]);
+                                    if (is_numeric(trim($parts[1]))) {
+                                        $weight = (float) trim($parts[1]);
+                                    }
+                                }
                                 return [
                                     'keyword' => $kw,
-                                    'weight' => 1.0,
+                                    'weight' => $weight,
                                     'strict' => $strict
                                 ];
                             }, $keywords),
@@ -640,7 +648,8 @@ class SiswaController extends Controller
                                 ];
                             }, $bankSoal->math_steps ?? []),
                             'math_weight' => (float) ($bankSoal->math_weight ?? 0.0),
-                            'tgate' => (float) ($bankSoal->tgate ?? 0.0)
+                            'tgate' => (float) ($bankSoal->tgate ?? 0.0),
+                            'required_keywords_count' => !empty($bankSoal->required_keywords_count) ? (int) $bankSoal->required_keywords_count : null
                         ]);
                         
                         if ($response->successful()) {

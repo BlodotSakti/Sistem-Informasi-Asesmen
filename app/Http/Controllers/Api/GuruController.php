@@ -153,6 +153,7 @@ class GuruController extends Controller
             'math_steps.*' => ['string'],
             'math_weight' => ['nullable', 'numeric', 'min:0', 'max:1'],
             'tgate' => ['nullable', 'numeric', 'min:0', 'max:100'],
+            'required_keywords_count' => ['nullable', 'integer', 'min:1'],
         ]);
 
         $validator->after(function ($validator) use ($request): void {
@@ -213,6 +214,7 @@ class GuruController extends Controller
             $data['math_steps'] = array_values(array_filter(array_map('trim', $data['math_steps'] ?? [])));
             $data['math_weight'] = $data['math_weight'] ?? 0.00;
             $data['tgate'] = $data['tgate'] ?? 0.00;
+            $data['required_keywords_count'] = !empty($data['required_keywords_count']) ? (int) $data['required_keywords_count'] : null;
         } elseif ($data['jenis_soal'] === 'pilihan_ganda_kompleks') {
             $data['kunci_jawaban'] = json_encode(array_values(array_filter(array_map('trim', (array) $data['kunci_jawaban']))));
         } else {
@@ -249,6 +251,7 @@ class GuruController extends Controller
             'math_steps.*' => ['string'],
             'math_weight' => ['nullable', 'numeric', 'min:0', 'max:1'],
             'tgate' => ['nullable', 'numeric', 'min:0', 'max:100'],
+            'required_keywords_count' => ['nullable', 'integer', 'min:1'],
         ]);
 
         $validator->after(function ($validator) use ($request): void {
@@ -314,6 +317,7 @@ class GuruController extends Controller
             $data['math_steps'] = array_values(array_filter(array_map('trim', $data['math_steps'] ?? [])));
             $data['math_weight'] = $data['math_weight'] ?? 0.00;
             $data['tgate'] = $data['tgate'] ?? 0.00;
+            $data['required_keywords_count'] = !empty($data['required_keywords_count']) ? (int) $data['required_keywords_count'] : null;
         } elseif ($data['jenis_soal'] === 'pilihan_ganda_kompleks') {
             $data['kunci_jawaban'] = json_encode(array_values(array_filter(array_map('trim', (array) $data['kunci_jawaban']))));
         } else {
@@ -375,6 +379,7 @@ class GuruController extends Controller
             'soal.*.rule_weight' => ['nullable', 'numeric'],
             'soal.*.lsa_weight' => ['nullable', 'numeric'],
             'soal.*.tgate' => ['nullable', 'numeric', 'min:0', 'max:100'],
+            'soal.*.required_keywords_count' => ['nullable', 'integer', 'min:1'],
         ]);
 
         $guruId = $request->user()->guru->id_guru;
@@ -417,6 +422,7 @@ class GuruController extends Controller
             $soal['rule_weight'] = $soal['rule_weight'] ?? 0;
             $soal['lsa_weight'] = $soal['lsa_weight'] ?? 0;
             $soal['tgate'] = $soal['tgate'] ?? 0;
+            $soal['required_keywords_count'] = !empty($soal['required_keywords_count']) ? (int) $soal['required_keywords_count'] : null;
 
             $created[] = $soal;
         }

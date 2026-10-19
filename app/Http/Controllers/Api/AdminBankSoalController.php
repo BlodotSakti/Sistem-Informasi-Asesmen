@@ -36,13 +36,11 @@ class AdminBankSoalController extends Controller
             'keywords.*' => ['string'],
             'rule_weight' => ['nullable', 'numeric', 'min:0', 'max:1'],
             'lsa_weight' => ['nullable', 'numeric', 'min:0', 'max:1'],
-<<<<<<< Updated upstream
             'math_steps' => ['nullable', 'array'],
             'math_steps.*' => ['string'],
             'math_weight' => ['nullable', 'numeric', 'min:0', 'max:1'],
-=======
             'tgate' => ['nullable', 'numeric', 'min:0', 'max:100'],
->>>>>>> Stashed changes
+            'required_keywords_count' => ['nullable', 'integer', 'min:1'],
         ]);
 
         $validator->after(function ($validator) use ($request): void {
@@ -89,12 +87,10 @@ class AdminBankSoalController extends Controller
             $data['keywords'] = array_values(array_filter(array_map('trim', $data['keywords'] ?? [])));
             $data['rule_weight'] = $data['rule_weight'] ?? 0.50;
             $data['lsa_weight'] = $data['lsa_weight'] ?? 0.50;
-<<<<<<< Updated upstream
             $data['math_steps'] = array_values(array_filter(array_map('trim', $data['math_steps'] ?? [])));
             $data['math_weight'] = $data['math_weight'] ?? 0.00;
-=======
             $data['tgate'] = $data['tgate'] ?? 0.00;
->>>>>>> Stashed changes
+            $data['required_keywords_count'] = !empty($data['required_keywords_count']) ? (int) $data['required_keywords_count'] : null;
         } elseif ($data['jenis_soal'] === 'pilihan_ganda_kompleks') {
             $data['kunci_jawaban'] = json_encode(array_values(array_filter(array_map('trim', (array) $data['kunci_jawaban']))));
         } else {
@@ -134,13 +130,11 @@ class AdminBankSoalController extends Controller
             'keywords.*' => ['string'],
             'rule_weight' => ['nullable', 'numeric', 'min:0', 'max:1'],
             'lsa_weight' => ['nullable', 'numeric', 'min:0', 'max:1'],
-<<<<<<< Updated upstream
             'math_steps' => ['nullable', 'array'],
             'math_steps.*' => ['string'],
             'math_weight' => ['nullable', 'numeric', 'min:0', 'max:1'],
-=======
             'tgate' => ['nullable', 'numeric', 'min:0', 'max:100'],
->>>>>>> Stashed changes
+            'required_keywords_count' => ['nullable', 'integer', 'min:1'],
         ]);
 
         $validator->after(function ($validator) use ($request): void {
@@ -194,12 +188,10 @@ class AdminBankSoalController extends Controller
             $data['keywords'] = array_values(array_filter(array_map('trim', $data['keywords'] ?? [])));
             $data['rule_weight'] = $data['rule_weight'] ?? 0.50;
             $data['lsa_weight'] = $data['lsa_weight'] ?? 0.50;
-<<<<<<< Updated upstream
             $data['math_steps'] = array_values(array_filter(array_map('trim', $data['math_steps'] ?? [])));
             $data['math_weight'] = $data['math_weight'] ?? 0.00;
-=======
             $data['tgate'] = $data['tgate'] ?? 0.00;
->>>>>>> Stashed changes
+            $data['required_keywords_count'] = !empty($data['required_keywords_count']) ? (int) $data['required_keywords_count'] : null;
         } elseif ($data['jenis_soal'] === 'pilihan_ganda_kompleks') {
             $data['kunci_jawaban'] = json_encode(array_values(array_filter(array_map('trim', (array) $data['kunci_jawaban']))));
         } else {
@@ -246,12 +238,10 @@ class AdminBankSoalController extends Controller
             'soal.*.keywords' => ['nullable', 'array'],
             'soal.*.rule_weight' => ['nullable', 'numeric'],
             'soal.*.lsa_weight' => ['nullable', 'numeric'],
-<<<<<<< Updated upstream
             'soal.*.math_steps' => ['nullable', 'array'],
             'soal.*.math_weight' => ['nullable', 'numeric'],
-=======
             'soal.*.tgate' => ['nullable', 'numeric', 'min:0', 'max:100'],
->>>>>>> Stashed changes
+            'soal.*.required_keywords_count' => ['nullable', 'integer', 'min:1'],
         ]);
 
         $penggunaId = $request->user()->id_pengguna;
@@ -290,9 +280,10 @@ class AdminBankSoalController extends Controller
 
             $soal['rule_weight'] = $soal['rule_weight'] ?? 0;
             $soal['lsa_weight'] = $soal['lsa_weight'] ?? 0;
-<<<<<<< Updated upstream
             $soal['math_steps'] = $soal['math_steps'] ?? null;
             $soal['math_weight'] = $soal['math_weight'] ?? 0;
+            $soal['tgate'] = $soal['tgate'] ?? 0;
+            $soal['required_keywords_count'] = !empty($soal['required_keywords_count']) ? (int) $soal['required_keywords_count'] : null;
 
             $created[] = $soal;
         }
@@ -311,11 +302,6 @@ class AdminBankSoalController extends Controller
         $inserted = [];
         foreach ($created as $soal) {
             $inserted[] = BankSoal::create($soal);
-=======
-            $soal['tgate'] = $soal['tgate'] ?? 0;
-            
-            $created[] = BankSoal::create($soal);
->>>>>>> Stashed changes
         }
 
         $mapel = \App\Models\MataPelajaran::find($data['id_mapel']);
