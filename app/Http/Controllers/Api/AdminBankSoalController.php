@@ -36,6 +36,9 @@ class AdminBankSoalController extends Controller
             'keywords.*' => ['string'],
             'rule_weight' => ['nullable', 'numeric', 'min:0', 'max:1'],
             'lsa_weight' => ['nullable', 'numeric', 'min:0', 'max:1'],
+            'math_steps' => ['nullable', 'array'],
+            'math_steps.*' => ['string'],
+            'math_weight' => ['nullable', 'numeric', 'min:0', 'max:1'],
         ]);
 
         $validator->after(function ($validator) use ($request): void {
@@ -82,6 +85,8 @@ class AdminBankSoalController extends Controller
             $data['keywords'] = array_values(array_filter(array_map('trim', $data['keywords'] ?? [])));
             $data['rule_weight'] = $data['rule_weight'] ?? 0.50;
             $data['lsa_weight'] = $data['lsa_weight'] ?? 0.50;
+            $data['math_steps'] = array_values(array_filter(array_map('trim', $data['math_steps'] ?? [])));
+            $data['math_weight'] = $data['math_weight'] ?? 0.00;
         } elseif ($data['jenis_soal'] === 'pilihan_ganda_kompleks') {
             $data['kunci_jawaban'] = json_encode(array_values(array_filter(array_map('trim', (array) $data['kunci_jawaban']))));
         } else {
@@ -95,7 +100,7 @@ class AdminBankSoalController extends Controller
         $namaMapel = $soal->mataPelajaran->nama_lengkap ?? "ID {$data['id_mapel']}";
 
         LogAktivitas::create([
-            'id_pengguna_aktor' => request()->user()->id_pengguna,
+            'id_pengguna_aktor' => $request->user()->id_pengguna,
             'tipe_aksi' => 'Buat Soal',
             'deskripsi' => "Admin membuat 1 soal baru secara manual untuk mata pelajaran {$namaMapel}.",
         ]);
@@ -121,6 +126,9 @@ class AdminBankSoalController extends Controller
             'keywords.*' => ['string'],
             'rule_weight' => ['nullable', 'numeric', 'min:0', 'max:1'],
             'lsa_weight' => ['nullable', 'numeric', 'min:0', 'max:1'],
+            'math_steps' => ['nullable', 'array'],
+            'math_steps.*' => ['string'],
+            'math_weight' => ['nullable', 'numeric', 'min:0', 'max:1'],
         ]);
 
         $validator->after(function ($validator) use ($request): void {
@@ -174,6 +182,8 @@ class AdminBankSoalController extends Controller
             $data['keywords'] = array_values(array_filter(array_map('trim', $data['keywords'] ?? [])));
             $data['rule_weight'] = $data['rule_weight'] ?? 0.50;
             $data['lsa_weight'] = $data['lsa_weight'] ?? 0.50;
+            $data['math_steps'] = array_values(array_filter(array_map('trim', $data['math_steps'] ?? [])));
+            $data['math_weight'] = $data['math_weight'] ?? 0.00;
         } elseif ($data['jenis_soal'] === 'pilihan_ganda_kompleks') {
             $data['kunci_jawaban'] = json_encode(array_values(array_filter(array_map('trim', (array) $data['kunci_jawaban']))));
         } else {
@@ -220,26 +230,66 @@ class AdminBankSoalController extends Controller
             'soal.*.keywords' => ['nullable', 'array'],
             'soal.*.rule_weight' => ['nullable', 'numeric'],
             'soal.*.lsa_weight' => ['nullable', 'numeric'],
+            'soal.*.math_steps' => ['nullable', 'array'],
+            'soal.*.math_weight' => ['nullable', 'numeric'],
         ]);
 
         $penggunaId = $request->user()->id_pengguna;
 
         $created = [];
-        foreach ($data['soal'] as $soal) {
+        $errors = [];
+
+        foreach ($data['soal'] as $index => $soal) {
             $soal['created_by'] = $penggunaId;
             $soal['id_mapel'] = $data['id_mapel'];
-            
+
             if ($soal['jenis_soal'] === 'esai') {
                 $soal['opsi_jawaban'] = [];
+            } else {
+                $opsiJawaban = collect($soal['opsi_jawaban'] ?? [])->map(fn($val) => trim((string) $val));
+
+                if ($soal['jenis_soal'] === 'pilihan_ganda_kompleks') {
+                    $kunciArr = is_string($soal['kunci_jawaban'])
+                        ? array_values(array_filter(array_map('trim', explode(',', $soal['kunci_jawaban']))))
+                        : (array) $soal['kunci_jawaban'];
+
+                    foreach ($kunciArr as $k) {
+                        if (!$opsiJawaban->contains(trim((string) $k))) {
+                            $errors[] = "Baris " . ($index + 2) . ": Kunci '" . $k . "' tak ada di opsi.";
+                        }
+                    }
+                    $soal['kunci_jawaban'] = json_encode($kunciArr);
+                } else {
+                    $kunci = trim((string) $soal['kunci_jawaban']);
+                    if (!$opsiJawaban->contains($kunci)) {
+                        $errors[] = "Baris " . ($index + 2) . ": Kunci '" . $kunci . "' tak ada di opsi.";
+                    }
+                    $soal['kunci_jawaban'] = $kunci;
+                }
             }
-            if ($soal['jenis_soal'] === 'pilihan_ganda_kompleks' && is_string($soal['kunci_jawaban'])) {
-                $soal['kunci_jawaban'] = json_encode(array_values(array_filter(array_map('trim', explode(',', $soal['kunci_jawaban'])))));
-            }
-            
+
             $soal['rule_weight'] = $soal['rule_weight'] ?? 0;
             $soal['lsa_weight'] = $soal['lsa_weight'] ?? 0;
-            
-            $created[] = BankSoal::create($soal);
+            $soal['math_steps'] = $soal['math_steps'] ?? null;
+            $soal['math_weight'] = $soal['math_weight'] ?? 0;
+
+            $created[] = $soal;
+        }
+
+        if (!empty($errors)) {
+            $errorMsg = "Gagal Import! Kunci jawaban tidak cocok dengan opsi:\n" . implode("\n", array_slice($errors, 0, 5));
+            if (count($errors) > 5) {
+                $errorMsg .= "\n... dan " . (count($errors) - 5) . " baris lainnya.";
+            }
+            return response()->json([
+                'message' => $errorMsg,
+                'errors' => $errors
+            ], 422);
+        }
+
+        $inserted = [];
+        foreach ($created as $soal) {
+            $inserted[] = BankSoal::create($soal);
         }
 
         $mapel = \App\Models\MataPelajaran::find($data['id_mapel']);
@@ -248,9 +298,9 @@ class AdminBankSoalController extends Controller
         LogAktivitas::create([
             'id_pengguna_aktor' => $penggunaId,
             'tipe_aksi' => 'Import Soal',
-            'deskripsi' => "Admin mengimpor " . count($created) . " soal baru dari file Excel/CSV untuk mata pelajaran {$namaMapel}.",
+            'deskripsi' => "Admin mengimpor " . count($inserted) . " soal baru dari file Excel/CSV untuk mata pelajaran {$namaMapel}.",
         ]);
 
-        return response()->json(['message' => count($created) . ' soal berhasil diimport.', 'data' => $created], 201);
+        return response()->json(['message' => count($inserted) . ' soal berhasil diimport.', 'data' => $inserted], 201);
     }
 }

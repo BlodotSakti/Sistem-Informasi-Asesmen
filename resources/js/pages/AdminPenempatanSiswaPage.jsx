@@ -337,7 +337,7 @@ export default function AdminPenempatanSiswaPage({ session, onLogout }) {
                         <div className="rounded-3xl border border-emerald-500/20 bg-emerald-50/40 p-6 shadow-sm mb-6">
                             <div className="mb-4">
                                 <h4 className="text-lg font-semibold text-emerald-900">Import Relasi Siswa-Kelas</h4>
-                                <p className="text-sm text-emerald-700 mt-1">Gunakan template Excel atau CSV untuk menempatkan banyak siswa ke kelas sekaligus.</p>
+                                <p className="text-sm text-emerald-700 mt-1">Gunakan template Excel atau CSV untuk menempatkan banyak siswa ke kelas sekaligus. Kolom <strong>status_aktif</strong> dapat diisi <em>Aktif</em> atau <em>Tidak Aktif</em> (default: Aktif).</p>
                             </div>
                             <form onSubmit={submitClassStudentImport} className="flex flex-col gap-3 rounded-2xl bg-white p-4 border border-emerald-100 lg:flex-row lg:items-end shadow-sm">
                                 <label className="flex-1 space-y-2 text-sm font-medium text-emerald-800">

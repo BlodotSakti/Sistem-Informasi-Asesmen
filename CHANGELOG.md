@@ -3,6 +3,33 @@
 ## [Unreleased]
 
 ### Added
+- **Logika Nilai Tertinggi (Highest Score) Sesi CBT Multi-Attempt & Sinkronisasi Diagnostik AI**:
+  - **Sistem Nilai Tertinggi**: Untuk sesi CBT yang dapat dikerjakan ulang (*multi-attempt*), nilai resmi yang dihitung dan digunakan di seluruh sistem adalah **nilai tertinggi** yang diraih siswa (misal: Percobaan 1 = 75, Percobaan 2 = 60, maka nilai yang diakui dan digunakan sistem adalah 75).
+  - **Sinkronisasi Otomatis (`PercobaanCbt::syncHighestAttempt`)**:
+    - Secara otomatis menyelaraskan tabel `analisis_diagnostik` dengan skor tertinggi siswa.
+    - Menyelaraskan snapshot `jawaban_siswa` dengan paket jawaban dari percobaan terbaik siswa.
+    - Memicu pembaruan laporan Analisis Diagnostik AI agar merefleksikan performa pada percobaan tertinggi.
+  - **Artisan Command `php artisan cbt:sync-highest-scores`**: Perintah CLI untuk menyinkronkan seluruh riwayat pengerjaan CBT yang telah ada ke nilai tertinggi dan menjadwalkan ulang diagnosis AI jika diperlukan.
+  - **Cakupan Seluruh Metrik**:
+    - Grafik tren nilai siswa & rata-rata nilai siswa pada Dasbor Siswa (`SiswaController@dashboard`).
+    - Riwayat CBT siswa (`SiswaCbtHistoryPage.jsx` & `SiswaController@cbtHistory`).
+    - Halaman Analitik Guru (Tren Nilai & Ketuntasan Belajar).
+    - Halaman Analisis Diagnostik Guru (Daftar & Detail Diagnostik AI).
+    - Rata-rata nilai kelas di sisi Guru (`GuruController@dashboardSummary`).
+    - Rata-rata nilai sesi asesmen dan tabel nilai siswa di Detail Sesi CBT Guru (`GuruController@sesiAsesmenDetail`).
+  - **Tampilan Interaktif**:
+    - Kartu dan badge percobaan terbaik ditandai dengan ikon piala `🏆 Tertinggi (Digunakan)` / `★`.
+    - Di sisi Siswa maupun Guru, antarmuka review secara *default* langsung menampilkan jawaban dan skor dari percobaan terbaik, namun tetap menyediakan opsi interaktif untuk mengklik dan meninjau jawaban di setiap percobaan lainnya.
+- **Pelacakan Multi-Attempt CBT (Riwayat & Nilai Setiap Percobaan)**:
+  - **Tabel & Model `PercobaanCbt`**: Mencatat setiap kali siswa mengirimkan/submit ujian CBT (`percobaan_ke`, `total_skor`, `total_bobot`, `jumlah_soal`, `jumlah_benar`, `jumlah_salah`, `data_jawaban`). Data historis yang sudah ada otomatis di-backfill ke percobaan ke-1.
+  - **Sisi Guru (`GuruJadwalCbtPage.jsx` & `GuruController.php`)**:
+    - Menampilkan jumlah pengerjaan siswa pada tabel detail sesi (badge `Nx Pengerjaan`).
+    - Menampilkan nilai setiap percobaan yang dilakukan siswa (chip `P1`, `P2`, dst. di kolom Skor).
+    - Menampilkan kartu rincian riwayat percobaan lengkap (skor, jumlah benar, tanggal pengerjaan) saat baris siswa dibuka (*expanded*).
+    - Sinkronisasi otomatis ke percobaan terakhir jika guru melakukan update nilai manual pada soal esai.
+  - **Sisi Siswa (`SiswaCbtHistoryPage.jsx` & `SiswaController.php`)**:
+    - Menampilkan badge jumlah pengerjaan dan rincian skor setiap percobaan pada tabel Riwayat CBT.
+    - Pada modal Review CBT, menyajikan kartu riwayat pengerjaan yang memperlihatkan nilai, jumlah benar, persentase, dan waktu pengerjaan untuk setiap percobaan yang pernah dilakukan siswa.
 - **UI/UX (Admin)**: Form "Tahun Ajaran" pada halaman Penempatan Siswa dan Penugasan Guru sekarang menggunakan `dropdown (select)` yang secara otomatis menarik data dari master Tahun Ajaran.
 - **Fitur (Otomatisasi)**: Pada halaman Penempatan Siswa dan Penugasan Guru, ketika Admin memilih suatu Kelas dari dropdown, maka kolom "Tahun Ajaran" di bawahnya akan secara otomatis terisi dan menyesuaikan dengan tahun ajaran milik kelas tersebut.
 - **Testing**: Menambahkan skenario test pada file `AdminMasterDataTest.php` untuk memvalidasi pembuatan dan pembaruan kelas beserta fungsionalitas semesternya.

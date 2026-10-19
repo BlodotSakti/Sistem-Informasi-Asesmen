@@ -12,12 +12,15 @@ use App\Models\JawabanSiswa;
 use App\Models\KelasSiswa;
 use App\Models\Kelas;
 use App\Models\PenugasanPembelajaran;
+use App\Models\PercobaanCbt;
 use App\Models\SesiAsesmen;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class GuruController extends Controller
 {
@@ -453,6 +456,11 @@ class GuruController extends Controller
             ->get()
             ->groupBy('id_siswa');
 
+        $allPercobaan = PercobaanCbt::where('id_sesi', $id_sesi)
+            ->orderBy('percobaan_ke', 'asc')
+            ->get()
+            ->groupBy('id_siswa');
+
         // Build soal list with correct answers
         $soalList = $sesi->detailSesiSoal->map(function ($detail) {
             $bs = $detail->bankSoal;
@@ -483,6 +491,42 @@ class GuruController extends Controller
             $totalSkor = $jawabanSiswa->sum('skor_diperoleh');
             $jumlahBenar = $jawabanSiswa->where('is_correct', true)->count();
 
+            $percobaanList = $allPercobaan->get($siswa->id_siswa, collect());
+            $highestPercobaan = null;
+            if ($percobaanList->isNotEmpty()) {
+                $sudahMengerjakan = true;
+                $highestPercobaan = $percobaanList->sort(function ($a, $b) {
+                    $skorA = (float) $a->total_skor;
+                    $skorB = (float) $b->total_skor;
+                    if ($skorA == $skorB) {
+                        return $b->percobaan_ke <=> $a->percobaan_ke;
+                    }
+                    return $skorB <=> $skorA;
+                })->first();
+
+                $totalSkor = (float) $highestPercobaan->total_skor;
+                $jumlahBenar = $highestPercobaan->jumlah_benar;
+            }
+
+            $riwayatPercobaan = $percobaanList->map(function ($p) {
+                return [
+                    'id_percobaan' => $p->id_percobaan,
+                    'percobaan_ke' => $p->percobaan_ke,
+                    'total_skor' => (float) $p->total_skor,
+                    'total_bobot' => (float) $p->total_bobot,
+                    'jumlah_soal' => $p->jumlah_soal,
+                    'jumlah_benar' => $p->jumlah_benar,
+                    'jumlah_salah' => $p->jumlah_salah,
+                    'data_jawaban' => $p->data_jawaban,
+                    'tanggal' => $p->created_at?->format('Y-m-d H:i:s'),
+                ];
+            })->values();
+
+            $jumlahPercobaan = $riwayatPercobaan->count();
+            if ($jumlahPercobaan === 0 && $sudahMengerjakan) {
+                $jumlahPercobaan = 1;
+            }
+
             $detailJawaban = null;
             if ($sudahMengerjakan) {
                 $skorSemua[] = (float) $totalSkor;
@@ -506,6 +550,9 @@ class GuruController extends Controller
                 'total_skor' => round($totalSkor, 2),
                 'jumlah_benar' => $jumlahBenar,
                 'jumlah_dijawab' => $jawabanSiswa->count(),
+                'jumlah_percobaan' => $jumlahPercobaan,
+                'percobaan_tertinggi' => $highestPercobaan?->percobaan_ke ?? 1,
+                'riwayat_percobaan' => $riwayatPercobaan,
                 'detail_jawaban' => $detailJawaban,
                 'analisis_diagnostik' => (function () use ($siswa, $id_sesi, $sudahMengerjakan) {
                     if (!$sudahMengerjakan)
@@ -537,7 +584,9 @@ class GuruController extends Controller
                 'jenis_asesmen' => $sesi->jenis_asesmen,
                 'tipe_soal' => $sesi->tipe_soal,
                 'waktu_mulai' => $sesi->waktu_mulai,
+                'waktu_selesai' => $sesi->waktu_selesai,
                 'durasi_menit' => $sesi->durasi_menit,
+                'boleh_ulang' => (bool) $sesi->boleh_ulang,
             ],
             'soal' => $soalList,
             'total_bobot' => round($totalBobot, 2),
@@ -551,6 +600,99 @@ class GuruController extends Controller
             ],
             'siswa' => $siswaResults,
         ]);
+    }
+
+    /**
+     * Download soal-soal dalam satu Sesi CBT sebagai PDF (untuk dicetak / dibahas di kelas).
+     * Query param ?kunci=1 untuk menyertakan kunci jawaban (versi pembahasan guru).
+     */
+    public function exportSoalPdf(Request $request, int $id_sesi)
+    {
+        $guruId = $request->user()->guru->id_guru;
+
+        $sesi = SesiAsesmen::query()
+            ->with(['kelas', 'mataPelajaran', 'detailSesiSoal.bankSoal'])
+            ->findOrFail($id_sesi);
+
+        $this->ensureGuruMengampuMapel($guruId, (int) $sesi->id_mapel);
+
+        $withKunci = $request->boolean('kunci');
+
+        $soalList = $sesi->detailSesiSoal
+            ->filter(fn($detail) => $detail->bankSoal !== null)
+            ->values()
+            ->map(function ($detail) {
+                $bs = $detail->bankSoal;
+
+                // Gambar di-embed sebagai base64 agar dompdf tidak perlu akses file/URL eksternal
+                $gambar = null;
+                if ($bs->gambar_soal && Storage::disk('public')->exists($bs->gambar_soal)) {
+                    $mime = Storage::disk('public')->mimeType($bs->gambar_soal) ?: 'image/png';
+                    $gambar = 'data:' . $mime . ';base64,' . base64_encode(Storage::disk('public')->get($bs->gambar_soal));
+                }
+
+                $kunci = $bs->kunci_jawaban;
+                if ($bs->jenis_soal === 'pilihan_ganda_kompleks') {
+                    $decoded = json_decode((string) $kunci, true);
+                    $kunci = is_array($decoded) ? $decoded : [$kunci];
+                }
+
+                // Normalisasi keywords untuk soal esai
+                $rawKeywords = $bs->keywords;
+                if (is_string($rawKeywords)) {
+                    $decodedKw = json_decode($rawKeywords, true);
+                    $rawKeywords = is_array($decodedKw) ? $decodedKw : preg_split('/\r\n|\r|\n/', $rawKeywords);
+                } elseif (!is_array($rawKeywords)) {
+                    $rawKeywords = [];
+                }
+
+                $keywords = [];
+                foreach ((array) $rawKeywords as $kw) {
+                    if (is_string($kw)) {
+                        foreach (preg_split('/\r\n|\r|\n/', $kw) as $line) {
+                            $trimmed = trim($line);
+                            if ($trimmed !== '') {
+                                $keywords[] = $trimmed;
+                            }
+                        }
+                    }
+                }
+
+                return [
+                    'isi_soal' => $bs->isi_soal,
+                    'jenis_soal' => $bs->jenis_soal,
+                    'opsi_jawaban' => is_array($bs->opsi_jawaban) ? $bs->opsi_jawaban : [],
+                    'kunci_jawaban' => $kunci,
+                    'keywords' => $keywords,
+                    'rule_weight' => $bs->rule_weight,
+                    'lsa_weight' => $bs->lsa_weight,
+                    'gambar' => $gambar,
+                    'bobot_nilai' => $detail->bobot_nilai,
+                ];
+            });
+
+        $mapel = $sesi->mataPelajaran?->nama_mapel ?? 'Mapel';
+        $kelas = $sesi->kelas?->nama_kelas ?? 'Kelas';
+
+        $pdf = Pdf::loadView('pdf.soal-sesi-cbt', [
+            'sesi' => $sesi,
+            'mapel' => $mapel,
+            'kelas' => $kelas,
+            'soalList' => $soalList,
+            'withKunci' => $withKunci,
+            'totalBobot' => $sesi->detailSesiSoal->sum('bobot_nilai'),
+        ])->setPaper('a4', 'portrait');
+
+        $filename = sprintf(
+            'Soal_%s_%s_%s%s.pdf',
+            $mapel,
+            $kelas,
+            optional($sesi->waktu_mulai)->format('Y-m-d') ?? $sesi->id_sesi,
+            $withKunci ? '_Kunci' : ''
+        );
+        $filename = preg_replace('/[^A-Za-z0-9_\-\.]+/', '_', $filename);
+
+        return $pdf->download($filename);
     }
 
     public function updateSkorJawaban(Request $request, int $id_sesi, int $id_detail, int $id_siswa): JsonResponse
@@ -580,6 +722,23 @@ class GuruController extends Controller
         \App\Models\AnalisisDiagnostik::where('id_siswa', $id_siswa)
             ->where('id_sesi', $id_sesi)
             ->update(['skor_total' => $totalSkor]);
+
+        $latestPercobaan = PercobaanCbt::where('id_siswa', $id_siswa)
+            ->where('id_sesi', $id_sesi)
+            ->orderByDesc('percobaan_ke')
+            ->first();
+
+        if ($latestPercobaan) {
+            $jumlahBenar = JawabanSiswa::where('id_siswa', $id_siswa)
+                ->whereIn('id_detail', $detailIds)
+                ->where('is_correct', true)
+                ->count();
+            $latestPercobaan->update([
+                'total_skor' => $totalSkor,
+                'jumlah_benar' => $jumlahBenar,
+                'jumlah_salah' => max(0, $latestPercobaan->jumlah_soal - $jumlahBenar),
+            ]);
+        }
 
         return response()->json([
             'message' => 'Skor berhasil diperbarui',

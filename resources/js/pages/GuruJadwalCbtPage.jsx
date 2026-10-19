@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import DashboardLayout from '../components/layout/DashboardLayout';
 import StatCard from '../components/ui/StatCard';
-import { apiFetch } from '../lib/api';
+import { apiFetch, apiBase } from '../lib/api';
+import * as XLSX from 'xlsx';
 import { formatDateTimeLabel } from '../lib/date';
 import useGuruWorkspace from '../hooks/useGuruWorkspace';
 import { guruNavigation } from './guru/guruNavigation';
@@ -48,13 +49,173 @@ export default function GuruJadwalCbtPage({ session, onLogout }) {
     const [isUnsavedModalOpen, setIsUnsavedModalOpen] = useState(false);
     const [isValidasiModalOpen, setIsValidasiModalOpen] = useState(false);
     const [unlockModal, setUnlockModal] = useState({ isOpen: false, id_sesi: null, id_siswa: null, loading: false });
+    const [deleteModal, setDeleteModal] = useState({ isOpen: false, item: null, loading: false });
     const [validasiSiswaId, setValidasiSiswaId] = useState(null);
     const [validasiLoading, setValidasiLoading] = useState(false);
+    const [selectedAttemptBySiswa, setSelectedAttemptBySiswa] = useState({});
 
     // Detail Siswa Modal States
     const [detailSiswaSearch, setDetailSiswaSearch] = useState('');
     const [detailSiswaStatus, setDetailSiswaStatus] = useState('');
     const [detailSiswaSort, setDetailSiswaSort] = useState('');
+    const [downloadingPdf, setDownloadingPdf] = useState(null); // 'siswa' | 'kunci' | null
+
+    const buildExportBaseName = (sesi) => {
+        const tanggal = sesi?.waktu_mulai ? new Date(sesi.waktu_mulai).toISOString().slice(0, 10) : sesi?.id_sesi;
+        return `${sesi?.mata_pelajaran || 'Mapel'}_${sesi?.kelas || 'Kelas'}_${tanggal}`.replace(/[^A-Za-z0-9_\-]+/g, '_');
+    };
+
+    const handleDownloadSoalPdf = async (withKunci) => {
+        const sesi = sesiDetailData?.sesi;
+        if (!sesi) return;
+        setDownloadingPdf(withKunci ? 'kunci' : 'siswa');
+        try {
+            const response = await fetch(apiBase(`/api/guru/sesi-asesmen/${sesi.id_sesi}/export-soal-pdf?kunci=${withKunci ? 1 : 0}`), {
+                headers: {
+                    Accept: 'application/pdf',
+                    ...(session?.token ? { Authorization: `Bearer ${session.token}` } : {}),
+                },
+            });
+            if (!response.ok) {
+                let message = 'Gagal mengunduh PDF soal.';
+                try { const json = await response.json(); message = json.message || message; } catch { /* ignore */ }
+                throw new Error(message);
+            }
+            const blob = await response.blob();
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `Soal_${buildExportBaseName(sesi)}${withKunci ? '_Kunci' : ''}.pdf`;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            URL.revokeObjectURL(url);
+        } catch (err) {
+            showSuccessPopup('Gagal', err.message || 'Gagal mengunduh PDF soal.');
+        } finally {
+            setDownloadingPdf(null);
+        }
+    };
+
+    const handleDownloadAnalisisExcel = () => {
+        if (!sesiDetailData) return;
+        const { sesi, soal = [], siswa = [] } = sesiDetailData;
+        const isEsai = (jenis) => jenis === 'esai' || jenis === 'essay';
+        const jenisSingkat = (jenis) => (isEsai(jenis) ? 'Esai' : jenis === 'pilihan_ganda_kompleks' ? 'PGK' : 'PG');
+        const soalHeaders = soal.map((s, idx) => `Soal ${idx + 1} (${jenisSingkat(s.jenis_soal)})`);
+        const jumlahPg = soal.filter((s) => !isEsai(s.jenis_soal)).length;
+
+        const formatOpsiTerpilih = (jawabanSiswa, jenisSoal) => {
+            if (!jawabanSiswa) return '-';
+            if (jenisSoal === 'pilihan_ganda_kompleks') {
+                try {
+                    const arr = JSON.parse(jawabanSiswa);
+                    if (Array.isArray(arr)) return arr.join(', ');
+                } catch {}
+            }
+            return String(jawabanSiswa).trim() || '-';
+        };
+
+        // --- SHEET 1: ANALISIS BUTIR SOAL (0 / 1 & Esai) ---
+        const header1 = ['No', 'NISN', 'Nama Siswa', 'Status', ...soalHeaders, `Jumlah Benar PG (dari ${jumlahPg})`, 'Total Skor'];
+        const rows1 = [header1];
+
+        const sortedSiswa = [...siswa].sort((a, b) => (a.nama_lengkap || '').localeCompare(b.nama_lengkap || ''));
+        const benarPerSoal = soal.map(() => 0);
+        let jumlahPeserta = 0;
+
+        sortedSiswa.forEach((s, i) => {
+            const sudah = s.status === 'sudah';
+            const jawabanMap = {};
+            (s.detail_jawaban || []).forEach((d) => { jawabanMap[d.id_detail] = d; });
+            if (sudah) jumlahPeserta++;
+
+            let benarPg = 0;
+            const cells = soal.map((q, qIdx) => {
+                if (!sudah) return '';
+                const jawab = jawabanMap[q.id_detail];
+                if (isEsai(q.jenis_soal)) {
+                    const teks = (jawab?.jawaban_siswa || '').trim();
+                    return teks !== '' ? teks : '-';
+                }
+                const nilai = jawab?.is_correct ? 1 : 0;
+                benarPg += nilai;
+                benarPerSoal[qIdx] += nilai;
+                return nilai;
+            });
+
+            rows1.push([
+                i + 1,
+                s.nisn || '',
+                s.nama_lengkap || '',
+                sudah ? 'Sudah' : 'Belum Mengerjakan',
+                ...cells,
+                sudah ? benarPg : '',
+                sudah ? Number(s.total_skor || 0) : '',
+            ]);
+        });
+
+        // Baris ringkasan per butir soal (hanya untuk PG / PG Kompleks)
+        const persenPerSoal = soal.map((q, idx) => (isEsai(q.jenis_soal) || jumlahPeserta === 0 ? null : Math.round((benarPerSoal[idx] / jumlahPeserta) * 10000) / 100));
+        const tingkatKesukaran = (p) => (p === null ? '-' : p > 70 ? 'Mudah' : p >= 30 ? 'Sedang' : 'Sukar');
+        rows1.push([]);
+        rows1.push(['', '', 'Jumlah Siswa Benar', '', ...soal.map((q, idx) => (isEsai(q.jenis_soal) ? '-' : benarPerSoal[idx])), '', '']);
+        rows1.push(['', '', 'Persentase Benar (%)', '', ...persenPerSoal.map((p) => (p === null ? '-' : p)), '', '']);
+        rows1.push(['', '', 'Tingkat Kesukaran', '', ...persenPerSoal.map(tingkatKesukaran), '', '']);
+        rows1.push(['', '', `Catatan: 1 = Benar, 0 = Salah. Untuk esai berisi teks jawaban siswa. Peserta mengerjakan: ${jumlahPeserta} dari ${sortedSiswa.length} siswa`]);
+
+        const wsAnalisis = XLSX.utils.aoa_to_sheet(rows1);
+        wsAnalisis['!cols'] = [
+            { wch: 5 }, { wch: 14 }, { wch: 30 }, { wch: 18 },
+            ...soal.map((q) => ({ wch: isEsai(q.jenis_soal) ? 35 : 12 })),
+            { wch: 22 }, { wch: 12 },
+        ];
+
+        // --- SHEET 2: REKAP PILIHAN JAWABAN SISWA ---
+        const header2 = ['No', 'NISN', 'Nama Siswa', 'Status', ...soalHeaders, 'Total Skor'];
+        const rows2 = [header2];
+        sortedSiswa.forEach((s, i) => {
+            const sudah = s.status === 'sudah';
+            const jawabanMap = {};
+            (s.detail_jawaban || []).forEach((d) => { jawabanMap[d.id_detail] = d; });
+
+            const cellsOpsi = soal.map((q) => {
+                if (!sudah) return '';
+                const jawab = jawabanMap[q.id_detail];
+                return formatOpsiTerpilih(jawab?.jawaban_siswa, q.jenis_soal);
+            });
+
+            rows2.push([
+                i + 1,
+                s.nisn || '',
+                s.nama_lengkap || '',
+                sudah ? 'Sudah' : 'Belum Mengerjakan',
+                ...cellsOpsi,
+                sudah ? Number(s.total_skor || 0) : '',
+            ]);
+        });
+        const wsPilihan = XLSX.utils.aoa_to_sheet(rows2);
+        wsPilihan['!cols'] = [
+            { wch: 5 }, { wch: 14 }, { wch: 30 }, { wch: 18 },
+            ...soal.map(() => ({ wch: 25 })),
+            { wch: 12 },
+        ];
+
+        // --- SHEET 3: DAFTAR SOAL & KUNCI ---
+        const formatKunci = (k) => { try { const arr = JSON.parse(k); if (Array.isArray(arr)) return arr.join(', '); } catch {} return k ?? ''; };
+        const soalRows = [['No', 'Jenis Soal', 'Level Kognitif', 'Isi Soal', 'Kunci Jawaban', 'Bobot']];
+        soal.forEach((q, idx) => {
+            soalRows.push([idx + 1, jenisSingkat(q.jenis_soal), q.level_kognitif || '', q.isi_soal || '', formatKunci(q.kunci_jawaban), Number(q.bobot_nilai || 0)]);
+        });
+        const wsSoal = XLSX.utils.aoa_to_sheet(soalRows);
+        wsSoal['!cols'] = [{ wch: 5 }, { wch: 10 }, { wch: 14 }, { wch: 70 }, { wch: 40 }, { wch: 8 }];
+
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, wsAnalisis, 'Analisis Butir Soal');
+        XLSX.utils.book_append_sheet(wb, wsPilihan, 'Pilihan Jawaban Siswa');
+        XLSX.utils.book_append_sheet(wb, wsSoal, 'Daftar Kunci & Soal');
+        XLSX.writeFile(wb, `Analisis_Soal_${buildExportBaseName(sesi)}.xlsx`);
+    };
 
     const showSuccessPopup = (title, message) => setSuccessPopup({ title, message });
     const closeSuccessPopup = () => setSuccessPopup(null);
@@ -241,13 +402,27 @@ export default function GuruJadwalCbtPage({ session, onLogout }) {
         setIsSesiModalOpen(true);
     };
 
-    const handleDeleteSesiAsesmen = async (id) => {
-        if (!window.confirm('Yakin ingin menghapus jadwal CBT ini?')) return;
+    const handleDeleteSesiAsesmen = (id) => {
+        const item = sesiAsesmenHistory.find((s) => s.id_sesi === id) || { id_sesi: id };
+        setDeleteModal({ isOpen: true, item, loading: false });
+    };
+
+    const closeDeleteModal = () => {
+        if (deleteModal.loading) return;
+        setDeleteModal({ isOpen: false, item: null, loading: false });
+    };
+
+    const confirmDeleteSesiAsesmen = async () => {
+        const id = deleteModal.item?.id_sesi;
+        if (!id) return;
+        setDeleteModal((prev) => ({ ...prev, loading: true }));
         try {
             await apiFetch(`/api/guru/sesi-asesmen/${id}`, session, { method: 'DELETE' });
+            setDeleteModal({ isOpen: false, item: null, loading: false });
             showSuccessPopup('Berhasil', 'Jadwal CBT berhasil dihapus.');
             await reloadWorkspace();
         } catch (err) {
+            setDeleteModal({ isOpen: false, item: null, loading: false });
             showSuccessPopup('Gagal Menghapus', err.message || 'Jadwal tidak dapat dihapus karena siswa sudah mulai mengerjakan.');
         }
     };
@@ -551,6 +726,47 @@ export default function GuruJadwalCbtPage({ session, onLogout }) {
                                         }} className="text-2xl text-slate-400 hover:text-slate-600">&times;</button>
                                     </div>
                                     <div className="p-6 space-y-6 overflow-y-auto">
+                                        {/* Download / Export */}
+                                        <div className="flex flex-col gap-3 rounded-2xl border border-border bg-slate-50/60 p-4 sm:flex-row sm:items-center sm:justify-between">
+                                            <div>
+                                                <p className="text-sm font-bold text-slate-800">Unduh Dokumen Sesi</p>
+                                                <p className="text-xs text-slate-500">Cetak soal untuk pembahasan di kelas, atau unduh analisis jawaban per soal (1 = benar, 0 = salah, esai berisi jawaban siswa).</p>
+                                            </div>
+                                            <div className="flex flex-wrap gap-2">
+                                                <button
+                                                    id="btn-download-soal-pdf"
+                                                    type="button"
+                                                    disabled={downloadingPdf !== null}
+                                                    onClick={() => handleDownloadSoalPdf(false)}
+                                                    className="inline-flex items-center gap-2 rounded-xl border border-rose-200 bg-white px-4 py-2 text-xs font-bold text-rose-700 shadow-sm transition hover:bg-rose-50 disabled:opacity-60"
+                                                >
+                                                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3M6 20h12a2 2 0 002-2V8l-6-6H6a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>
+                                                    {downloadingPdf === 'siswa' ? 'Menyiapkan...' : 'Soal (PDF)'}
+                                                </button>
+                                                <button
+                                                    id="btn-download-soal-kunci-pdf"
+                                                    type="button"
+                                                    disabled={downloadingPdf !== null}
+                                                    onClick={() => handleDownloadSoalPdf(true)}
+                                                    className="inline-flex items-center gap-2 rounded-xl border border-rose-200 bg-white px-4 py-2 text-xs font-bold text-rose-700 shadow-sm transition hover:bg-rose-50 disabled:opacity-60"
+                                                >
+                                                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" /></svg>
+                                                    {downloadingPdf === 'kunci' ? 'Menyiapkan...' : 'Soal + Kunci (PDF)'}
+                                                </button>
+                                                <button
+                                                    id="btn-download-analisis-excel"
+                                                    type="button"
+                                                    onClick={handleDownloadAnalisisExcel}
+                                                    disabled={!sesiDetailData.statistik?.sudah_mengerjakan}
+                                                    title={!sesiDetailData.statistik?.sudah_mengerjakan ? 'Belum ada siswa yang mengerjakan' : ''}
+                                                    className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                                                >
+                                                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M3 14h18M10 3v18M14 3v18M5 3h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2z" /></svg>
+                                                    Analisis Soal (Excel)
+                                                </button>
+                                            </div>
+                                        </div>
+
                                         {/* Statistik */}
                                         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
                                             <div className="rounded-2xl bg-primary/5 px-4 py-4 text-center">
@@ -688,25 +904,71 @@ export default function GuruJadwalCbtPage({ session, onLogout }) {
                                                                     <td className="px-4 py-3 font-semibold text-slate-900">{sw.nama_lengkap}</td>
                                                                     <td className="px-4 py-3 text-slate-500">{sw.nisn}</td>
                                                                     <td className="px-4 py-3">
-                                                                        <span className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-semibold ${sw.status === 'sudah' ? 'bg-emerald-100/80 text-emerald-700' : 'bg-slate-100 text-slate-600'}`}>
-                                                                            {sw.status === 'sudah' ? (
-                                                                                <>
-                                                                                    <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                                                                        <div className="flex flex-col gap-1 items-start">
+                                                                            <span className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-semibold ${sw.status === 'sudah' ? 'bg-emerald-100/80 text-emerald-700' : 'bg-slate-100 text-slate-600'}`}>
+                                                                                {sw.status === 'sudah' ? (
+                                                                                    <>
+                                                                                        <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                                                                                        </svg>
+                                                                                        Sudah
+                                                                                    </>
+                                                                                ) : (
+                                                                                    <>
+                                                                                        <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M20 12H4" />
+                                                                                        </svg>
+                                                                                        Belum
+                                                                                    </>
+                                                                                )}
+                                                                            </span>
+                                                                            {sw.status === 'sudah' && (
+                                                                                <span className="inline-flex items-center gap-1 rounded-md bg-blue-50 px-2 py-0.5 text-[11px] font-semibold text-blue-700 border border-blue-200">
+                                                                                    <svg className="w-3 h-3 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                                                                                     </svg>
-                                                                                    Sudah
-                                                                                </>
-                                                                            ) : (
-                                                                                <>
-                                                                                    <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M20 12H4" />
-                                                                                    </svg>
-                                                                                    Belum
-                                                                                </>
+                                                                                    {sw.jumlah_percobaan || 1}x Pengerjaan
+                                                                                </span>
                                                                             )}
-                                                                        </span>
+                                                                        </div>
                                                                     </td>
-                                                                    <td className="px-4 py-3 text-slate-600">{sw.status === 'sudah' ? `${sw.total_skor}/${sesiDetailData.total_bobot}` : '-'}</td>
+                                                                    <td className="px-4 py-3 text-slate-600">
+                                                                        {sw.status === 'sudah' ? (
+                                                                             <div>
+                                                                                <div className="flex items-center gap-1.5">
+                                                                                    <span className="font-semibold text-slate-900">{sw.total_skor}/{sesiDetailData.total_bobot}</span>
+                                                                                    {sw.riwayat_percobaan && sw.riwayat_percobaan.length > 1 && (
+                                                                                        <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded-full border border-emerald-200" title="Nilai tertinggi yang digunakan untuk penilaian">
+                                                                                            Tertinggi
+                                                                                        </span>
+                                                                                    )}
+                                                                                </div>
+                                                                                {sw.riwayat_percobaan && sw.riwayat_percobaan.length > 1 && (
+                                                                                    <div className="mt-1 flex flex-col gap-0.5">
+                                                                                        <span className="text-[10px] text-slate-400 font-medium">Nilai Percobaan:</span>
+                                                                                        <div className="flex flex-wrap gap-1">
+                                                                                            {sw.riwayat_percobaan.map((p) => {
+                                                                                                const isHighest = Number(p.total_skor) === Number(sw.total_skor);
+                                                                                                return (
+                                                                                                    <span 
+                                                                                                        key={p.percobaan_ke} 
+                                                                                                        className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold ${
+                                                                                                            isHighest 
+                                                                                                                ? 'bg-emerald-100 text-emerald-800 border border-emerald-300 font-bold' 
+                                                                                                                : 'bg-slate-100 text-slate-700 border border-slate-200'
+                                                                                                        }`}
+                                                                                                        title={`Percobaan ke-${p.percobaan_ke}: ${p.total_skor}/${p.total_bobot} • ${p.jumlah_benar} Benar${isHighest ? ' (Nilai Tertinggi Digunakan)' : ''}`}
+                                                                                                    >
+                                                                                                        P{p.percobaan_ke}: {p.total_skor}{isHighest ? ' ★' : ''}
+                                                                                                    </span>
+                                                                                                );
+                                                                                            })}
+                                                                                        </div>
+                                                                                    </div>
+                                                                                )}
+                                                                            </div>
+                                                                        ) : '-'}
+                                                                    </td>
                                                                     <td className="px-4 py-3 text-slate-600">{sw.status === 'sudah' ? `${sw.jumlah_benar}/${sesiDetailData.soal.length}` : '-'}</td>
                                                                     <td className="px-4 py-3 text-right">
                                                                         {sw.status === 'sudah' && (
@@ -716,27 +978,115 @@ export default function GuruJadwalCbtPage({ session, onLogout }) {
                                                                         )}
                                                                     </td>
                                                                 </tr>
-                                                                {expandedSiswaId === sw.id_siswa && sw.detail_jawaban && (
-                                                                    <tr>
-                                                                        <td colSpan="6" className="bg-slate-50 px-4 py-4">
-                                                                            <div className="space-y-2">
-                                                                                {sesiDetailData.soal.map((soal, sIdx) => {
-                                                                                    const dj = sw.detail_jawaban.find(d => d.id_detail === soal.id_detail);
-                                                                                    const jawSiswa = dj?.jawaban_siswa || '-';
-                                                                                    const kunci = soal.kunci_jawaban;
-                                                                                    const isCorrect = dj?.is_correct;
-                                                                                    const formatVal = (v) => { 
-                                                                                        if (Array.isArray(v)) return v.join(', ');
-                                                                                        try { const a = JSON.parse(v); if (Array.isArray(a)) return a.join(', '); } catch {} 
-                                                                                        return v || '-'; 
-                                                                                    };
-                                                                                    const isEsai = soal.jenis_soal === 'esai' || soal.jenis_soal === 'essay';
-                                                                                    const kemiripan = (dj?.skor_diperoleh || 0) / soal.bobot_nilai;
-                                                                                    return (
-                                                                                        <div key={soal.id_detail} className={`rounded-xl border px-4 py-3 text-xs ${isCorrect ? 'border-emerald-200 bg-emerald-50/50' : 'border-rose-200 bg-rose-50/50'}`}>
-                                                                                            <div className="flex items-center justify-between mb-3 border-b border-slate-200/50 pb-2">
-                                                                                                <div className="flex flex-col">
-                                                                                                    <span className="font-bold text-slate-700">Soal {sIdx + 1}</span>
+                                                                {expandedSiswaId === sw.id_siswa && sw.detail_jawaban && (() => {
+                                                                    const highestAttemptNum = sw.percobaan_tertinggi ?? sw.riwayat_percobaan?.reduce((prev, curr) => (Number(curr.total_skor) > Number(prev.total_skor) ? curr : prev), sw.riwayat_percobaan[0])?.percobaan_ke;
+                                                                    const currentAttemptNum = selectedAttemptBySiswa[sw.id_siswa] ?? (highestAttemptNum || sw.riwayat_percobaan?.length || 1);
+                                                                    const activeAttempt = sw.riwayat_percobaan?.find(p => p.percobaan_ke === currentAttemptNum) || sw.riwayat_percobaan?.[sw.riwayat_percobaan.length - 1];
+                                                                    const isViewingLatest = activeAttempt && activeAttempt.percobaan_ke === sw.riwayat_percobaan?.length;
+                                                                    const isViewingHighest = activeAttempt && activeAttempt.percobaan_ke === highestAttemptNum;
+
+                                                                    return (
+                                                                        <tr>
+                                                                            <td colSpan="6" className="bg-slate-50 px-4 py-4">
+                                                                                {sw.riwayat_percobaan && sw.riwayat_percobaan.length > 1 && (
+                                                                                    <div className="mb-4 rounded-xl border border-blue-200 bg-blue-50/70 p-3 sm:p-4">
+                                                                                        <div className="flex items-center justify-between mb-2">
+                                                                                            <h4 className="text-xs font-bold uppercase tracking-wider text-blue-900 flex items-center gap-1.5">
+                                                                                                <svg className="w-4 h-4 text-blue-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                                                                </svg>
+                                                                                                Riwayat Nilai Setiap Percobaan ({sw.jumlah_percobaan}x Pengerjaan)
+                                                                                            </h4>
+                                                                                            <span className="text-[11px] text-blue-700 font-semibold bg-blue-100 px-2 py-0.5 rounded-full">
+                                                                                                Klik kartu untuk melihat jawaban percobaan
+                                                                                            </span>
+                                                                                        </div>
+                                                                                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
+                                                                                            {sw.riwayat_percobaan.map((p) => {
+                                                                                                const isHighest = p.percobaan_ke === highestAttemptNum;
+                                                                                                const isLatest = p.percobaan_ke === sw.riwayat_percobaan.length;
+                                                                                                const isSelected = p.percobaan_ke === currentAttemptNum;
+                                                                                                const persentase = p.total_bobot > 0 ? ((p.total_skor / p.total_bobot) * 100).toFixed(1) : 0;
+                                                                                                return (
+                                                                                                    <button
+                                                                                                        key={p.percobaan_ke}
+                                                                                                        type="button"
+                                                                                                        onClick={() => setSelectedAttemptBySiswa(prev => ({ ...prev, [sw.id_siswa]: p.percobaan_ke }))}
+                                                                                                        className={`text-left rounded-lg border p-2.5 transition-all cursor-pointer ${
+                                                                                                            isSelected
+                                                                                                                ? 'bg-white border-primary shadow-sm ring-2 ring-primary/60'
+                                                                                                                : 'bg-white/80 border-slate-200 hover:bg-white hover:border-slate-300'
+                                                                                                        }`}
+                                                                                                    >
+                                                                                                        <div className="flex items-center justify-between">
+                                                                                                            <span className="text-xs font-bold text-slate-800">
+                                                                                                                Percobaan ke-{p.percobaan_ke}
+                                                                                                                {isHighest && <span className="ml-1 text-[10px] text-emerald-700 font-extrabold bg-emerald-100 px-1.5 py-0.5 rounded-full">🏆 Tertinggi</span>}
+                                                                                                                {isLatest && !isHighest && <span className="ml-1 text-[10px] text-blue-700 font-semibold bg-blue-100 px-1.5 py-0.5 rounded-full">Terbaru</span>}
+                                                                                                                {isSelected && <span className="ml-1 text-[10px] text-primary font-bold bg-primary/10 px-1.5 py-0.5 rounded-full">Sedang Dilihat</span>}
+                                                                                                            </span>
+                                                                                                            <span className="text-xs font-extrabold text-primary">{p.total_skor} / {p.total_bobot} ({persentase}%)</span>
+                                                                                                        </div>
+                                                                                                        <div className="mt-1 flex items-center justify-between text-[11px] text-slate-500">
+                                                                                                            <span>Benar: <strong className="text-emerald-700">{p.jumlah_benar}</strong> / {p.jumlah_soal}</span>
+                                                                                                            <span>{p.tanggal ? new Date(p.tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '-'}</span>
+                                                                                                        </div>
+                                                                                                    </button>
+                                                                                                );
+                                                                                            })}
+                                                                                        </div>
+                                                                                    </div>
+                                                                                )}
+
+                                                                                {sw.riwayat_percobaan && sw.riwayat_percobaan.length > 1 && (
+                                                                                    <div className="flex items-center justify-between px-1 py-1 mb-2 bg-slate-100/80 rounded-lg px-3 py-2 border border-slate-200">
+                                                                                        <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                                                                                            📝 Menampilkan Jawaban: <strong className="text-primary">Percobaan ke-{currentAttemptNum}</strong>
+                                                                                            {isViewingHighest && (
+                                                                                                <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded-full">Nilai Tertinggi (Digunakan)</span>
+                                                                                            )}
+                                                                                            {isViewingLatest && !isViewingHighest && (
+                                                                                                <span className="text-[10px] font-semibold text-blue-700 bg-blue-100 px-1.5 py-0.5 rounded-full">Pengerjaan Terbaru</span>
+                                                                                            )}
+                                                                                        </span>
+                                                                                        <span className="text-xs font-semibold text-slate-600">
+                                                                                            Skor: <strong className="text-primary">{activeAttempt ? activeAttempt.total_skor : sw.total_skor}</strong> / {activeAttempt ? activeAttempt.total_bobot : sesiDetailData.total_bobot} ({activeAttempt ? activeAttempt.jumlah_benar : sw.jumlah_benar} Benar)
+                                                                                        </span>
+                                                                                    </div>
+                                                                                )}
+
+                                                                                <div className="space-y-2">
+                                                                                    {sesiDetailData.soal.map((soal, sIdx) => {
+                                                                                        let dj = null;
+                                                                                        if (activeAttempt?.data_jawaban && Array.isArray(activeAttempt.data_jawaban)) {
+                                                                                            const fromAtt = activeAttempt.data_jawaban.find(d => d.id_detail === soal.id_detail);
+                                                                                            if (fromAtt) {
+                                                                                                dj = {
+                                                                                                    id_detail: fromAtt.id_detail,
+                                                                                                    jawaban_siswa: fromAtt.jawaban_siswa,
+                                                                                                    is_correct: fromAtt.is_correct,
+                                                                                                    skor_diperoleh: fromAtt.skor_diperoleh,
+                                                                                                };
+                                                                                            }
+                                                                                        }
+                                                                                        if (!dj) {
+                                                                                            dj = sw.detail_jawaban.find(d => d.id_detail === soal.id_detail);
+                                                                                        }
+                                                                                        const jawSiswa = dj?.jawaban_siswa || '-';
+                                                                                        const kunci = soal.kunci_jawaban;
+                                                                                        const isCorrect = dj?.is_correct;
+                                                                                        const formatVal = (v) => { 
+                                                                                            if (Array.isArray(v)) return v.join(', ');
+                                                                                            try { const a = JSON.parse(v); if (Array.isArray(a)) return a.join(', '); } catch {} 
+                                                                                            return v || '-'; 
+                                                                                        };
+                                                                                        const isEsai = soal.jenis_soal === 'esai' || soal.jenis_soal === 'essay';
+                                                                                        const kemiripan = (dj?.skor_diperoleh || 0) / soal.bobot_nilai;
+                                                                                        return (
+                                                                                            <div key={soal.id_detail} className={`rounded-xl border px-4 py-3 text-xs ${isCorrect ? 'border-emerald-200 bg-emerald-50/50' : 'border-rose-200 bg-rose-50/50'}`}>
+                                                                                                <div className="flex items-center justify-between mb-3 border-b border-slate-200/50 pb-2">
+                                                                                                    <div className="flex flex-col">
+                                                                                                        <span className="font-bold text-slate-700">Soal {sIdx + 1}</span>
                                                                                                     <span className="text-[10px] text-slate-400 mt-0.5">{soal.level_kognitif ? `Taksonomi Bloom: ${soal.level_kognitif}` : 'Level Kognitif tidak disetel'}</span>
                                                                                                 </div>
                                                                                                 <div className="text-right">
@@ -810,9 +1160,14 @@ export default function GuruJadwalCbtPage({ session, onLogout }) {
                                                                             </div>
                                                                             {sw.analisis_diagnostik && (
                                                                                 <div className="mt-4 rounded-xl border border-primary/20 bg-primary/5 p-4">
-                                                                                    <div className="flex items-center gap-2 mb-2">
-                                                                                        <span className="text-sm">🤖</span>
-                                                                                        <span className="text-xs font-bold text-primary">Analisis Diagnostik AI</span>
+                                                                                    <div className="flex items-center justify-between mb-2">
+                                                                                        <div className="flex items-center gap-2">
+                                                                                            <span className="text-sm">🤖</span>
+                                                                                            <span className="text-xs font-bold text-primary">Analisis Diagnostik AI</span>
+                                                                                        </div>
+                                                                                        <span className="text-[10px] text-slate-400 italic">
+                                                                                            *Berdasarkan hasil terbaik (Percobaan ke-{highestAttemptNum || sw.riwayat_percobaan?.length || 1})
+                                                                                        </span>
                                                                                     </div>
                                                                                     <div className="grid gap-3 sm:grid-cols-2">
                                                                                         <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3">
@@ -828,7 +1183,8 @@ export default function GuruJadwalCbtPage({ session, onLogout }) {
                                                                             )}
                                                                         </td>
                                                                     </tr>
-                                                                )}
+                                                                );
+                                                            })()}
                                                             </React.Fragment>
                                                         ))}
                                                         {filteredDetailSiswa.length === 0 && (
@@ -1240,6 +1596,37 @@ export default function GuruJadwalCbtPage({ session, onLogout }) {
                             <button onClick={() => setUnlockModal({ isOpen: false, id_sesi: null, id_siswa: null, loading: false })} className="rounded-xl px-5 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 transition" disabled={unlockModal.loading}>Batal</button>
                             <button onClick={confirmUnlockSiswa} className="rounded-xl bg-amber-600 px-5 py-2 text-sm font-semibold text-white hover:bg-amber-700 transition flex items-center gap-2" disabled={unlockModal.loading}>
                                 {unlockModal.loading ? 'Memproses...' : 'Ya, Buka Kunci'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {deleteModal.isOpen && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm" onClick={closeDeleteModal}>
+                    <div id="modal-hapus-jadwal-cbt" role="dialog" aria-modal="true" className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+                        <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-rose-50 text-rose-600">
+                            <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                        </div>
+                        <h3 className="text-xl font-bold text-slate-900 mb-2">Hapus Jadwal CBT?</h3>
+                        <p className="text-sm text-slate-600 mb-4">Jadwal yang dihapus tidak dapat dikembalikan.</p>
+                        {deleteModal.item?.tipe_soal && (
+                            <div className="mb-6 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm">
+                                <p className="font-semibold text-slate-900">{deleteModal.item.tipe_soal}</p>
+                                <p className="mt-0.5 text-slate-500">
+                                    {deleteModal.item.mata_pelajaran?.nama_lengkap || deleteModal.item.mata_pelajaran?.nama_mapel || '-'} • {deleteModal.item.kelas?.nama_kelas || '-'}
+                                </p>
+                                {deleteModal.item.waktu_mulai && (
+                                    <p className="mt-0.5 text-xs text-slate-400">{formatDateTimeLabel(deleteModal.item.waktu_mulai)}</p>
+                                )}
+                            </div>
+                        )}
+                        <div className="flex gap-3 justify-end">
+                            <button id="btn-batal-hapus-jadwal" type="button" onClick={closeDeleteModal} className="rounded-xl px-5 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 transition disabled:opacity-50" disabled={deleteModal.loading}>Batal</button>
+                            <button id="btn-konfirmasi-hapus-jadwal" type="button" onClick={confirmDeleteSesiAsesmen} className="rounded-xl bg-rose-600 px-5 py-2 text-sm font-semibold text-white hover:bg-rose-700 transition flex items-center gap-2 disabled:opacity-70" disabled={deleteModal.loading}>
+                                {deleteModal.loading ? 'Menghapus...' : 'Ya, Hapus'}
                             </button>
                         </div>
                     </div>

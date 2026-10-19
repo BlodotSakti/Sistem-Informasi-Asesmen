@@ -22,9 +22,30 @@ export default function SiswaCbtPage({ session, onLogout, idSesi }) {
 
     const [isLockdownActive, setIsLockdownActive] = useState(false);
     const [lockdownWarning, setLockdownWarning] = useState(null);
+    const [warningToast, setWarningToast] = useState(null);
     const [submitErrorPopup, setSubmitErrorPopup] = useState(null);
     const [isLockedOut, setIsLockedOut] = useState(false);
     const [lockdownMessage, setLockdownMessage] = useState(null);
+
+    const warningTimerRef = useRef(null);
+
+    const triggerWarning = useCallback((msg) => {
+        if (warningTimerRef.current) {
+            clearTimeout(warningTimerRef.current);
+        }
+        setWarningToast(msg);
+        warningTimerRef.current = setTimeout(() => {
+            setWarningToast(null);
+        }, 3000);
+    }, []);
+
+    useEffect(() => {
+        return () => {
+            if (warningTimerRef.current) {
+                clearTimeout(warningTimerRef.current);
+            }
+        };
+    }, []);
 
     const reportCheating = useCallback(async (jenis, keterangan) => {
         setIsLockdownActive(false); // Matikan event listener agar tidak trigger berulang
@@ -43,9 +64,8 @@ export default function SiswaCbtPage({ session, onLogout, idSesi }) {
                 body: JSON.stringify({ jenis_pelanggaran: jenis, keterangan }),
             });
 
-            // Hapus jawaban tersimpan dari local storage karena jawaban telah direset oleh backend
+            // (Kita tidak lagi menghapus jawaban dari local storage agar progress tersimpan)
             try { 
-                localStorage.removeItem(`${STORAGE_PREFIX}${idSesi}`); 
                 localStorage.removeItem(`${STORAGE_PREFIX}start-${idSesi}`);
             } catch { /* ignore */ }
         } catch { /* silent fail */ }
@@ -55,7 +75,7 @@ export default function SiswaCbtPage({ session, onLogout, idSesi }) {
     const activeSoal = soalData[currentIndex];
     const storageKey = `${STORAGE_PREFIX}${idSesi}`;
 
-    // Browser Lockdown Event Listeners
+    // Browser Lockdown & Anti-Copy-Paste Event Listeners
     useEffect(() => {
         if (!isLockdownActive || resultData) return;
 
@@ -71,28 +91,81 @@ export default function SiswaCbtPage({ session, onLogout, idSesi }) {
 
         const handleContextMenu = (e) => {
             e.preventDefault();
-            reportCheating('right_click', 'Klik kanan dinonaktifkan selama ujian.');
+            triggerWarning('Klik kanan dinonaktifkan demi keamanan dan kejujuran ujian.');
         };
 
-        const handleCopyPaste = (e) => {
+        const handleCopy = (e) => {
             e.preventDefault();
-            reportCheating('copy_paste', 'Tindakan menyalin (copy) atau menempel (paste) dinonaktifkan.');
+            triggerWarning('Tindakan menyalin teks (Copy) tidak diizinkan selama ujian.');
+        };
+
+        const handlePaste = (e) => {
+            e.preventDefault();
+            triggerWarning('Tindakan menempelkan teks (Paste) tidak diizinkan selama ujian.');
+        };
+
+        const handleCut = (e) => {
+            e.preventDefault();
+            triggerWarning('Tindakan memotong teks (Cut) tidak diizinkan selama ujian.');
+        };
+
+        const handleDragStart = (e) => {
+            e.preventDefault();
+        };
+
+        const handleDrop = (e) => {
+            e.preventDefault();
+            triggerWarning('Tindakan menyeret teks (Drag-and-Drop) tidak diizinkan.');
+        };
+
+        const handleKeyDown = (e) => {
+            const isCtrlOrMeta = e.ctrlKey || e.metaKey;
+            const key = e.key.toLowerCase();
+
+            // Cegah pintasan Ctrl+C (Copy), Ctrl+V (Paste), Ctrl+X (Cut)
+            if (isCtrlOrMeta && (key === 'c' || key === 'v' || key === 'x')) {
+                e.preventDefault();
+                const actionName = key === 'c' ? 'Copy' : key === 'v' ? 'Paste' : 'Cut';
+                triggerWarning(`Kombinasi tombol Ctrl+${key.toUpperCase()} (${actionName}) tidak diizinkan selama ujian.`);
+                return;
+            }
+
+            // Cegah Shift+Insert (Paste) & Ctrl+Insert (Copy)
+            if ((e.shiftKey && e.key === 'Insert') || (e.ctrlKey && e.key === 'Insert')) {
+                e.preventDefault();
+                triggerWarning('Tombol pintasan copy-paste dinonaktifkan.');
+                return;
+            }
+
+            // Cegah Ctrl+U (View Source), Ctrl+S (Save Page), Ctrl+P (Print)
+            if (isCtrlOrMeta && (key === 'u' || key === 's' || key === 'p')) {
+                e.preventDefault();
+                return;
+            }
+
+            // Cegah F12 (Inspect Element)
+            if (e.key === 'F12') {
+                e.preventDefault();
+                triggerWarning('Tombol F12 (Developer Tools) dinonaktifkan.');
+                return;
+            }
         };
 
         const handleFullscreenChange = () => {
             if (!document.fullscreenElement && !document.webkitIsFullScreen && !document.mozFullScreen) {
                 reportCheating('fullscreen_exit', 'Anda keluar dari mode layar penuh.');
-                // Opsional: paksa masuk kembali jika memungkinkan, atau berhentikan ujian
-                // window.alert("Anda dilarang keluar dari mode layar penuh selama ujian!");
             }
         };
 
         document.addEventListener('visibilitychange', handleVisibilityChange);
         window.addEventListener('blur', handleBlur);
         document.addEventListener('contextmenu', handleContextMenu);
-        document.addEventListener('copy', handleCopyPaste);
-        document.addEventListener('paste', handleCopyPaste);
-        document.addEventListener('cut', handleCopyPaste);
+        document.addEventListener('copy', handleCopy);
+        document.addEventListener('paste', handlePaste);
+        document.addEventListener('cut', handleCut);
+        document.addEventListener('dragstart', handleDragStart);
+        document.addEventListener('drop', handleDrop);
+        document.addEventListener('keydown', handleKeyDown);
         document.addEventListener('fullscreenchange', handleFullscreenChange);
         document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
         document.addEventListener('mozfullscreenchange', handleFullscreenChange);
@@ -102,15 +175,18 @@ export default function SiswaCbtPage({ session, onLogout, idSesi }) {
             document.removeEventListener('visibilitychange', handleVisibilityChange);
             window.removeEventListener('blur', handleBlur);
             document.removeEventListener('contextmenu', handleContextMenu);
-            document.removeEventListener('copy', handleCopyPaste);
-            document.removeEventListener('paste', handleCopyPaste);
-            document.removeEventListener('cut', handleCopyPaste);
+            document.removeEventListener('copy', handleCopy);
+            document.removeEventListener('paste', handlePaste);
+            document.removeEventListener('cut', handleCut);
+            document.removeEventListener('dragstart', handleDragStart);
+            document.removeEventListener('drop', handleDrop);
+            document.removeEventListener('keydown', handleKeyDown);
             document.removeEventListener('fullscreenchange', handleFullscreenChange);
             document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
             document.removeEventListener('mozfullscreenchange', handleFullscreenChange);
             document.removeEventListener('MSFullscreenChange', handleFullscreenChange);
         };
-    }, [isLockdownActive, resultData, reportCheating]);
+    }, [isLockdownActive, resultData, reportCheating, triggerWarning]);
 
     // Persist jawaban to localStorage whenever it changes
     useEffect(() => {
@@ -127,7 +203,7 @@ export default function SiswaCbtPage({ session, onLogout, idSesi }) {
 
         async function fetchData() {
             try {
-                const url = new URL(apiBase(`/api/siswa/cbt/${idSesi}`));
+                const url = new URL(apiBase(`/api/siswa/cbt/${idSesi}`), window.location.origin || 'http://localhost');
                 const searchParams = new URLSearchParams(window.location.search);
                 if (searchParams.has('token')) {
                     url.searchParams.append('token', searchParams.get('token'));
@@ -557,7 +633,7 @@ export default function SiswaCbtPage({ session, onLogout, idSesi }) {
                         <div className="mb-6 rounded-xl bg-rose-50 p-4 border border-rose-100">
                             <p className="text-sm font-semibold text-rose-700">"{lockdownMessage}"</p>
                         </div>
-                        <p className="text-sm text-slate-500 mb-6">Ujian dihentikan dan seluruh jawaban sebelumnya telah direset. Silakan lapor kepada Guru pengawas untuk meminta akses ulang ujian (Buka Kunci).</p>
+                        <p className="text-sm text-slate-500 mb-6">Ujian dihentikan sementara. Silakan lapor kepada Guru pengawas untuk meminta akses ulang ujian (Buka Kunci).</p>
                         <a href="/siswa/dashboard" className="inline-flex items-center justify-center rounded-xl bg-slate-800 px-6 py-3 text-sm font-bold text-white shadow transition hover:bg-slate-700 w-full">
                             Kembali ke Dashboard
                         </a>
@@ -611,7 +687,32 @@ export default function SiswaCbtPage({ session, onLogout, idSesi }) {
 
     // --- EXAM SCREEN ---
     return (
-        <div className="min-h-screen bg-slate-100 font-sans text-slate-900 flex flex-col selection:bg-primary/10">
+        <div className="min-h-screen bg-slate-100 font-sans text-slate-900 flex flex-col selection:bg-transparent select-none">
+            {/* Anti Copy-Paste & Soft Warning Toast */}
+            {warningToast && (
+                <div className="fixed top-5 left-1/2 -translate-x-1/2 z-[100] w-[90%] max-w-md animate-in fade-in slide-in-from-top-4 duration-200">
+                    <div className="flex items-center gap-3 rounded-2xl bg-slate-900/95 text-white px-5 py-3.5 shadow-2xl backdrop-blur-md border border-amber-400/40">
+                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-amber-500/20 text-amber-400">
+                            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                            </svg>
+                        </div>
+                        <div className="flex-1 text-xs sm:text-sm font-medium text-slate-100">
+                            {warningToast}
+                        </div>
+                        <button
+                            type="button"
+                            onClick={() => setWarningToast(null)}
+                            className="text-slate-400 hover:text-white transition p-1"
+                        >
+                            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            )}
+
             {/* Lockdown Warning Modal */}
             {lockdownWarning && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
@@ -782,11 +883,11 @@ export default function SiswaCbtPage({ session, onLogout, idSesi }) {
                                 </span>
                             </div>
 
-                            <div className="prose prose-slate max-w-none text-lg leading-relaxed text-slate-700 whitespace-pre-wrap">
+                            <div className="prose prose-slate max-w-none text-lg leading-relaxed text-slate-700 whitespace-pre-wrap select-none">
                                 {activeSoal.isi_soal}
                                 {activeSoal.gambar_soal && (
                                     <div className="mt-4">
-                                        <img src={`/storage/${activeSoal.gambar_soal}`} alt="Ilustrasi Soal" className="max-h-64 max-w-full rounded-xl border border-border shadow-sm" />
+                                        <img src={`/storage/${activeSoal.gambar_soal}`} alt="Ilustrasi Soal" onDragStart={(e) => e.preventDefault()} className="max-h-64 max-w-full rounded-xl border border-border shadow-sm pointer-events-none" />
                                     </div>
                                 )}
                             </div>
@@ -842,8 +943,24 @@ export default function SiswaCbtPage({ session, onLogout, idSesi }) {
                                     <textarea
                                         value={jawaban[activeSoal.id_detail] || ''}
                                         onChange={(e) => handleAnswerChange(activeSoal.id_detail, e.target.value)}
+                                        onPaste={(e) => {
+                                            e.preventDefault();
+                                            triggerWarning('Menempelkan teks (Paste) tidak diizinkan pada jawaban esai. Silakan ketik jawaban secara manual.');
+                                        }}
+                                        onCopy={(e) => {
+                                            e.preventDefault();
+                                            triggerWarning('Menyalin teks (Copy) tidak diizinkan selama ujian.');
+                                        }}
+                                        onCut={(e) => {
+                                            e.preventDefault();
+                                            triggerWarning('Memotong teks (Cut) tidak diizinkan selama ujian.');
+                                        }}
+                                        onDrop={(e) => {
+                                            e.preventDefault();
+                                            triggerWarning('Menyeret teks (Drag-and-Drop) tidak diizinkan pada jawaban esai.');
+                                        }}
                                         rows={6}
-                                        className="w-full rounded-2xl border border-slate-300 p-4 text-slate-700 shadow-sm outline-none transition focus:border-primary focus:ring-1 focus:ring-primary"
+                                        className="w-full rounded-2xl border border-slate-300 p-4 text-slate-700 shadow-sm outline-none transition focus:border-primary focus:ring-1 focus:ring-primary select-text"
                                         placeholder="Ketikkan jawaban essay Anda di sini..."
                                     />
                                 )}

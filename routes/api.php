@@ -96,6 +96,7 @@ Route::middleware('auth:sanctum')->group(function (): void {
 			Route::patch('/sesi-asesmen/{id_sesi}', [GuruController::class, 'sesiAsesmenUpdate'])->name('sesi-asesmen.update');
 			Route::delete('/sesi-asesmen/{id_sesi}', [GuruController::class, 'sesiAsesmenDestroy'])->name('sesi-asesmen.destroy');
 			Route::get('/sesi-asesmen/{id_sesi}/detail', [GuruController::class, 'sesiAsesmenDetail'])->name('sesi-asesmen.detail');
+			Route::get('/sesi-asesmen/{id_sesi}/export-soal-pdf', [GuruController::class, 'exportSoalPdf'])->name('sesi-asesmen.export-soal-pdf');
 			Route::get('/sesi-asesmen/{id_sesi}/log-pelanggaran', [GuruController::class, 'getLogPelanggaran'])->name('sesi-asesmen.log-pelanggaran');
 			Route::post('/sesi-asesmen/{id_sesi}/unlock/{id_siswa}', [GuruController::class, 'unlockSiswaCbt'])->name('sesi-asesmen.unlock');
 			Route::put('/sesi-asesmen/{id_sesi}/jawaban/{id_detail}/siswa/{id_siswa}/score', [GuruController::class, 'updateSkorJawaban'])->name('sesi-asesmen.update-skor');

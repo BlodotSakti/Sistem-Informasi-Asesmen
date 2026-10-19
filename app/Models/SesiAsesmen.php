@@ -100,4 +100,9 @@ class SesiAsesmen extends Model
     {
         return $this->hasMany(AnalisisDiagnostik::class, 'id_sesi', 'id_sesi');
     }
+
+    public function percobaanCbt(): HasMany
+    {
+        return $this->hasMany(PercobaanCbt::class, 'id_sesi', 'id_sesi');
+    }
 }

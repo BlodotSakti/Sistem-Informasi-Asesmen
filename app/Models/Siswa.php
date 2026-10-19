@@ -90,4 +90,9 @@ class Siswa extends Model
             ->where('is_aktif', true)
             ->latestOfMany('tanggal_masuk');
     }
+
+    public function percobaanCbt(): HasMany
+    {
+        return $this->hasMany(PercobaanCbt::class, 'id_siswa', 'id_siswa');
+    }
 }
