@@ -4,6 +4,7 @@ import { apiFetch } from '../lib/api';
 import { adminNavigation } from './adminNavigation';
 import useAdminWorkspace from '../hooks/useAdminWorkspace';
 import FilterSelect from '../components/ui/FilterSelect';
+import { ConfirmModal } from '../components/ui/ConfirmModal';
 
 const TABLE_HEAD_CLASS = 'border-b border-border bg-slate-50 text-xs uppercase tracking-[0.2em] text-slate-500';
 const TABLE_BODY_ROW_CLASS = 'align-top hover:bg-slate-50/70';
@@ -212,13 +213,23 @@ export default function AdminPenugasanGuruPage({ session, onLogout }) {
         }
     };
 
-    const deleteMaster = async (path, label) => {
-        if (!window.confirm(`Hapus ${label} ini?`)) return;
+    const [confirmDelete, setConfirmDelete] = useState({ isOpen: false, path: '', label: '', loading: false });
+
+    const deleteMaster = (path, label) => {
+        setConfirmDelete({ isOpen: true, path, label, loading: false });
+    };
+
+    const handleConfirmDelete = async () => {
+        const { path, label } = confirmDelete;
+        if (!path) return;
+        setConfirmDelete((prev) => ({ ...prev, loading: true }));
         try {
             await apiFetch(path, session, { method: 'DELETE' });
             showToast(`${label} berhasil dihapus.`);
+            setConfirmDelete({ isOpen: false, path: '', label: '', loading: false });
             await reloadWorkspace();
         } catch (exception) {
+            setConfirmDelete({ isOpen: false, path: '', label: '', loading: false });
             showToast(exception.message || `Gagal menghapus ${label}.`, 'error');
         }
     };
@@ -253,17 +264,24 @@ export default function AdminPenugasanGuruPage({ session, onLogout }) {
                     </section>
 
                     {toast && (
-                        <div className="fixed inset-0 z-[100] flex items-center justify-center pointer-events-none bg-slate-900/20 backdrop-blur-sm animate-fade-in">
-                            <div className={`pointer-events-auto flex items-center gap-4 rounded-2xl px-8 py-5 shadow-2xl border bg-white scale-110 ${toast.type === 'error' ? 'border-rose-200' : 'border-emerald-200'}`}>
-                                <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${toast.type === 'error' ? 'bg-rose-100 text-rose-600' : 'bg-emerald-100 text-emerald-600'}`}>
+                        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 pointer-events-none bg-slate-900/25 backdrop-blur-sm animate-fade-in">
+                            <div className={`pointer-events-auto flex w-full max-w-md sm:max-w-lg items-start sm:items-center gap-3.5 sm:gap-4 rounded-2xl sm:rounded-3xl px-4 py-4 sm:px-6 sm:py-5 shadow-2xl border bg-white ${toast.type === 'error' ? 'border-rose-200' : 'border-emerald-200'}`}>
+                                <div className={`flex h-10 w-10 sm:h-11 sm:w-11 shrink-0 items-center justify-center rounded-full ${toast.type === 'error' ? 'bg-rose-100 text-rose-600' : 'bg-emerald-100 text-emerald-600'}`}>
                                     {toast.type === 'error' ? (
-                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 sm:h-6 sm:w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                                     ) : (
-                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 sm:h-6 sm:w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M5 13l4 4L19 7" /></svg>
                                     )}
                                 </div>
-                                <div className="text-base font-bold text-slate-800">{toast.message}</div>
-                                <button type="button" onClick={() => setToast(null)} className="ml-4 rounded-full p-1 opacity-70 hover:bg-slate-100 hover:opacity-100">
+                                <div className="min-w-0 flex-1">
+                                    <p className={`text-xs font-bold uppercase tracking-wider mb-0.5 ${toast.type === 'error' ? 'text-rose-600' : 'text-emerald-600'}`}>
+                                        {toast.type === 'error' ? 'Peringatan' : 'Berhasil'}
+                                    </p>
+                                    <p className="text-sm sm:text-base font-semibold leading-snug text-slate-800 break-words">
+                                        {toast.message}
+                                    </p>
+                                </div>
+                                <button type="button" onClick={() => setToast(null)} className="shrink-0 rounded-full p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700">
                                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
                                 </button>
                             </div>
@@ -585,6 +603,15 @@ export default function AdminPenugasanGuruPage({ session, onLogout }) {
                     </div>
                 </main>
             </div>
+
+            <ConfirmModal
+                isOpen={confirmDelete.isOpen}
+                title={`Hapus ${confirmDelete.label}?`}
+                message={`Apakah Anda yakin ingin menghapus data ${confirmDelete.label.toLowerCase()} ini? Data yang dihapus tidak dapat dikembalikan.`}
+                loading={confirmDelete.loading}
+                onConfirm={handleConfirmDelete}
+                onCancel={() => setConfirmDelete({ isOpen: false, path: '', label: '', loading: false })}
+            />
         </DashboardLayout>
     );
 }

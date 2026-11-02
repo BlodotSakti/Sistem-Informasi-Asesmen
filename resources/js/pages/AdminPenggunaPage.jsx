@@ -5,6 +5,7 @@ import { adminNavigation } from './adminNavigation';
 import useAdminWorkspace from '../hooks/useAdminWorkspace';
 import * as XLSX from 'xlsx';
 import FilterSelect from '../components/ui/FilterSelect';
+import { ConfirmModal } from '../components/ui/ConfirmModal';
 
 const TABLE_HEAD_CLASS = 'border-b border-border bg-slate-50 text-xs uppercase tracking-[0.2em] text-slate-500';
 const TABLE_BODY_ROW_CLASS = 'align-top hover:bg-slate-50/70';
@@ -166,13 +167,23 @@ export default function AdminPenggunaPage({ session, onLogout, mode = 'pengguna'
         }
     };
 
-    const deleteUser = async (idPengguna) => {
-        if (!window.confirm('Hapus akun ini secara permanen? Data yang terkait juga akan dihapus dan tidak bisa dikembalikan.')) return;
+    const [confirmDeleteUser, setConfirmDeleteUser] = useState({ isOpen: false, idPengguna: null, loading: false });
+
+    const deleteUser = (idPengguna) => {
+        setConfirmDeleteUser({ isOpen: true, idPengguna, loading: false });
+    };
+
+    const handleConfirmDeleteUser = async () => {
+        const { idPengguna } = confirmDeleteUser;
+        if (!idPengguna) return;
+        setConfirmDeleteUser((prev) => ({ ...prev, loading: true }));
         try {
             await apiFetch(`/api/admin/pengguna/${idPengguna}`, session, { method: 'DELETE' });
             showToast('Akun berhasil dihapus permanen.');
+            setConfirmDeleteUser({ isOpen: false, idPengguna: null, loading: false });
             await loadUsers();
         } catch (exception) {
+            setConfirmDeleteUser({ isOpen: false, idPengguna: null, loading: false });
             showToast(exception.message || 'Gagal menghapus akun.', 'error');
         }
     };
@@ -276,17 +287,24 @@ export default function AdminPenggunaPage({ session, onLogout, mode = 'pengguna'
                     </section>
 
                     {toast && (
-                        <div className="fixed inset-0 z-[100] flex items-center justify-center pointer-events-none bg-slate-900/20 backdrop-blur-sm animate-fade-in">
-                            <div className={`pointer-events-auto flex items-center gap-4 rounded-2xl px-8 py-5 shadow-2xl border bg-white scale-110 ${toast.type === 'error' ? 'border-rose-200' : 'border-emerald-200'}`}>
-                                <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${toast.type === 'error' ? 'bg-rose-100 text-rose-600' : 'bg-emerald-100 text-emerald-600'}`}>
+                        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 pointer-events-none bg-slate-900/25 backdrop-blur-sm animate-fade-in">
+                            <div className={`pointer-events-auto flex w-full max-w-md sm:max-w-lg items-start sm:items-center gap-3.5 sm:gap-4 rounded-2xl sm:rounded-3xl px-4 py-4 sm:px-6 sm:py-5 shadow-2xl border bg-white ${toast.type === 'error' ? 'border-rose-200' : 'border-emerald-200'}`}>
+                                <div className={`flex h-10 w-10 sm:h-11 sm:w-11 shrink-0 items-center justify-center rounded-full ${toast.type === 'error' ? 'bg-rose-100 text-rose-600' : 'bg-emerald-100 text-emerald-600'}`}>
                                     {toast.type === 'error' ? (
-                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 sm:h-6 sm:w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                                     ) : (
-                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 sm:h-6 sm:w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M5 13l4 4L19 7" /></svg>
                                     )}
                                 </div>
-                                <div className="text-base font-bold text-slate-800">{toast.message}</div>
-                                <button type="button" onClick={() => setToast(null)} className="ml-4 rounded-full p-1 opacity-70 hover:bg-slate-100 hover:opacity-100">
+                                <div className="min-w-0 flex-1">
+                                    <p className={`text-xs font-bold uppercase tracking-wider mb-0.5 ${toast.type === 'error' ? 'text-rose-600' : 'text-emerald-600'}`}>
+                                        {toast.type === 'error' ? 'Peringatan' : 'Berhasil'}
+                                    </p>
+                                    <p className="text-sm sm:text-base font-semibold leading-snug text-slate-800 break-words">
+                                        {toast.message}
+                                    </p>
+                                </div>
+                                <button type="button" onClick={() => setToast(null)} className="shrink-0 rounded-full p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700">
                                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
                                 </button>
                             </div>
@@ -642,6 +660,15 @@ export default function AdminPenggunaPage({ session, onLogout, mode = 'pengguna'
                     </div>
                 </main>
             </div>
+
+            <ConfirmModal
+                isOpen={confirmDeleteUser.isOpen}
+                title="Hapus Akun Permanen?"
+                message="Apakah Anda yakin ingin menghapus akun ini secara permanen? Data yang terkait juga akan dihapus dan tidak bisa dikembalikan."
+                loading={confirmDeleteUser.loading}
+                onConfirm={handleConfirmDeleteUser}
+                onCancel={() => setConfirmDeleteUser({ isOpen: false, idPengguna: null, loading: false })}
+            />
         </DashboardLayout>
     );
 }

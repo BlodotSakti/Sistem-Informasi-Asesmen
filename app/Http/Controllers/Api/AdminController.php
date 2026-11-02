@@ -832,9 +832,27 @@ class AdminController extends Controller
             'id_guru_wali' => ['required', 'integer', 'exists:guru,id_guru'],
             'nama_kelas' => ['required', 'string', 'max:100'],
             'tahun_ajaran' => ['required', 'string', 'max:255'],
+        ], [
+            'id_guru_wali.required' => 'Guru wali wajib dipilih.',
+            'id_guru_wali.exists' => 'Guru wali yang dipilih tidak valid.',
+            'nama_kelas.required' => 'Nama kelas wajib diisi.',
+            'tahun_ajaran.required' => 'Tahun ajaran wajib dipilih.',
         ]);
 
+        $data['nama_kelas'] = trim($data['nama_kelas']);
         $data['tahun_ajaran'] = $this->normalizeTahunAjaran($data['tahun_ajaran']);
+
+        $exists = Kelas::query()
+            ->whereRaw('LOWER(TRIM(nama_kelas)) = ?', [strtolower($data['nama_kelas'])])
+            ->where('id_guru_wali', (int) $data['id_guru_wali'])
+            ->where('tahun_ajaran', $data['tahun_ajaran'])
+            ->exists();
+
+        if ($exists) {
+            return response()->json([
+                'message' => 'Gagal menyimpan: Kelas dengan Nama Kelas, Guru Wali, dan Tahun Ajaran tersebut sudah terdaftar.',
+            ], 422);
+        }
 
         $kelas = Kelas::create($data);
 
@@ -858,10 +876,35 @@ class AdminController extends Controller
             'id_guru_wali' => ['sometimes', 'integer', 'exists:guru,id_guru'],
             'nama_kelas' => ['sometimes', 'string', 'max:100'],
             'tahun_ajaran' => ['sometimes', 'string', 'max:255'],
+        ], [
+            'id_guru_wali.exists' => 'Guru wali yang dipilih tidak valid.',
+            'nama_kelas.required' => 'Nama kelas wajib diisi.',
+            'tahun_ajaran.required' => 'Tahun ajaran wajib dipilih.',
         ]);
+
+        if (array_key_exists('nama_kelas', $data)) {
+            $data['nama_kelas'] = trim($data['nama_kelas']);
+        }
 
         if (array_key_exists('tahun_ajaran', $data)) {
             $data['tahun_ajaran'] = $this->normalizeTahunAjaran($data['tahun_ajaran']);
+        }
+
+        $nextNamaKelas = $data['nama_kelas'] ?? trim((string) $kelas->nama_kelas);
+        $nextGuruWaliId = (int) ($data['id_guru_wali'] ?? $kelas->id_guru_wali);
+        $nextTahunAjaran = $data['tahun_ajaran'] ?? $kelas->tahun_ajaran;
+
+        $exists = Kelas::query()
+            ->whereRaw('LOWER(TRIM(nama_kelas)) = ?', [strtolower($nextNamaKelas)])
+            ->where('id_guru_wali', $nextGuruWaliId)
+            ->where('tahun_ajaran', $nextTahunAjaran)
+            ->where('id_kelas', '!=', $kelas->id_kelas)
+            ->exists();
+
+        if ($exists) {
+            return response()->json([
+                'message' => 'Gagal memperbarui: Kelas dengan Nama Kelas, Guru Wali, dan Tahun Ajaran tersebut sudah terdaftar.',
+            ], 422);
         }
 
         $kelas->update($data);
@@ -937,6 +980,26 @@ class AdminController extends Controller
 
     public function mataPelajaranDestroy(Request $request, MataPelajaran $mataPelajaran): JsonResponse
     {
+        $now = now();
+
+        $hasActiveCbt = $mataPelajaran->sesiAsesmen()
+            ->where(function ($query) use ($now) {
+                $query->where(function ($q) use ($now) {
+                    $q->whereNotNull('waktu_selesai')
+                        ->where('waktu_selesai', '>=', $now);
+                })->orWhere(function ($q) use ($now) {
+                    $q->whereNull('waktu_selesai')
+                        ->whereRaw('DATE_ADD(waktu_mulai, INTERVAL durasi_menit MINUTE) >= ?', [$now]);
+                });
+            })
+            ->exists();
+
+        if ($hasActiveCbt) {
+            return response()->json([
+                'message' => 'Gagal menghapus: Mata pelajaran ' . $mataPelajaran->nama_lengkap . ' tidak dapat dihapus karena sedang memiliki jadwal ujian CBT aktif.',
+            ], 422);
+        }
+
         $nama = $mataPelajaran->nama_mapel;
         $mataPelajaran->delete();
 

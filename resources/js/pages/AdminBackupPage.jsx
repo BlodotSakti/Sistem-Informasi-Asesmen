@@ -3,6 +3,7 @@ import DashboardLayout from '../components/layout/DashboardLayout';
 import { apiFetch } from '../lib/api';
 import { adminNavigation } from './adminNavigation';
 import { Database, HardDriveDownload, Trash2, Download, AlertCircle, Plus, Loader2 } from 'lucide-react';
+import { ConfirmModal } from '../components/ui/ConfirmModal';
 
 export default function AdminBackupPage({ session, onLogout }) {
     const [backups, setBackups] = useState([]);
@@ -47,9 +48,17 @@ export default function AdminBackupPage({ session, onLogout }) {
         }
     };
 
-    const handleDeleteBackup = async (fileName) => {
-        if (!window.confirm(`Anda yakin ingin menghapus backup ${fileName}?`)) return;
+    const [confirmDeleteBackup, setConfirmDeleteBackup] = useState({ isOpen: false, fileName: '', loading: false });
 
+    const handleDeleteBackup = (fileName) => {
+        setConfirmDeleteBackup({ isOpen: true, fileName, loading: false });
+    };
+
+    const confirmDeleteBackupAction = async () => {
+        const { fileName } = confirmDeleteBackup;
+        if (!fileName) return;
+
+        setConfirmDeleteBackup((prev) => ({ ...prev, loading: true }));
         setActionLoading(true);
         setSuccess('');
         setError('');
@@ -59,8 +68,10 @@ export default function AdminBackupPage({ session, onLogout }) {
                 method: 'DELETE'
             });
             setSuccess(res.message || 'Backup berhasil dihapus');
+            setConfirmDeleteBackup({ isOpen: false, fileName: '', loading: false });
             await fetchBackups();
         } catch (err) {
+            setConfirmDeleteBackup({ isOpen: false, fileName: '', loading: false });
             setError(err.message || 'Gagal menghapus backup');
         } finally {
             setActionLoading(false);
@@ -223,6 +234,15 @@ export default function AdminBackupPage({ session, onLogout }) {
                 </div>
 
             </div>
+
+            <ConfirmModal
+                isOpen={confirmDeleteBackup.isOpen}
+                title="Hapus File Backup?"
+                message={`Apakah Anda yakin ingin menghapus file backup "${confirmDeleteBackup.fileName}"? File yang dihapus tidak dapat dikembalikan.`}
+                loading={confirmDeleteBackup.loading}
+                onConfirm={confirmDeleteBackupAction}
+                onCancel={() => setConfirmDeleteBackup({ isOpen: false, fileName: '', loading: false })}
+            />
         </DashboardLayout>
     );
 }

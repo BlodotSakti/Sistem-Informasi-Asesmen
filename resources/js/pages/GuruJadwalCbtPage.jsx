@@ -217,7 +217,10 @@ export default function GuruJadwalCbtPage({ session, onLogout }) {
         XLSX.writeFile(wb, `Analisis_Soal_${buildExportBaseName(sesi)}.xlsx`);
     };
 
-    const showSuccessPopup = (title, message) => setSuccessPopup({ title, message });
+    const showSuccessPopup = (title, message, type = null) => {
+        const isError = type === 'error' || /gagal|error|kesalahan|peringatan|tidak valid/i.test(String(title || ''));
+        setSuccessPopup({ title, message, isError });
+    };
     const closeSuccessPopup = () => setSuccessPopup(null);
 
     const requestAction = (actionFn) => {
@@ -283,7 +286,7 @@ export default function GuruJadwalCbtPage({ session, onLogout }) {
             showSuccessPopup('Sukses', 'Skor berhasil diperbarui.');
         } catch (error) {
             console.error('Failed to update score:', error);
-            alert('Gagal memperbarui skor.');
+            showSuccessPopup('Gagal Memperbarui Skor', error?.message || 'Gagal memperbarui skor.', 'error');
         }
     };
 
@@ -302,7 +305,7 @@ export default function GuruJadwalCbtPage({ session, onLogout }) {
             }
         } catch (error) {
             console.error('Failed to validate:', error);
-            alert('Gagal memvalidasi nilai.');
+            showSuccessPopup('Gagal Memvalidasi Nilai', error?.message || 'Gagal memvalidasi nilai.', 'error');
         } finally {
             setValidasiLoading(false);
         }
@@ -338,7 +341,12 @@ export default function GuruJadwalCbtPage({ session, onLogout }) {
                 .map(([id, bobot]) => ({ id_soal: Number(id), bobot_nilai: Number(bobot) }));
 
             if (soalArr.length === 0) {
-                showSuccessPopup('Validasi Gagal', 'Pilih minimal satu soal dan tentukan bobot nilainya.');
+                showSuccessPopup('Validasi Gagal', 'Pilih minimal satu soal dan tentukan bobot nilainya.', 'error');
+                return;
+            }
+
+            if (sesiForm.waktu_mulai && sesiForm.waktu_selesai && new Date(sesiForm.waktu_selesai) <= new Date(sesiForm.waktu_mulai)) {
+                showSuccessPopup('Gagal Menyimpan Jadwal', 'Waktu selesai harus setelah waktu mulai.', 'error');
                 return;
             }
 
@@ -1534,10 +1542,16 @@ export default function GuruJadwalCbtPage({ session, onLogout }) {
             {successPopup && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
                     <div className="w-full max-w-sm rounded-3xl bg-white p-6 text-center shadow-2xl">
-                        <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100">
-                            <svg className="h-8 w-8 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                            </svg>
+                        <div className={`mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full ${successPopup.isError ? 'bg-rose-100' : 'bg-emerald-100'}`}>
+                            {successPopup.isError ? (
+                                <svg className="h-8 w-8 text-rose-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                            ) : (
+                                <svg className="h-8 w-8 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                </svg>
+                            )}
                         </div>
                         <h3 className="mb-2 text-xl font-bold text-slate-900">{successPopup.title}</h3>
                         <p className="mb-6 text-sm text-slate-500">{successPopup.message}</p>

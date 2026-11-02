@@ -14,6 +14,9 @@ export default function SiswaSessionsPage({ session, onLogout }) {
     const [tokenInput, setTokenInput] = useState('');
 
     const handleStartExam = (item) => {
+        if (item.waktu_selesai && new Date() > new Date(item.waktu_selesai)) {
+            return;
+        }
         if (item.has_token) {
             setSelectedSession(item);
             setTokenInput('');
@@ -173,7 +176,7 @@ export default function SiswaSessionsPage({ session, onLogout }) {
                                                 <span className="inline-flex items-center justify-center rounded-xl bg-slate-200 px-4 py-2 text-sm font-semibold text-slate-500 cursor-not-allowed">
                                                     Sudah Dikerjakan
                                                 </span>
-                                            ) : isExpired && !sudahDikerjakan ? (
+                                            ) : isExpired ? (
                                                 <span className="inline-flex items-center justify-center rounded-xl bg-slate-200 px-4 py-2 text-sm font-semibold text-slate-500 cursor-not-allowed">
                                                     CBT Sudah Ditutup
                                                 </span>

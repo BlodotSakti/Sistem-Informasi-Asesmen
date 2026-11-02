@@ -5,6 +5,8 @@ import { adminNavigation } from './adminNavigation';
 import * as XLSX from 'xlsx';
 import BankSoalForm from '../components/ui/BankSoalForm';
 import FilterSelect from '../components/ui/FilterSelect';
+import { ConfirmModal, PopupModal } from '../components/ui/ConfirmModal';
+import { downloadBankSoalTemplateExcel, parseBankSoalExcelRows } from '../lib/bankSoalExcel';
 
 export default function AdminBankSoalPage({ session, onLogout }) {
     const [soalList, setSoalList] = useState([]);
@@ -13,7 +15,14 @@ export default function AdminBankSoalPage({ session, onLogout }) {
     const [error, setError] = useState('');
     const [isImporting, setIsImporting] = useState(false);
     const [importResult, setImportResult] = useState(null);
+    const [popup, setPopup] = useState(null);
+    const [confirmDeleteSoal, setConfirmDeleteSoal] = useState({ isOpen: false, id_soal: null, loading: false });
     const fileInputRef = useRef(null);
+
+    const showPopup = (title, message, type = null) => {
+        const isError = type === 'error' || /gagal|error|kesalahan|peringatan|tidak valid/i.test(String(title || ''));
+        setPopup({ title, message, isError });
+    };
 
     // Filters
     const [selectedMapel, setSelectedMapel] = useState('all');
@@ -65,13 +74,22 @@ export default function AdminBankSoalPage({ session, onLogout }) {
         }
     };
 
-    const handleDelete = async (id_soal) => {
-        if (!confirm('Apakah Anda yakin ingin menghapus soal ini?')) return;
+    const handleDelete = (id_soal) => {
+        setConfirmDeleteSoal({ isOpen: true, id_soal, loading: false });
+    };
+
+    const confirmDeleteSoalAction = async () => {
+        const { id_soal } = confirmDeleteSoal;
+        if (!id_soal) return;
+        setConfirmDeleteSoal((prev) => ({ ...prev, loading: true }));
         try {
             await apiFetch(`/api/admin/bank-soal/${id_soal}`, session, { method: 'DELETE' });
+            setConfirmDeleteSoal({ isOpen: false, id_soal: null, loading: false });
+            showPopup('Berhasil', 'Soal berhasil dihapus.');
             loadData();
         } catch (err) {
-            alert(err.message || 'Gagal menghapus soal.');
+            setConfirmDeleteSoal({ isOpen: false, id_soal: null, loading: false });
+            showPopup('Gagal Menghapus', err.message || 'Gagal menghapus soal.', 'error');
         }
     };
 
@@ -143,7 +161,7 @@ export default function AdminBankSoalPage({ session, onLogout }) {
         e.preventDefault();
         try {
             if (!bankForm.id_mapel || !bankForm.isi_soal.trim() || !bankForm.topik_materi.trim() || !bankForm.level_kognitif) {
-                alert('Mohon lengkapi semua kolom yang wajib diisi.');
+                showPopup('Validasi Gagal', 'Mohon lengkapi semua kolom yang wajib diisi.', 'error');
                 return;
             }
 
@@ -160,7 +178,7 @@ export default function AdminBankSoalPage({ session, onLogout }) {
 
             if (bankForm.jenis_soal === 'pilihan_ganda' || bankForm.jenis_soal === 'pilihan_ganda_kompleks') {
                 if (opsiJawaban.length < 2) {
-                    alert('Minimal 2 opsi jawaban diperlukan.');
+                    showPopup('Validasi Gagal', 'Minimal 2 opsi jawaban diperlukan.', 'error');
                     return;
                 }
                 opsiJawaban.forEach((opsi, index) => {
@@ -216,90 +234,17 @@ export default function AdminBankSoalPage({ session, onLogout }) {
                 body: formData,
             });
 
-            alert(editingBankSoalId ? 'Soal berhasil diperbarui!' : 'Soal berhasil ditambahkan!');
+            showPopup('Berhasil', editingBankSoalId ? 'Soal berhasil diperbarui!' : 'Soal berhasil ditambahkan!');
             resetBankForm();
             loadData();
         } catch (error) {
             console.error('Error saving soal:', error);
-            alert(error.message || 'Gagal menyimpan soal.');
+            showPopup('Gagal Menyimpan Soal', error.message || 'Gagal menyimpan soal.', 'error');
         }
     };
 
     const downloadTemplateExcel = () => {
-        const headers = [
-            "nama_mapel", "isi_soal", "opsi_a", "opsi_b", "opsi_c", "opsi_d", "opsi_e",
-            "kunci_jawaban", "jenis_soal", "topik_materi", "level_kognitif",
-            "keywords", "rule_weight", "lsa_weight", "tgate", "required_keywords_count"
-        ];
-
-        const exampleData = [
-            {
-                "nama_mapel": "Bahasa Indonesia (X)",
-                "isi_soal": "Siapakah penemu bola lampu?",
-                "opsi_a": "Albert Einstein",
-                "opsi_b": "Thomas Edison",
-                "opsi_c": "Nikola Tesla",
-                "opsi_d": "Isaac Newton",
-                "opsi_e": "Galileo Galilei",
-                "kunci_jawaban": "Thomas Edison",
-                "jenis_soal": "pilihan_ganda",
-                "topik_materi": "Sejarah Penemuan",
-                "level_kognitif": "C1",
-                "keywords": "",
-                "rule_weight": "",
-                "lsa_weight": "",
-                "tgate": "",
-                "required_keywords_count": ""
-            },
-            {
-                "nama_mapel": "Bahasa Indonesia (X)",
-                "isi_soal": "Jelaskan apa yang dimaksud dengan majas personifikasi beserta satu contohnya!",
-                "opsi_a": "",
-                "opsi_b": "",
-                "opsi_c": "",
-                "opsi_d": "",
-                "opsi_e": "",
-                "kunci_jawaban": "Majas personifikasi adalah gaya bahasa yang memberikan sifat-sifat manusia kepada benda mati. Contoh: Angin menari-nari di sela dedaunan.",
-                "jenis_soal": "esai",
-                "topik_materi": "Gaya Bahasa",
-                "level_kognitif": "C3",
-                "keywords": "majas, gaya bahasa, sifat manusia, benda mati",
-                "rule_weight": 0.4,
-                "lsa_weight": 0.6,
-                "tgate": 40,
-                "required_keywords_count": ""
-            },
-            {
-                "nama_mapel": "Bahasa Indonesia (X)",
-                "isi_soal": "Manakah dari berikut ini yang merupakan bahasa pemrograman?",
-                "opsi_a": "Python",
-                "opsi_b": "Kobra",
-                "opsi_c": "JavaScript",
-                "opsi_d": "HTML",
-                "opsi_e": "C++",
-                "kunci_jawaban": "Python, JavaScript, C++",
-                "jenis_soal": "pilihan_ganda_kompleks",
-                "topik_materi": "Informatika",
-                "level_kognitif": "C2",
-                "keywords": "",
-                "rule_weight": "",
-                "lsa_weight": "",
-                "tgate": "",
-                "required_keywords_count": ""
-            }
-        ];
-
-        const worksheet = XLSX.utils.json_to_sheet(exampleData, { header: headers });
-        const workbook = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(workbook, worksheet, "Template Soal");
-
-        const wscols = [
-            {wch: 25}, {wch: 40}, {wch: 20}, {wch: 20}, {wch: 20}, {wch: 20}, {wch: 20},
-            {wch: 30}, {wch: 15}, {wch: 20}, {wch: 15}, {wch: 30}, {wch: 15}, {wch: 15}, {wch: 10}
-        ];
-        worksheet['!cols'] = wscols;
-
-        XLSX.writeFile(workbook, "Template_Import_Soal_Admin_SMAN.xlsx");
+        downloadBankSoalTemplateExcel("Template_Import_Soal_Admin_SMAN.xlsx");
     };
 
     const handleFileUpload = (e) => {
@@ -319,74 +264,11 @@ export default function AdminBankSoalPage({ session, onLogout }) {
                 const data = XLSX.utils.sheet_to_json(ws);
                 
                 if (data.length === 0) {
-                    alert('File Excel kosong atau format tidak sesuai.');
+                    showPopup('Format File Tidak Valid', 'File Excel kosong atau format tidak sesuai.', 'error');
                     return;
                 }
 
-                // Build a lookup map: nama_mapel (case-insensitive) -> id_mapel
-                const mapelLookup = {};
-                masterMapel.forEach(m => {
-                    const namaLengkap = (m.nama_lengkap || `${m.nama_mapel} (${m.tingkat})`).toLowerCase();
-                    mapelLookup[namaLengkap] = m.id_mapel;
-                    mapelLookup[m.nama_mapel.toLowerCase()] = m.id_mapel;
-                    if (m.tingkat) {
-                        mapelLookup[`${m.nama_mapel} (${m.tingkat})`.toLowerCase()] = m.id_mapel;
-                    }
-                });
-
-                // Map data from excel — support both nama_mapel and id_mapel columns
-                const mapelGroup = {};
-                const skippedRows = [];
-
-                data.forEach((row, idx) => {
-                    let resolvedId = null;
-
-                    // Prefer nama_mapel column
-                    if (row.nama_mapel) {
-                        const key = String(row.nama_mapel).trim().toLowerCase();
-                        resolvedId = mapelLookup[key] || null;
-                        if (!resolvedId) {
-                            skippedRows.push(`Baris ${idx + 2}: Mapel '${row.nama_mapel}' tidak ditemukan.`);
-                            return;
-                        }
-                    } else if (row.id_mapel) {
-                        // Fallback to id_mapel for backward compatibility
-                        resolvedId = parseInt(row.id_mapel);
-                    }
-
-                    if (!resolvedId) {
-                        skippedRows.push(`Baris ${idx + 2}: Kolom nama_mapel atau id_mapel kosong.`);
-                        return;
-                    }
-
-                    if (!mapelGroup[resolvedId]) mapelGroup[resolvedId] = [];
-
-                    let opsi = [];
-                    if (row.opsi_a) opsi.push(String(row.opsi_a));
-                    if (row.opsi_b) opsi.push(String(row.opsi_b));
-                    if (row.opsi_c) opsi.push(String(row.opsi_c));
-                    if (row.opsi_d) opsi.push(String(row.opsi_d));
-                    if (row.opsi_e) opsi.push(String(row.opsi_e));
-
-                    let keywords = [];
-                    if (row.keywords) {
-                        keywords = String(row.keywords).split(',').map(s => s.trim()).filter(Boolean);
-                    }
-
-                    mapelGroup[resolvedId].push({
-                        isi_soal: String(row.isi_soal || ''),
-                        jenis_soal: row.jenis_soal || 'pilihan_ganda',
-                        kunci_jawaban: String(row.kunci_jawaban || ''),
-                        topik_materi: row.topik_materi || 'Umum',
-                        level_kognitif: row.level_kognitif || 'C1',
-                        opsi_jawaban: opsi,
-                        keywords: keywords,
-                        rule_weight: row.rule_weight !== undefined && row.rule_weight !== '' ? parseFloat(row.rule_weight) : 0,
-                        lsa_weight: row.lsa_weight !== undefined && row.lsa_weight !== '' ? parseFloat(row.lsa_weight) : 0,
-                        tgate: row.tgate !== undefined && row.tgate !== '' ? parseFloat(row.tgate) : 0,
-                        required_keywords_count: row.required_keywords_count !== undefined && row.required_keywords_count !== '' ? parseInt(row.required_keywords_count) : null,
-                    });
-                });
+                const { mapelGroup, skippedRows } = parseBankSoalExcelRows(data, masterMapel, { isGuru: false });
 
                 let totalCreated = 0;
                 for (const [idMapel, soalArray] of Object.entries(mapelGroup)) {
@@ -414,7 +296,7 @@ export default function AdminBankSoalPage({ session, onLogout }) {
                 loadData();
             } catch (err) {
                 console.error(err);
-                alert('Terjadi kesalahan saat memproses file Excel: ' + (err.message || err));
+                showPopup('Gagal Import Excel', 'Terjadi kesalahan saat memproses file Excel: ' + (err.message || err), 'error');
             } finally {
                 setIsImporting(false);
             }
@@ -654,6 +536,16 @@ export default function AdminBankSoalPage({ session, onLogout }) {
                     </div>
                 </div>
             </div>
+
+            <ConfirmModal
+                isOpen={confirmDeleteSoal.isOpen}
+                title="Hapus Soal?"
+                message="Apakah Anda yakin ingin menghapus soal ini dari Bank Soal? Soal yang dihapus tidak dapat dikembalikan."
+                loading={confirmDeleteSoal.loading}
+                onConfirm={confirmDeleteSoalAction}
+                onCancel={() => setConfirmDeleteSoal({ isOpen: false, id_soal: null, loading: false })}
+            />
+            <PopupModal popup={popup} onClose={() => setPopup(null)} />
         </DashboardLayout>
     );
 }

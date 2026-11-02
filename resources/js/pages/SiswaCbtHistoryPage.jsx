@@ -4,6 +4,7 @@ import StatCard from '../components/ui/StatCard';
 import AnalisisDiagnostikCard from '../components/ui/AnalisisDiagnostikCard';
 import { siswaNavigation } from './siswa/siswaNavigation';
 import { apiFetch } from '../lib/api';
+import { PopupModal } from '../components/ui/ConfirmModal';
 
 export default function SiswaCbtHistoryPage({ session, onLogout }) {
     const [history, setHistory] = useState([]);
@@ -13,6 +14,7 @@ export default function SiswaCbtHistoryPage({ session, onLogout }) {
     const [reviewLoading, setReviewLoading] = useState(false);
     const [selectedAttemptNumber, setSelectedAttemptNumber] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
+    const [popup, setPopup] = useState(null);
 
     useEffect(() => {
         if (!session?.token) return;
@@ -74,7 +76,11 @@ export default function SiswaCbtHistoryPage({ session, onLogout }) {
             const data = await apiFetch(`/api/siswa/cbt/${idSesi}/review`, session);
             setReviewData(data);
         } catch (err) {
-            alert(err.message || 'Gagal memuat review.');
+            setPopup({
+                title: 'Gagal Memuat Review',
+                message: err.message || 'Gagal memuat review pengerjaan CBT.',
+                isError: true,
+            });
         } finally {
             setReviewLoading(false);
         }
@@ -504,6 +510,7 @@ export default function SiswaCbtHistoryPage({ session, onLogout }) {
                     </div>
                 )}
             </div>
+            <PopupModal popup={popup} onClose={() => setPopup(null)} />
         </DashboardLayout>
     );
 }

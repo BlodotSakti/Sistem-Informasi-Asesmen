@@ -4,6 +4,7 @@ import { guruNavigation } from './guru/guruNavigation';
 import useGuruWorkspace from '../hooks/useGuruWorkspace';
 import { apiFetch } from '../lib/api';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { PopupModal } from '../components/ui/ConfirmModal';
 
 export default function GuruAnalitikPage({ session, onLogout }) {
     const { workspace, diagnostics, loading: wsLoading, error: wsError } = useGuruWorkspace(session);
@@ -19,6 +20,7 @@ export default function GuruAnalitikPage({ session, onLogout }) {
     // For KKM editing
     const [isEditingKkm, setIsEditingKkm] = useState(null); // id_penugasan
     const [kkmValue, setKkmValue] = useState(75);
+    const [popup, setPopup] = useState(null);
 
     useEffect(() => {
         if (selectedKelas) {
@@ -55,7 +57,11 @@ export default function GuruAnalitikPage({ session, onLogout }) {
             // Refresh analytics to reflect new KKM
             fetchAnalytics(selectedKelas, selectedSiswa);
         } catch (err) {
-            alert('Gagal memperbarui KKM: ' + (err.message || 'Unknown error'));
+            setPopup({
+                title: 'Gagal Memperbarui KKM',
+                message: err.message || 'Terjadi kesalahan saat memperbarui nilai KKM.',
+                isError: true,
+            });
         }
     };
 
@@ -337,6 +343,7 @@ export default function GuruAnalitikPage({ session, onLogout }) {
                     </>
                 )}
             </div>
+            <PopupModal popup={popup} onClose={() => setPopup(null)} />
         </DashboardLayout>
     );
 }

@@ -378,6 +378,8 @@ class GuruController extends Controller
             'soal.*.keywords' => ['nullable', 'array'],
             'soal.*.rule_weight' => ['nullable', 'numeric'],
             'soal.*.lsa_weight' => ['nullable', 'numeric'],
+            'soal.*.math_steps' => ['nullable', 'array'],
+            'soal.*.math_weight' => ['nullable', 'numeric'],
             'soal.*.tgate' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'soal.*.required_keywords_count' => ['nullable', 'integer', 'min:1'],
         ]);
@@ -421,6 +423,8 @@ class GuruController extends Controller
             
             $soal['rule_weight'] = $soal['rule_weight'] ?? 0;
             $soal['lsa_weight'] = $soal['lsa_weight'] ?? 0;
+            $soal['math_steps'] = $soal['math_steps'] ?? null;
+            $soal['math_weight'] = $soal['math_weight'] ?? 0;
             $soal['tgate'] = $soal['tgate'] ?? 0;
             $soal['required_keywords_count'] = !empty($soal['required_keywords_count']) ? (int) $soal['required_keywords_count'] : null;
 
@@ -825,6 +829,23 @@ class GuruController extends Controller
             'soal.*.id_soal' => ['required', 'integer', 'exists:bank_soal,id_soal'],
             'soal.*.bobot_nilai' => ['required', 'numeric', 'min:0'],
             'token' => ['nullable', 'string', 'max:10'],
+        ], [
+            'id_kelas.required' => 'Kelas wajib dipilih.',
+            'id_kelas.exists' => 'Kelas yang dipilih tidak valid.',
+            'id_mapel.required' => 'Mata pelajaran wajib dipilih.',
+            'id_mapel.exists' => 'Mata pelajaran yang dipilih tidak valid.',
+            'tipe_soal.required' => 'Judul atau tipe asesmen wajib diisi.',
+            'jenis_asesmen.required' => 'Jenis asesmen wajib dipilih.',
+            'jenis_asesmen.in' => 'Jenis asesmen harus berupa Pretest, Posttest, atau Ujian.',
+            'waktu_mulai.required' => 'Waktu mulai wajib diisi.',
+            'waktu_mulai.date' => 'Format waktu mulai tidak valid.',
+            'waktu_selesai.required' => 'Waktu selesai wajib diisi.',
+            'waktu_selesai.date' => 'Format waktu selesai tidak valid.',
+            'waktu_selesai.after' => 'Waktu selesai harus setelah waktu mulai.',
+            'durasi_menit.required' => 'Durasi ujian wajib diisi.',
+            'durasi_menit.min' => 'Durasi ujian minimal 1 menit.',
+            'soal.required' => 'Pilih minimal satu soal untuk jadwal CBT ini.',
+            'soal.min' => 'Pilih minimal satu soal untuk jadwal CBT ini.',
         ]);
 
         $guruId = $request->user()->guru->id_guru;
@@ -1026,6 +1047,23 @@ class GuruController extends Controller
             'soal.*.id_soal' => ['required', 'integer', 'exists:bank_soal,id_soal'],
             'soal.*.bobot_nilai' => ['required', 'numeric', 'min:0'],
             'token' => ['nullable', 'string', 'max:10'],
+        ], [
+            'id_kelas.required' => 'Kelas wajib dipilih.',
+            'id_kelas.exists' => 'Kelas yang dipilih tidak valid.',
+            'id_mapel.required' => 'Mata pelajaran wajib dipilih.',
+            'id_mapel.exists' => 'Mata pelajaran yang dipilih tidak valid.',
+            'tipe_soal.required' => 'Judul atau tipe asesmen wajib diisi.',
+            'jenis_asesmen.required' => 'Jenis asesmen wajib dipilih.',
+            'jenis_asesmen.in' => 'Jenis asesmen harus berupa Pretest, Posttest, atau Ujian.',
+            'waktu_mulai.required' => 'Waktu mulai wajib diisi.',
+            'waktu_mulai.date' => 'Format waktu mulai tidak valid.',
+            'waktu_selesai.required' => 'Waktu selesai wajib diisi.',
+            'waktu_selesai.date' => 'Format waktu selesai tidak valid.',
+            'waktu_selesai.after' => 'Waktu selesai harus setelah waktu mulai.',
+            'durasi_menit.required' => 'Durasi ujian wajib diisi.',
+            'durasi_menit.min' => 'Durasi ujian minimal 1 menit.',
+            'soal.required' => 'Pilih minimal satu soal untuk jadwal CBT ini.',
+            'soal.min' => 'Pilih minimal satu soal untuk jadwal CBT ini.',
         ]);
 
         $guruId = $request->user()->guru->id_guru;

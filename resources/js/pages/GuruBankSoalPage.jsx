@@ -6,6 +6,8 @@ import { apiFetch } from '../lib/api';
 import useGuruWorkspace from '../hooks/useGuruWorkspace';
 import { guruNavigation } from './guru/guruNavigation';
 import * as XLSX from 'xlsx';
+import { ConfirmModal } from '../components/ui/ConfirmModal';
+import { downloadBankSoalTemplateExcel, parseBankSoalExcelRows } from '../lib/bankSoalExcel';
 
 const BLOOM_OPTIONS = ['C1', 'C2', 'C3', 'C4', 'C5', 'C6'];
 
@@ -49,7 +51,10 @@ export default function GuruBankSoalPage({ session, onLogout }) {
     const fileInputRef = useRef(null);
     const formRef = useRef(null);
 
-    const showSuccessPopup = (title, message) => setSuccessPopup({ title, message });
+    const showSuccessPopup = (title, message, type = null) => {
+        const isError = type === 'error' || /gagal|error|kesalahan|peringatan|tidak valid/i.test(String(title || ''));
+        setSuccessPopup({ title, message, isError });
+    };
     const closeSuccessPopup = () => setSuccessPopup(null);
     const toggleBankFolder = (id) => setExpandedBankFolders(prev => ({...prev, [id]: !prev[id]}));
 
@@ -145,14 +150,24 @@ export default function GuruBankSoalPage({ session, onLogout }) {
         }));
     };
 
-    const handleDeleteBankSoal = async (id) => {
-        if (!window.confirm('Yakin ingin menghapus soal ini?')) return;
+    const [confirmDeleteSoal, setConfirmDeleteSoal] = useState({ isOpen: false, id: null, loading: false });
+
+    const handleDeleteBankSoal = (id) => {
+        setConfirmDeleteSoal({ isOpen: true, id, loading: false });
+    };
+
+    const confirmDeleteBankSoalAction = async () => {
+        const { id } = confirmDeleteSoal;
+        if (!id) return;
+        setConfirmDeleteSoal((prev) => ({ ...prev, loading: true }));
         try {
             await apiFetch(`/api/guru/bank-soal/${id}`, session, { method: 'DELETE' });
+            setConfirmDeleteSoal({ isOpen: false, id: null, loading: false });
             showSuccessPopup('Berhasil', 'Soal berhasil dihapus.');
             await reloadWorkspace();
         } catch (err) {
-            showSuccessPopup('Gagal Menghapus', err.message || 'Soal tidak dapat dihapus karena sudah dipakai dalam sesi ujian.');
+            setConfirmDeleteSoal({ isOpen: false, id: null, loading: false });
+            showSuccessPopup('Gagal Menghapus', err.message || 'Soal tidak dapat dihapus karena sudah dipakai dalam sesi ujian.', 'error');
         }
     };
 
@@ -256,66 +271,11 @@ export default function GuruBankSoalPage({ session, onLogout }) {
                 const data = XLSX.utils.sheet_to_json(ws);
                 
                 if (data.length === 0) {
-                    alert('File Excel kosong atau format tidak sesuai.');
+                    showSuccessPopup('Format File Tidak Valid', 'File Excel kosong atau format tidak sesuai.', 'error');
                     return;
                 }
 
-                const mapelLookup = {};
-                (workspace?.mapel_options || []).forEach(m => {
-                    const namaLengkap = m.nama_lengkap ? m.nama_lengkap.toLowerCase() : `${m.nama_mapel} (${m.tingkat})`.toLowerCase();
-                    mapelLookup[namaLengkap] = m.id_mapel;
-                    mapelLookup[m.nama_mapel.toLowerCase()] = m.id_mapel;
-                });
-
-                const mapelGroup = {};
-                const skippedRows = [];
-
-                data.forEach((row, idx) => {
-                    let resolvedId = null;
-                    if (row.nama_mapel) {
-                        const key = String(row.nama_mapel).trim().toLowerCase();
-                        resolvedId = mapelLookup[key] || null;
-                        if (!resolvedId) {
-                            skippedRows.push(`Baris ${idx + 2}: Mapel '${row.nama_mapel}' tidak ditemukan atau Anda tidak mengajar mapel ini.`);
-                            return;
-                        }
-                    } else if (row.id_mapel) {
-                        resolvedId = parseInt(row.id_mapel);
-                    }
-
-                    if (!resolvedId) {
-                        skippedRows.push(`Baris ${idx + 2}: Kolom nama_mapel atau id_mapel kosong.`);
-                        return;
-                    }
-
-                    if (!mapelGroup[resolvedId]) mapelGroup[resolvedId] = [];
-
-                    let opsi = [];
-                    if (row.opsi_a) opsi.push(String(row.opsi_a));
-                    if (row.opsi_b) opsi.push(String(row.opsi_b));
-                    if (row.opsi_c) opsi.push(String(row.opsi_c));
-                    if (row.opsi_d) opsi.push(String(row.opsi_d));
-                    if (row.opsi_e) opsi.push(String(row.opsi_e));
-
-                    let keywords = [];
-                    if (row.keywords) {
-                        keywords = String(row.keywords).split(',').map(s => s.trim()).filter(Boolean);
-                    }
-
-                    mapelGroup[resolvedId].push({
-                        isi_soal: String(row.isi_soal || ''),
-                        jenis_soal: row.jenis_soal || 'pilihan_ganda',
-                        kunci_jawaban: String(row.kunci_jawaban || ''),
-                        topik_materi: row.topik_materi || 'Umum',
-                        level_kognitif: row.level_kognitif || 'C1',
-                        opsi_jawaban: opsi,
-                        keywords: keywords,
-                        rule_weight: row.rule_weight !== undefined && row.rule_weight !== '' ? parseFloat(row.rule_weight) : 0,
-                        lsa_weight: row.lsa_weight !== undefined && row.lsa_weight !== '' ? parseFloat(row.lsa_weight) : 0,
-                        tgate: row.tgate !== undefined && row.tgate !== '' ? parseFloat(row.tgate) : 0,
-                        required_keywords_count: row.required_keywords_count !== undefined && row.required_keywords_count !== '' ? parseInt(row.required_keywords_count) : null,
-                    });
-                });
+                const { mapelGroup, skippedRows } = parseBankSoalExcelRows(data, workspace?.mapel_options || [], { isGuru: true });
 
                 let totalCreated = 0;
                 for (const [idMapel, soalArray] of Object.entries(mapelGroup)) {
@@ -343,7 +303,7 @@ export default function GuruBankSoalPage({ session, onLogout }) {
                 await reloadWorkspace();
             } catch (err) {
                 console.error(err);
-                alert('Terjadi kesalahan saat memproses file Excel: ' + (err.message || err));
+                showSuccessPopup('Gagal Import Excel', 'Terjadi kesalahan saat memproses file Excel: ' + (err.message || err), 'error');
             } finally {
                 setIsImporting(false);
             }
@@ -353,79 +313,7 @@ export default function GuruBankSoalPage({ session, onLogout }) {
     };
 
     const downloadTemplateExcel = () => {
-        const headers = [
-            "nama_mapel", "isi_soal", "opsi_a", "opsi_b", "opsi_c", "opsi_d", "opsi_e", 
-            "kunci_jawaban", "jenis_soal", "topik_materi", "level_kognitif",
-            "keywords", "rule_weight", "lsa_weight", "tgate", "required_keywords_count"
-        ];
-        
-        const exampleData = [
-            {
-                "nama_mapel": "Bahasa Indonesia (X)",
-                "isi_soal": "Siapakah penemu bola lampu?",
-                "opsi_a": "Albert Einstein",
-                "opsi_b": "Thomas Edison",
-                "opsi_c": "Nikola Tesla",
-                "opsi_d": "Isaac Newton",
-                "opsi_e": "Galileo Galilei",
-                "kunci_jawaban": "Thomas Edison",
-                "jenis_soal": "pilihan_ganda",
-                "topik_materi": "Sejarah Penemuan",
-                "level_kognitif": "C1",
-                "keywords": "",
-                "rule_weight": "",
-                "lsa_weight": "",
-                "tgate": "",
-                "required_keywords_count": ""
-            },
-            {
-                "nama_mapel": "Bahasa Indonesia (X)",
-                "isi_soal": "Jelaskan apa yang dimaksud dengan majas personifikasi beserta satu contohnya!",
-                "opsi_a": "",
-                "opsi_b": "",
-                "opsi_c": "",
-                "opsi_d": "",
-                "opsi_e": "",
-                "kunci_jawaban": "Majas personifikasi adalah gaya bahasa yang memberikan sifat-sifat manusia kepada benda mati. Contoh: Angin menari-nari di sela dedaunan.",
-                "jenis_soal": "esai",
-                "topik_materi": "Gaya Bahasa",
-                "level_kognitif": "C3",
-                "keywords": "majas, gaya bahasa, sifat manusia, benda mati",
-                "rule_weight": 0.4,
-                "lsa_weight": 0.6,
-                "tgate": 40,
-                "required_keywords_count": ""
-            },
-            {
-                "nama_mapel": "Bahasa Indonesia (X)",
-                "isi_soal": "Manakah dari berikut ini yang merupakan bahasa pemrograman?",
-                "opsi_a": "Python",
-                "opsi_b": "Kobra",
-                "opsi_c": "JavaScript",
-                "opsi_d": "HTML",
-                "opsi_e": "C++",
-                "kunci_jawaban": "Python, JavaScript, C++",
-                "jenis_soal": "pilihan_ganda_kompleks",
-                "topik_materi": "Informatika",
-                "level_kognitif": "C2",
-                "keywords": "",
-                "rule_weight": "",
-                "lsa_weight": "",
-                "tgate": ""
-            }
-        ];
-
-        const worksheet = XLSX.utils.json_to_sheet(exampleData, { header: headers });
-        const workbook = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(workbook, worksheet, "Template Soal");
-
-        const wscols = [
-            {wch: 25}, {wch: 40}, {wch: 20}, {wch: 20}, {wch: 20}, {wch: 20}, {wch: 20}, 
-            {wch: 30}, {wch: 15}, {wch: 20}, {wch: 15}, {wch: 30}, {wch: 15}, {wch: 15}, {wch: 10}
-        ];
-        worksheet['!cols'] = wscols;
-
-        XLSX.writeFile(workbook, "Template_Import_Soal_Guru_SMAN.xlsx");
+        downloadBankSoalTemplateExcel("Template_Import_Soal_Guru_SMAN.xlsx");
     };
 
     return (
@@ -931,10 +819,16 @@ export default function GuruBankSoalPage({ session, onLogout }) {
             {successPopup && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
                     <div className="w-full max-w-sm rounded-3xl bg-white p-6 text-center shadow-2xl">
-                        <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100">
-                            <svg className="h-8 w-8 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                            </svg>
+                        <div className={`mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full ${successPopup.isError ? 'bg-rose-100' : 'bg-emerald-100'}`}>
+                            {successPopup.isError ? (
+                                <svg className="h-8 w-8 text-rose-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                            ) : (
+                                <svg className="h-8 w-8 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                </svg>
+                            )}
                         </div>
                         <h3 className="mb-2 text-xl font-bold text-slate-900">{successPopup.title}</h3>
                         <p className="mb-6 text-sm text-slate-500">{successPopup.message}</p>
@@ -942,6 +836,14 @@ export default function GuruBankSoalPage({ session, onLogout }) {
                     </div>
                 </div>
             )}
+            <ConfirmModal
+                isOpen={confirmDeleteSoal.isOpen}
+                title="Hapus Soal?"
+                message="Apakah Anda yakin ingin menghapus soal ini dari Bank Soal? Soal yang dihapus tidak dapat dikembalikan."
+                loading={confirmDeleteSoal.loading}
+                onConfirm={confirmDeleteBankSoalAction}
+                onCancel={() => setConfirmDeleteSoal({ isOpen: false, id: null, loading: false })}
+            />
         </DashboardLayout>
     );
 }
