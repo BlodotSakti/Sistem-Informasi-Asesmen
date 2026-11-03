@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import DashboardLayout from '../components/layout/DashboardLayout';
 import StatCard from '../components/ui/StatCard';
 import AnalisisDiagnostikCard from '../components/ui/AnalisisDiagnostikCard';
+import ImageLightboxModal from '../components/ui/ImageLightboxModal';
+import CbtAudioPlayer from '../components/ui/CbtAudioPlayer';
 import { siswaNavigation } from './siswa/siswaNavigation';
 import { apiFetch } from '../lib/api';
 import { PopupModal } from '../components/ui/ConfirmModal';
@@ -15,6 +17,7 @@ export default function SiswaCbtHistoryPage({ session, onLogout }) {
     const [selectedAttemptNumber, setSelectedAttemptNumber] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [popup, setPopup] = useState(null);
+    const [zoomedImageUrl, setZoomedImageUrl] = useState(null);
 
     useEffect(() => {
         if (!session?.token) return;
@@ -381,109 +384,147 @@ export default function SiswaCbtHistoryPage({ session, onLogout }) {
 
                                                     {/* Questions */}
                                                     <div className="space-y-4">
-                                                        {(reviewData.soal || []).map((item, idx) => {
-                                                            let dj = null;
-                                                            if (activeAttempt?.data_jawaban && Array.isArray(activeAttempt.data_jawaban)) {
-                                                                const fromAtt = activeAttempt.data_jawaban.find(d => d.id_detail === item.id_detail);
-                                                                if (fromAtt) {
-                                                                    dj = fromAtt;
-                                                                }
-                                                            }
-                                                            const jawabanSiswa = dj ? dj.jawaban_siswa : item.jawaban_siswa;
-                                                            const isCorrect = dj ? dj.is_correct : item.is_correct;
-                                                            const skorDiperoleh = dj ? dj.skor_diperoleh : item.skor_diperoleh;
+                                                        {(() => {
+                                                            const soalMap = new Map((reviewData.soal || []).map((s) => [Number(s.id_detail), s]));
+                                                            const questionsToRender = (activeAttempt?.data_jawaban && Array.isArray(activeAttempt.data_jawaban) && activeAttempt.data_jawaban.length > 0)
+                                                                ? activeAttempt.data_jawaban.map((dj) => {
+                                                                    const base = soalMap.get(Number(dj.id_detail)) || {};
+                                                                    return {
+                                                                        ...base,
+                                                                        ...dj,
+                                                                        gambar_soal: dj.gambar_soal ?? base.gambar_soal,
+                                                                        audio_soal: dj.audio_soal ?? base.audio_soal,
+                                                                        batas_putar_audio: dj.batas_putar_audio ?? base.batas_putar_audio,
+                                                                        taksonomi_bloom: dj.taksonomi_bloom ?? base.taksonomi_bloom,
+                                                                        bobot_nilai: dj.bobot_nilai ?? base.bobot_nilai,
+                                                                    };
+                                                                })
+                                                                : (reviewData.soal || []);
 
-                                                            return (
-                                                                <div key={item.id_detail} className={`rounded-2xl border p-4 ${isCorrect ? 'border-emerald-200 bg-emerald-50/30' : 'border-rose-200 bg-rose-50/30'}`}>
-                                                                    <div className="flex items-start justify-between mb-2">
-                                                                        <div className="flex items-center gap-2">
-                                                                            <h4 className="font-semibold text-slate-800">Soal {idx + 1}</h4>
-                                                                            {item.taksonomi_bloom && (
-                                                                                <span className="rounded bg-indigo-50 border border-indigo-200 px-2 py-0.5 text-xs font-bold text-indigo-700">
-                                                                                    {item.taksonomi_bloom.toUpperCase()}
-                                                                                </span>
-                                                                            )}
-                                                                        </div>
-                                                                        <span className={`rounded-full px-3 py-1 text-xs font-bold ${isCorrect ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
-                                                                            {isCorrect ? '✓ Benar' : '✗ Salah'} — {skorDiperoleh}/{item.bobot_nilai}
-                                                                        </span>
-                                                                    </div>
-                                                                    <p className="text-sm text-slate-600 mb-3 whitespace-pre-wrap">{item.isi_soal}</p>
-                                                                    {item.gambar_soal && (
-                                                                        <div className="mb-3">
-                                                                            <img src={`/storage/${item.gambar_soal}`} alt="Gambar Soal" className="max-h-40 rounded-lg border border-border object-contain shadow-sm" />
-                                                                        </div>
-                                                                    )}
+                                                            return questionsToRender.map((item, idx) => {
+                                                                const jawabanSiswa = item.jawaban_siswa;
+                                                                const isCorrect = item.is_correct;
+                                                                const skorDiperoleh = item.skor_diperoleh;
+                                                                const bobotSoal = item.bobot_nilai;
 
-                                                                    {/* Options with highlights */}
-                                                                    {item.opsi_jawaban && item.opsi_jawaban.length > 0 && (
-                                                                        <div className="grid gap-2 mb-3">
-                                                                            {item.opsi_jawaban.map((opsi, oIdx) => {
-                                                                                let kunciArr = [item.kunci_jawaban];
-                                                                                try { const p = JSON.parse(item.kunci_jawaban); if (Array.isArray(p)) kunciArr = p; } catch {}
-                                                                                let jawabanArr = [jawabanSiswa];
-                                                                                try { const p = JSON.parse(jawabanSiswa); if (Array.isArray(p)) jawabanArr = p; } catch {}
-
-                                                                                const isCorrectOption = kunciArr.includes(opsi);
-                                                                                const isChosenOption = jawabanArr.includes(opsi);
-
-                                                                                let style = 'border-border bg-white text-slate-600';
-                                                                                let label = '';
-                                                                                let icon = '○';
-
-                                                                                if (isChosenOption && isCorrectOption) {
-                                                                                    style = 'border-emerald-300 bg-emerald-50 text-emerald-800 shadow-sm';
-                                                                                    icon = '✓';
-                                                                                    label = reviewData.sesi?.tampilkan_kunci !== false ? 'Pilihan Anda (Kunci Jawaban)' : 'Pilihan Anda (Benar)';
-                                                                                } else if (isChosenOption && !isCorrectOption) {
-                                                                                    style = 'border-rose-300 bg-rose-50 text-rose-800 shadow-sm';
-                                                                                    icon = '✗';
-                                                                                    label = 'Pilihan Anda (Salah)';
-                                                                                } else if (!isChosenOption && isCorrectOption) {
-                                                                                    if (reviewData.sesi?.tampilkan_kunci !== false) {
-                                                                                        style = 'border-emerald-300 bg-emerald-50/40 text-emerald-700 border-dashed';
-                                                                                        icon = '✓';
-                                                                                        label = 'Kunci Jawaban';
-                                                                                    } else {
-                                                                                        style = 'border-border bg-white text-slate-600';
-                                                                                        icon = '○';
-                                                                                        label = '';
-                                                                                    }
-                                                                                } else {
-                                                                                    icon = '○';
-                                                                                }
-
-                                                                                return (
-                                                                                    <div key={oIdx} className={`rounded-xl border px-4 py-3 text-sm flex items-center justify-between transition-all ${style}`}>
-                                                                                        <div className="flex items-center gap-3">
-                                                                                            <span className={`text-lg font-bold ${icon === '○' ? 'text-slate-300' : ''}`}>{icon}</span>
-                                                                                            <span className="font-medium">{opsi}</span>
-                                                                                        </div>
-                                                                                        {label && <span className="text-xs font-bold uppercase tracking-wider opacity-80">{label}</span>}
-                                                                                    </div>
-                                                                                );
-                                                                            })}
-                                                                        </div>
-                                                                    )}
-
-                                                                    {/* Essay answers */}
-                                                                    {(item.jenis_soal === 'essay' || item.jenis_soal === 'esai') && (
-                                                                        <div className={`grid gap-2 text-sm ${reviewData.sesi?.tampilkan_kunci !== false ? 'sm:grid-cols-2' : ''}`}>
-                                                                            <div className="rounded-xl bg-white/80 border border-border px-4 py-2">
-                                                                                <span className="font-medium text-slate-500">Jawaban Anda:</span>
-                                                                                <p className="mt-1 text-slate-700 whitespace-pre-wrap">{jawabanSiswa || <em className="text-slate-400">Tidak dijawab</em>}</p>
+                                                                return (
+                                                                    <div key={item.id_detail || idx} className={`rounded-2xl border p-4 ${isCorrect ? 'border-emerald-200 bg-emerald-50/30' : 'border-rose-200 bg-rose-50/30'}`}>
+                                                                        <div className="flex items-start justify-between mb-2">
+                                                                            <div className="flex items-center gap-2">
+                                                                                <h4 className="font-semibold text-slate-800">Soal {idx + 1}</h4>
+                                                                                {item.taksonomi_bloom && (
+                                                                                    <span className="rounded bg-indigo-50 border border-indigo-200 px-2 py-0.5 text-xs font-bold text-indigo-700">
+                                                                                        {item.taksonomi_bloom.toUpperCase()}
+                                                                                    </span>
+                                                                                )}
                                                                             </div>
-                                                                            {reviewData.sesi?.tampilkan_kunci !== false && (
-                                                                                <div className="rounded-xl bg-white/80 border border-border px-4 py-2">
-                                                                                    <span className="font-medium text-slate-500">Kunci Jawaban:</span>
-                                                                                    <p className="mt-1 text-slate-700 whitespace-pre-wrap">{formatJawaban(item.kunci_jawaban, item.jenis_soal)}</p>
-                                                                                </div>
-                                                                            )}
+                                                                            <span className={`rounded-full px-3 py-1 text-xs font-bold ${isCorrect ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
+                                                                                {isCorrect ? '✓ Benar' : '✗ Salah'} — {Number(skorDiperoleh).toFixed(2).replace(/\.00$/, '')}/{Number(bobotSoal).toFixed(2).replace(/\.00$/, '')}
+                                                                            </span>
                                                                         </div>
-                                                                    )}
-                                                                </div>
-                                                            );
-                                                        })}
+                                                                        <p className="text-sm text-slate-600 mb-3 whitespace-pre-wrap">{item.isi_soal}</p>
+                                                                        {item.gambar_soal && (
+                                                                            <div className="mb-3">
+                                                                                <div className="inline-block max-w-full">
+                                                                                    <img
+                                                                                        src={`/storage/${item.gambar_soal}`}
+                                                                                        alt="Gambar Soal"
+                                                                                        onClick={() => setZoomedImageUrl(`/storage/${item.gambar_soal}`)}
+                                                                                        title="Klik untuk memperbesar gambar"
+                                                                                        className="max-h-48 max-w-full cursor-zoom-in rounded-lg border border-border object-contain shadow-sm transition hover:opacity-95"
+                                                                                    />
+                                                                                    <button
+                                                                                        type="button"
+                                                                                        onClick={() => setZoomedImageUrl(`/storage/${item.gambar_soal}`)}
+                                                                                        className="mt-1.5 flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+                                                                                    >
+                                                                                        🔍 Klik gambar untuk memperbesar
+                                                                                    </button>
+                                                                                </div>
+                                                                            </div>
+                                                                        )}
+                                                                        {item.audio_soal && (
+                                                                            <div className="mb-3">
+                                                                                <CbtAudioPlayer
+                                                                                    src={`/storage/${item.audio_soal}`}
+                                                                                    idSesi={reviewData.sesi?.id_sesi}
+                                                                                    idDetail={item.id_detail}
+                                                                                    batasPutar={item.batas_putar_audio}
+                                                                                    isReview={true}
+                                                                                />
+                                                                            </div>
+                                                                        )}
+
+                                                                        {/* Options with highlights */}
+                                                                        {item.opsi_jawaban && item.opsi_jawaban.length > 0 && (
+                                                                            <div className="grid gap-2 mb-3">
+                                                                                {item.opsi_jawaban.map((opsi, oIdx) => {
+                                                                                    let kunciArr = [item.kunci_jawaban];
+                                                                                    try { const p = JSON.parse(item.kunci_jawaban); if (Array.isArray(p)) kunciArr = p; } catch {}
+                                                                                    let jawabanArr = [jawabanSiswa];
+                                                                                    try { const p = JSON.parse(jawabanSiswa); if (Array.isArray(p)) jawabanArr = p; } catch {}
+
+                                                                                    const isCorrectOption = kunciArr.includes(opsi);
+                                                                                    const isChosenOption = jawabanArr.includes(opsi);
+
+                                                                                    let style = 'border-border bg-white text-slate-600';
+                                                                                    let label = '';
+                                                                                    let icon = '○';
+
+                                                                                    if (isChosenOption && isCorrectOption) {
+                                                                                        style = 'border-emerald-300 bg-emerald-50 text-emerald-800 shadow-sm';
+                                                                                        icon = '✓';
+                                                                                        label = reviewData.sesi?.tampilkan_kunci !== false ? 'Pilihan Anda (Kunci Jawaban)' : 'Pilihan Anda (Benar)';
+                                                                                    } else if (isChosenOption && !isCorrectOption) {
+                                                                                        style = 'border-rose-300 bg-rose-50 text-rose-800 shadow-sm';
+                                                                                        icon = '✗';
+                                                                                        label = 'Pilihan Anda (Salah)';
+                                                                                    } else if (!isChosenOption && isCorrectOption) {
+                                                                                        if (reviewData.sesi?.tampilkan_kunci !== false) {
+                                                                                            style = 'border-emerald-300 bg-emerald-50/40 text-emerald-700 border-dashed';
+                                                                                            icon = '✓';
+                                                                                            label = 'Kunci Jawaban';
+                                                                                        } else {
+                                                                                            style = 'border-border bg-white text-slate-600';
+                                                                                            icon = '○';
+                                                                                            label = '';
+                                                                                        }
+                                                                                    } else {
+                                                                                        icon = '○';
+                                                                                    }
+
+                                                                                    return (
+                                                                                        <div key={oIdx} className={`rounded-xl border px-4 py-3 text-sm flex items-center justify-between transition-all ${style}`}>
+                                                                                            <div className="flex items-center gap-3">
+                                                                                                <span className={`text-lg font-bold ${icon === '○' ? 'text-slate-300' : ''}`}>{icon}</span>
+                                                                                                <span className="font-medium">{opsi}</span>
+                                                                                            </div>
+                                                                                            {label && <span className="text-xs font-bold uppercase tracking-wider opacity-80">{label}</span>}
+                                                                                        </div>
+                                                                                    );
+                                                                                })}
+                                                                            </div>
+                                                                        )}
+
+                                                                        {/* Essay answers */}
+                                                                        {(item.jenis_soal === 'essay' || item.jenis_soal === 'esai') && (
+                                                                            <div className={`grid gap-2 text-sm ${reviewData.sesi?.tampilkan_kunci !== false ? 'sm:grid-cols-2' : ''}`}>
+                                                                                <div className="rounded-xl bg-white/80 border border-border px-4 py-2">
+                                                                                    <span className="font-medium text-slate-500">Jawaban Anda:</span>
+                                                                                    <p className="mt-1 text-slate-700 whitespace-pre-wrap">{jawabanSiswa || <em className="text-slate-400">Tidak dijawab</em>}</p>
+                                                                                </div>
+                                                                                {reviewData.sesi?.tampilkan_kunci !== false && (
+                                                                                    <div className="rounded-xl bg-white/80 border border-border px-4 py-2">
+                                                                                        <span className="font-medium text-slate-500">Kunci Jawaban:</span>
+                                                                                        <p className="mt-1 text-slate-700 whitespace-pre-wrap">{formatJawaban(item.kunci_jawaban, item.jenis_soal)}</p>
+                                                                                    </div>
+                                                                                )}
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                );
+                                                            });
+                                                        })()}
                                                     </div>
 
                                                     {/* Analisis Diagnostik AI */}
@@ -511,6 +552,11 @@ export default function SiswaCbtHistoryPage({ session, onLogout }) {
                 )}
             </div>
             <PopupModal popup={popup} onClose={() => setPopup(null)} />
+            <ImageLightboxModal
+                imageUrl={zoomedImageUrl}
+                alt="Pratinjau Gambar Soal Diperbesar"
+                onClose={() => setZoomedImageUrl(null)}
+            />
         </DashboardLayout>
     );
 }

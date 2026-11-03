@@ -14,6 +14,7 @@ export function ConfirmModal({
     if (!isOpen) return null;
 
     const isDanger = variant === 'danger';
+    const isSuccess = variant === 'success';
 
     return (
         <div
@@ -26,18 +27,37 @@ export function ConfirmModal({
                 className="w-full max-w-sm sm:max-w-md max-h-[90vh] overflow-y-auto rounded-3xl bg-white p-5 sm:p-6 shadow-2xl border border-slate-100"
                 onClick={(e) => e.stopPropagation()}
             >
-                <div className={`mb-4 flex h-12 w-12 items-center justify-center rounded-2xl ${isDanger ? 'bg-rose-50 text-rose-600' : 'bg-amber-50 text-amber-600'}`}>
-                    <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                        />
-                    </svg>
+                <div
+                    className={`mb-4 flex h-12 w-12 items-center justify-center rounded-2xl ${
+                        isDanger
+                            ? 'bg-rose-50 text-rose-600'
+                            : isSuccess
+                            ? 'bg-emerald-50 text-emerald-600'
+                            : 'bg-amber-50 text-amber-600'
+                    }`}
+                >
+                    {isSuccess ? (
+                        <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+                            />
+                        </svg>
+                    ) : (
+                        <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                            />
+                        </svg>
+                    )}
                 </div>
                 <h3 className="text-lg sm:text-xl font-bold text-slate-900 mb-2 break-words">{title}</h3>
-                <p className="text-xs sm:text-sm leading-relaxed text-slate-600 mb-6 break-words">{message}</p>
+                <p className="text-xs sm:text-sm leading-relaxed text-slate-600 mb-6 break-words whitespace-pre-line">{message}</p>
                 <div className="flex flex-col-reverse sm:flex-row gap-2.5 sm:gap-3 justify-end">
                     <button
                         type="button"
@@ -52,7 +72,11 @@ export function ConfirmModal({
                         onClick={onConfirm}
                         disabled={loading}
                         className={`w-full sm:w-auto rounded-xl px-5 py-2.5 sm:py-2 text-sm font-semibold text-white transition flex items-center justify-center gap-2 disabled:opacity-70 ${
-                            isDanger ? 'bg-rose-600 hover:bg-rose-700' : 'bg-amber-600 hover:bg-amber-700'
+                            isDanger
+                                ? 'bg-rose-600 hover:bg-rose-700'
+                                : isSuccess
+                                ? 'bg-emerald-600 hover:bg-emerald-700'
+                                : 'bg-amber-600 hover:bg-amber-700'
                         }`}
                     >
                         {loading ? 'Memproses...' : confirmText}

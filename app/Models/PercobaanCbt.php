@@ -79,14 +79,14 @@ class PercobaanCbt extends Model
 
         // 1. Sinkronkan JawabanSiswa agar mencerminkan jawaban percobaan tertinggi
         if (!empty($highest->data_jawaban) && is_array($highest->data_jawaban)) {
-            $detailIds = collect($highest->data_jawaban)->pluck('id_detail')->filter()->values();
-            if ($detailIds->isNotEmpty()) {
+            $sessionDetailIds = DetailSesiSoal::where('id_sesi', $id_sesi)->pluck('id_detail');
+            if ($sessionDetailIds->isNotEmpty()) {
                 JawabanSiswa::where('id_siswa', $id_siswa)
-                    ->whereIn('id_detail', $detailIds)
+                    ->whereIn('id_detail', $sessionDetailIds)
                     ->delete();
 
                 foreach ($highest->data_jawaban as $dj) {
-                    if (empty($dj['id_detail'])) {
+                    if (empty($dj['id_detail']) || !$sessionDetailIds->contains((int) $dj['id_detail'])) {
                         continue;
                     }
                     $teks = $dj['jawaban_siswa'] ?? null;

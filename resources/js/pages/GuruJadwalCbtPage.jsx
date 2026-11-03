@@ -29,18 +29,94 @@ export default function GuruJadwalCbtPage({ session, onLogout }) {
         waktu_mulai: '',
         waktu_selesai: '',
         durasi_menit: 60,
+        target_bobot_total: 100,
         boleh_ulang: false,
         tampilkan_kunci: true,
+        distribusi_paket: false,
+        acak_soal: false,
         token: '',
     });
     const [selectedSoalMap, setSelectedSoalMap] = useState({});
+    const [autoDistributeBobot, setAutoDistributeBobot] = useState(true);
     const [sharedBankSoal, setSharedBankSoal] = useState([]);
     const [sharedBankSoalLoading, setSharedBankSoalLoading] = useState(false);
 
     // Filter states untuk tabel Bank Soal CBT
     const [bankSearch, setBankSearch] = useState('');
+    const [bankFilterPaket, setBankFilterPaket] = useState('');
     const [bankFilterLevel, setBankFilterLevel] = useState('');
     const [bankFilterJenis, setBankFilterJenis] = useState('');
+
+    const round2 = (num) => Math.round((Number(num) + Number.EPSILON) * 100) / 100;
+
+    const divideBobotEvenly = (ids, totalTarget) => {
+        const result = {};
+        const count = ids.length;
+        const target = Number(totalTarget) > 0 ? Number(totalTarget) : 100;
+        if (count === 0) return result;
+        if (count === 1) {
+            result[ids[0]] = round2(target);
+            return result;
+        }
+        const base = Math.floor((target / count) * 100) / 100;
+        let runningSum = 0;
+        ids.forEach((id, idx) => {
+            if (idx < count - 1) {
+                result[id] = base;
+                runningSum = round2(runningSum + base);
+            } else {
+                result[id] = round2(Math.max(0.01, target - runningSum));
+            }
+        });
+        return result;
+    };
+
+    const computeDistributedBobotMap = (selectedIds, bankList, targetTotal = 100, isMultiPaket = false) => {
+        const cleanIds = selectedIds.map(id => Number(id)).filter(Boolean);
+        if (cleanIds.length === 0) return {};
+
+        const target = Number(targetTotal) > 0 ? Number(targetTotal) : 100;
+        const lookup = {};
+        (bankList || []).forEach(s => {
+            lookup[Number(s.id_soal)] = (s.paket_soal || '').trim();
+        });
+
+        if (isMultiPaket) {
+            const namedGroups = {};
+            const umumIds = [];
+            cleanIds.forEach(id => {
+                const pkt = lookup[id] || '';
+                if (pkt) {
+                    if (!namedGroups[pkt]) namedGroups[pkt] = [];
+                    namedGroups[pkt].push(id);
+                } else {
+                    umumIds.push(id);
+                }
+            });
+
+            const pkgKeys = Object.keys(namedGroups);
+            if (pkgKeys.length > 1) {
+                const nextMap = {};
+                if (umumIds.length === 0) {
+                    pkgKeys.forEach(k => {
+                        Object.assign(nextMap, divideBobotEvenly(namedGroups[k], target));
+                    });
+                    return nextMap;
+                } else {
+                    const avgPkgLen = pkgKeys.reduce((acc, k) => acc + namedGroups[k].length, 0) / pkgKeys.length;
+                    const umumShare = round2((umumIds.length / (avgPkgLen + umumIds.length)) * target);
+                    const pkgShare = round2(Math.max(1, target - umumShare));
+                    Object.assign(nextMap, divideBobotEvenly(umumIds, umumShare));
+                    pkgKeys.forEach(k => {
+                        Object.assign(nextMap, divideBobotEvenly(namedGroups[k], pkgShare));
+                    });
+                    return nextMap;
+                }
+            }
+        }
+
+        return divideBobotEvenly(cleanIds, target);
+    };
 
     const [editingScoreId, setEditingScoreId] = useState(null);
     const [editScoreValue, setEditScoreValue] = useState('');
@@ -85,7 +161,8 @@ export default function GuruJadwalCbtPage({ session, onLogout }) {
             const url = URL.createObjectURL(blob);
             const link = document.createElement('a');
             link.href = url;
-            link.download = `Soal_${buildExportBaseName(sesi)}${withKunci ? '_Kunci' : ''}.pdf`;
+            const paketSuffix = sesi.multi_paket_aktif && (sesi.paket_groups || []).length > 1 ? `_${sesi.paket_groups.length}Paket` : '';
+            link.download = `Soal_${buildExportBaseName(sesi)}${paketSuffix}${withKunci ? '_Kunci' : ''}.pdf`;
             document.body.appendChild(link);
             link.click();
             link.remove();
@@ -102,119 +179,269 @@ export default function GuruJadwalCbtPage({ session, onLogout }) {
         const { sesi, soal = [], siswa = [] } = sesiDetailData;
         const isEsai = (jenis) => jenis === 'esai' || jenis === 'essay';
         const jenisSingkat = (jenis) => (isEsai(jenis) ? 'Esai' : jenis === 'pilihan_ganda_kompleks' ? 'PGK' : 'PG');
-        const soalHeaders = soal.map((s, idx) => `Soal ${idx + 1} (${jenisSingkat(s.jenis_soal)})`);
-        const jumlahPg = soal.filter((s) => !isEsai(s.jenis_soal)).length;
+        const jenisPanjang = (jenis) => (isEsai(jenis) ? 'Esai' : jenis === 'pilihan_ganda_kompleks' ? 'Pilihan Ganda Kompleks' : 'Pilihan Ganda');
+        const HURUF = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
+        const fmtNum = (n) => Math.round(Number(n || 0) * 100) / 100;
 
-        const formatOpsiTerpilih = (jawabanSiswa, jenisSoal) => {
-            if (!jawabanSiswa) return '-';
-            if (jenisSoal === 'pilihan_ganda_kompleks') {
-                try {
-                    const arr = JSON.parse(jawabanSiswa);
-                    if (Array.isArray(arr)) return arr.join(', ');
-                } catch {}
+        const parseArr = (val) => {
+            if (Array.isArray(val)) return val;
+            try { const arr = JSON.parse(val); if (Array.isArray(arr)) return arr; } catch { /* bukan JSON */ }
+            return null;
+        };
+        const opsiOf = (q) => (Array.isArray(q.opsi_jawaban) ? q.opsi_jawaban : parseArr(q.opsi_jawaban) || []);
+        const labelOpsi = (q, teks) => {
+            const t = String(teks ?? '').trim();
+            const idx = opsiOf(q).findIndex((o) => String(o ?? '').trim() === t);
+            return idx >= 0 ? `${HURUF[idx] || idx + 1}. ${t}` : t;
+        };
+        const formatKunci = (q) => {
+            if (isEsai(q.jenis_soal)) return String(q.kunci_jawaban ?? '');
+            const arr = parseArr(q.kunci_jawaban);
+            const list = arr || [q.kunci_jawaban];
+            return list.filter((v) => v !== null && v !== undefined && String(v).trim() !== '').map((k) => labelOpsi(q, k)).join('; ');
+        };
+        const formatOpsiTerpilih = (q, jawab) => {
+            const raw = jawab?.jawaban_siswa;
+            if (raw === null || raw === undefined || String(raw).trim() === '') return '-';
+            if (isEsai(q.jenis_soal)) return String(raw).trim();
+            const arr = q.jenis_soal === 'pilihan_ganda_kompleks' ? parseArr(raw) : null;
+            const teks = arr ? arr.map((a) => labelOpsi(q, a)).join(', ') : labelOpsi(q, raw);
+            return `${teks} ${jawab?.is_correct ? '✓' : '✗'}`;
+        };
+        const safeSheetName = (name, used) => {
+            let base = String(name).replace(/[\\/?*\[\]:]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 31) || 'Sheet';
+            let candidate = base;
+            let i = 2;
+            while (used.has(candidate.toLowerCase())) {
+                const suffix = ` (${i++})`;
+                candidate = base.slice(0, 31 - suffix.length) + suffix;
             }
-            return String(jawabanSiswa).trim() || '-';
+            used.add(candidate.toLowerCase());
+            return candidate;
         };
 
-        // --- SHEET 1: ANALISIS BUTIR SOAL (0 / 1 & Esai) ---
-        const header1 = ['No', 'NISN', 'Nama Siswa', 'Status', ...soalHeaders, `Jumlah Benar PG (dari ${jumlahPg})`, 'Total Skor'];
-        const rows1 = [header1];
+        // --- Susun grup paket (urutan MASTER, sama dengan dokumen Soal PDF) ---
+        const soalById = {};
+        soal.forEach((q) => { soalById[q.id_detail] = q; });
+        const rawGroups = Array.isArray(sesi?.paket_groups) && sesi.paket_groups.length > 0
+            ? sesi.paket_groups
+            : [{ nama: null, id_details: soal.map((q) => q.id_detail) }];
+        const groups = rawGroups.map((g) => ({
+            nama: g.nama || null,
+            soal: (g.id_details || []).map((id) => soalById[id]).filter(Boolean),
+        }));
+        const isMulti = !!sesi?.multi_paket_aktif && groups.length > 1;
+        const isAcak = !!sesi?.acak_soal;
 
         const sortedSiswa = [...siswa].sort((a, b) => (a.nama_lengkap || '').localeCompare(b.nama_lengkap || ''));
-        const benarPerSoal = soal.map(() => 0);
-        let jumlahPeserta = 0;
-
-        sortedSiswa.forEach((s, i) => {
-            const sudah = s.status === 'sudah';
-            const jawabanMap = {};
-            (s.detail_jawaban || []).forEach((d) => { jawabanMap[d.id_detail] = d; });
-            if (sudah) jumlahPeserta++;
-
-            let benarPg = 0;
-            const cells = soal.map((q, qIdx) => {
-                if (!sudah) return '';
-                const jawab = jawabanMap[q.id_detail];
-                if (isEsai(q.jenis_soal)) {
-                    const teks = (jawab?.jawaban_siswa || '').trim();
-                    return teks !== '' ? teks : '-';
-                }
-                const nilai = jawab?.is_correct ? 1 : 0;
-                benarPg += nilai;
-                benarPerSoal[qIdx] += nilai;
-                return nilai;
-            });
-
-            rows1.push([
-                i + 1,
-                s.nisn || '',
-                s.nama_lengkap || '',
-                sudah ? 'Sudah' : 'Belum Mengerjakan',
-                ...cells,
-                sudah ? benarPg : '',
-                sudah ? Number(s.total_skor || 0) : '',
-            ]);
-        });
-
-        // Baris ringkasan per butir soal (hanya untuk PG / PG Kompleks)
-        const persenPerSoal = soal.map((q, idx) => (isEsai(q.jenis_soal) || jumlahPeserta === 0 ? null : Math.round((benarPerSoal[idx] / jumlahPeserta) * 10000) / 100));
-        const tingkatKesukaran = (p) => (p === null ? '-' : p > 70 ? 'Mudah' : p >= 30 ? 'Sedang' : 'Sukar');
-        rows1.push([]);
-        rows1.push(['', '', 'Jumlah Siswa Benar', '', ...soal.map((q, idx) => (isEsai(q.jenis_soal) ? '-' : benarPerSoal[idx])), '', '']);
-        rows1.push(['', '', 'Persentase Benar (%)', '', ...persenPerSoal.map((p) => (p === null ? '-' : p)), '', '']);
-        rows1.push(['', '', 'Tingkat Kesukaran', '', ...persenPerSoal.map(tingkatKesukaran), '', '']);
-        rows1.push(['', '', `Catatan: 1 = Benar, 0 = Salah. Untuk esai berisi teks jawaban siswa. Peserta mengerjakan: ${jumlahPeserta} dari ${sortedSiswa.length} siswa`]);
-
-        const wsAnalisis = XLSX.utils.aoa_to_sheet(rows1);
-        wsAnalisis['!cols'] = [
-            { wch: 5 }, { wch: 14 }, { wch: 30 }, { wch: 18 },
-            ...soal.map((q) => ({ wch: isEsai(q.jenis_soal) ? 35 : 12 })),
-            { wch: 22 }, { wch: 12 },
-        ];
-
-        // --- SHEET 2: REKAP PILIHAN JAWABAN SISWA ---
-        const header2 = ['No', 'NISN', 'Nama Siswa', 'Status', ...soalHeaders, 'Total Skor'];
-        const rows2 = [header2];
-        sortedSiswa.forEach((s, i) => {
-            const sudah = s.status === 'sudah';
-            const jawabanMap = {};
-            (s.detail_jawaban || []).forEach((d) => { jawabanMap[d.id_detail] = d; });
-
-            const cellsOpsi = soal.map((q) => {
-                if (!sudah) return '';
-                const jawab = jawabanMap[q.id_detail];
-                return formatOpsiTerpilih(jawab?.jawaban_siswa, q.jenis_soal);
-            });
-
-            rows2.push([
-                i + 1,
-                s.nisn || '',
-                s.nama_lengkap || '',
-                sudah ? 'Sudah' : 'Belum Mengerjakan',
-                ...cellsOpsi,
-                sudah ? Number(s.total_skor || 0) : '',
-            ]);
-        });
-        const wsPilihan = XLSX.utils.aoa_to_sheet(rows2);
-        wsPilihan['!cols'] = [
-            { wch: 5 }, { wch: 14 }, { wch: 30 }, { wch: 18 },
-            ...soal.map(() => ({ wch: 25 })),
-            { wch: 12 },
-        ];
-
-        // --- SHEET 3: DAFTAR SOAL & KUNCI ---
-        const formatKunci = (k) => { try { const arr = JSON.parse(k); if (Array.isArray(arr)) return arr.join(', '); } catch {} return k ?? ''; };
-        const soalRows = [['No', 'Jenis Soal', 'Level Kognitif', 'Isi Soal', 'Kunci Jawaban', 'Bobot']];
-        soal.forEach((q, idx) => {
-            soalRows.push([idx + 1, jenisSingkat(q.jenis_soal), q.level_kognitif || '', q.isi_soal || '', formatKunci(q.kunci_jawaban), Number(q.bobot_nilai || 0)]);
-        });
-        const wsSoal = XLSX.utils.aoa_to_sheet(soalRows);
-        wsSoal['!cols'] = [{ wch: 5 }, { wch: 10 }, { wch: 14 }, { wch: 70 }, { wch: 40 }, { wch: 8 }];
+        const groupOfSiswa = (s) => {
+            if (!isMulti) return groups[0];
+            return groups.find((g) => g.nama === s.paket_aktif)
+                || groups.find((g) => g.soal.some((q) => (s.urutan_soal || []).includes(q.id_detail)))
+                || groups[0];
+        };
+        const jawabanMapOf = (s) => {
+            const map = {};
+            (s.jawaban_terpakai || s.detail_jawaban || []).forEach((d) => { map[d.id_detail] = d; });
+            return map;
+        };
+        const noLabel = (q, idx) => `No.${idx + 1} (${jenisSingkat(q.jenis_soal)})${isMulti && !q.paket_soal ? ' [Umum]' : ''}`;
 
         const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, wsAnalisis, 'Analisis Butir Soal');
-        XLSX.utils.book_append_sheet(wb, wsPilihan, 'Pilihan Jawaban Siswa');
-        XLSX.utils.book_append_sheet(wb, wsSoal, 'Daftar Kunci & Soal');
-        XLSX.writeFile(wb, `Analisis_Soal_${buildExportBaseName(sesi)}.xlsx`);
+        const usedNames = new Set();
+        const ringkasanPaket = [];
+
+        groups.forEach((group) => {
+            const gSoal = group.soal;
+            const gSiswa = sortedSiswa.filter((s) => groupOfSiswa(s) === group);
+            const judulPaket = isMulti ? ` — ${group.nama.toUpperCase()}` : '';
+            const totalBobot = fmtNum(gSoal.reduce((acc, q) => acc + Number(q.bobot_nilai || 0), 0));
+            const jumlahPg = gSoal.filter((q) => !isEsai(q.jenis_soal)).length;
+            const headerSoal = gSoal.map(noLabel);
+
+            // --- Sheet Analisis Butir Soal (0 / 1 & teks esai) ---
+            const rows = [
+                [`ANALISIS BUTIR SOAL${judulPaket}`],
+                [`${sesi?.mata_pelajaran || '-'} • ${sesi?.kelas || '-'} • ${gSoal.length} soal • ${gSiswa.length} siswa • Total bobot ${totalBobot}`],
+                [isAcak
+                    ? 'Kolom "No." = nomor MASTER soal (sama dengan dokumen Soal PDF). Urutan tampil tiap siswa ada di sheet "Urutan Soal per Siswa".'
+                    : 'Kolom "No." = nomor soal sesuai dokumen Soal PDF. Isi: 1 = Benar, 0 = Salah, esai berisi teks jawaban siswa.'],
+                [],
+                ['No', 'NISN', 'Nama Siswa', 'Status', ...headerSoal, `Jumlah Benar PG (dari ${jumlahPg})`, 'Total Skor', 'Nilai Maks'],
+            ];
+            const benarPerSoal = gSoal.map(() => 0);
+            const skorList = [];
+            let peserta = 0;
+
+            gSiswa.forEach((s, i) => {
+                const sudah = s.status === 'sudah';
+                const jm = jawabanMapOf(s);
+                if (sudah) { peserta++; skorList.push(Number(s.total_skor || 0)); }
+                let benarPg = 0;
+                const cells = gSoal.map((q, qIdx) => {
+                    if (!sudah) return '';
+                    const jawab = jm[q.id_detail];
+                    if (isEsai(q.jenis_soal)) {
+                        const teks = String(jawab?.jawaban_siswa || '').trim();
+                        return teks !== '' ? teks : '-';
+                    }
+                    const nilai = jawab?.is_correct ? 1 : 0;
+                    benarPg += nilai;
+                    benarPerSoal[qIdx] += nilai;
+                    return nilai;
+                });
+                rows.push([
+                    i + 1, s.nisn || '', s.nama_lengkap || '', sudah ? 'Sudah' : 'Belum Mengerjakan',
+                    ...cells,
+                    sudah ? benarPg : '',
+                    sudah ? fmtNum(s.total_skor) : '',
+                    sudah ? fmtNum(s.total_bobot_siswa || totalBobot) : '',
+                ]);
+            });
+            if (gSiswa.length === 0) rows.push(['', '', '(Belum ada siswa yang mendapat paket ini)']);
+
+            const persen = gSoal.map((q, idx) => (isEsai(q.jenis_soal) || peserta === 0 ? null : Math.round((benarPerSoal[idx] / peserta) * 10000) / 100));
+            const kesukaran = (p) => (p === null ? '-' : p > 70 ? 'Mudah' : p >= 30 ? 'Sedang' : 'Sukar');
+            rows.push([]);
+            rows.push(['', '', 'Bobot Soal', '', ...gSoal.map((q) => fmtNum(q.bobot_nilai)), '', totalBobot, '']);
+            rows.push(['', '', 'Jumlah Siswa Benar', '', ...gSoal.map((q, idx) => (isEsai(q.jenis_soal) ? '-' : benarPerSoal[idx])), '', '', '']);
+            rows.push(['', '', 'Persentase Benar (%)', '', ...persen.map((p) => (p === null ? '-' : p)), '', '', '']);
+            rows.push(['', '', 'Tingkat Kesukaran', '', ...persen.map(kesukaran), '', '', '']);
+            rows.push([]);
+            rows.push(['', '', `Peserta mengerjakan: ${peserta} dari ${gSiswa.length} siswa${isMulti ? ` yang mendapat ${group.nama}` : ''}.`]);
+
+            const wsA = XLSX.utils.aoa_to_sheet(rows);
+            const lastCol = 4 + gSoal.length + 2;
+            wsA['!merges'] = [0, 1, 2].map((r) => ({ s: { r, c: 0 }, e: { r, c: lastCol } }));
+            wsA['!cols'] = [
+                { wch: 5 }, { wch: 14 }, { wch: 30 }, { wch: 18 },
+                ...gSoal.map((q) => ({ wch: isEsai(q.jenis_soal) ? 35 : 13 })),
+                { wch: 22 }, { wch: 12 }, { wch: 11 },
+            ];
+            XLSX.utils.book_append_sheet(wb, wsA, safeSheetName(isMulti ? `Analisis ${group.nama}` : 'Analisis Butir Soal', usedNames));
+
+            // --- Sheet Pilihan Jawaban Siswa ---
+            const rows2 = [
+                [`PILIHAN JAWABAN SISWA${judulPaket}`],
+                ['Format: huruf opsi + teks jawaban. ✓ = Benar, ✗ = Salah. Kolom "No." mengikuti nomor soal pada dokumen Soal PDF.'],
+                [],
+                ['No', 'NISN', 'Nama Siswa', 'Status', ...headerSoal, 'Total Skor'],
+            ];
+            gSiswa.forEach((s, i) => {
+                const sudah = s.status === 'sudah';
+                const jm = jawabanMapOf(s);
+                rows2.push([
+                    i + 1, s.nisn || '', s.nama_lengkap || '', sudah ? 'Sudah' : 'Belum Mengerjakan',
+                    ...gSoal.map((q) => (sudah ? formatOpsiTerpilih(q, jm[q.id_detail]) : '')),
+                    sudah ? fmtNum(s.total_skor) : '',
+                ]);
+            });
+            rows2.push([]);
+            rows2.push(['', '', 'Kunci Jawaban', '', ...gSoal.map((q) => (isEsai(q.jenis_soal) ? '(lihat sheet Kunci)' : formatKunci(q)))]);
+            const wsP = XLSX.utils.aoa_to_sheet(rows2);
+            wsP['!merges'] = [0, 1].map((r) => ({ s: { r, c: 0 }, e: { r, c: 4 + gSoal.length } }));
+            wsP['!cols'] = [{ wch: 5 }, { wch: 14 }, { wch: 30 }, { wch: 18 }, ...gSoal.map(() => ({ wch: 26 })), { wch: 12 }];
+            XLSX.utils.book_append_sheet(wb, wsP, safeSheetName(isMulti ? `Jawaban ${group.nama}` : 'Pilihan Jawaban Siswa', usedNames));
+
+            ringkasanPaket.push([
+                group.nama || 'Semua Soal',
+                gSoal.length,
+                totalBobot,
+                gSiswa.length,
+                peserta,
+                gSiswa.length - peserta,
+                skorList.length ? fmtNum(skorList.reduce((a, b) => a + b, 0) / skorList.length) : '-',
+                skorList.length ? fmtNum(Math.max(...skorList)) : '-',
+                skorList.length ? fmtNum(Math.min(...skorList)) : '-',
+            ]);
+        });
+
+        // --- Sheet Daftar Soal & Kunci (dikelompokkan per paket) ---
+        const kunciRows = [['DAFTAR SOAL & KUNCI JAWABAN'], []];
+        const kunciHeader = ['No', 'Jenis Soal', 'Level Kognitif', 'Isi Soal', 'Kunci Jawaban', 'Bobot', 'Keterangan'];
+        groups.forEach((group, gi) => {
+            const total = fmtNum(group.soal.reduce((acc, q) => acc + Number(q.bobot_nilai || 0), 0));
+            if (isMulti) {
+                if (gi > 0) kunciRows.push([]);
+                kunciRows.push([`${group.nama.toUpperCase()} — ${group.soal.length} soal, total bobot ${total}`]);
+            }
+            kunciRows.push(kunciHeader);
+            group.soal.forEach((q, idx) => {
+                const ket = isMulti ? (q.paket_soal ? group.nama : 'Umum (muncul di semua paket)') : (q.paket_soal || '-');
+                kunciRows.push([idx + 1, jenisPanjang(q.jenis_soal), q.level_kognitif || '', q.isi_soal || '', formatKunci(q), fmtNum(q.bobot_nilai), ket]);
+            });
+            kunciRows.push(['', '', '', '', 'Total Bobot', total, '']);
+        });
+        const wsK = XLSX.utils.aoa_to_sheet(kunciRows);
+        wsK['!cols'] = [{ wch: 5 }, { wch: 22 }, { wch: 14 }, { wch: 70 }, { wch: 40 }, { wch: 9 }, { wch: 28 }];
+
+        // --- Sheet Urutan Soal per Siswa (hanya jika acak aktif) ---
+        let wsU = null;
+        if (isAcak) {
+            const maxLen = Math.max(1, ...groups.map((g) => g.soal.length));
+            const rowsU = [
+                ['URUTAN SOAL YANG TAMPIL DI LAYAR TIAP SISWA'],
+                ['Contoh: "Urutan 1 = No.3" artinya soal pertama yang dilihat siswa adalah soal nomor 3 pada dokumen Soal PDF / sheet Analisis' + (isMulti ? ' paket siswa tersebut.' : '.')],
+                ['Untuk siswa yang belum mengerjakan, urutan yang ditampilkan adalah urutan yang akan ia terima pada percobaan pertama.'],
+                [],
+                ['No', 'NISN', 'Nama Siswa', ...(isMulti ? ['Paket'] : []), 'Status', ...Array.from({ length: maxLen }, (_, i) => `Urutan ${i + 1}`)],
+            ];
+            sortedSiswa.forEach((s, i) => {
+                const g = groupOfSiswa(s);
+                const masterIndex = {};
+                g.soal.forEach((q, idx) => { masterIndex[q.id_detail] = idx + 1; });
+                const urutan = (s.urutan_soal || []).filter((id) => masterIndex[id]).map((id) => `No.${masterIndex[id]}`);
+                rowsU.push([
+                    i + 1, s.nisn || '', s.nama_lengkap || '', ...(isMulti ? [g.nama] : []),
+                    s.status === 'sudah' ? 'Sudah' : 'Belum Mengerjakan',
+                    ...urutan,
+                ]);
+            });
+            wsU = XLSX.utils.aoa_to_sheet(rowsU);
+            const lastColU = (isMulti ? 5 : 4) + maxLen - 1;
+            wsU['!merges'] = [0, 1, 2].map((r) => ({ s: { r, c: 0 }, e: { r, c: Math.max(lastColU, 6) } }));
+            wsU['!cols'] = [{ wch: 5 }, { wch: 14 }, { wch: 30 }, ...(isMulti ? [{ wch: 14 }] : []), { wch: 18 }, ...Array.from({ length: maxLen }, () => ({ wch: 10 }))];
+        }
+
+        // --- Sheet Ringkasan (sheet pertama) ---
+        const tanggal = sesi?.waktu_mulai ? formatDateTimeLabel(sesi.waktu_mulai) : '-';
+        const ringkasRows = [
+            ['RINGKASAN ANALISIS SESI CBT'],
+            [],
+            ['Mata Pelajaran', sesi?.mata_pelajaran || '-'],
+            ['Kelas', sesi?.kelas || '-'],
+            ['Label Ujian', sesi?.tipe_soal || '-'],
+            ['Jenis Asesmen', sesi?.jenis_asesmen || '-'],
+            ['Waktu Mulai', tanggal],
+            ['Mode Paket Soal', isMulti ? `Multi-Paket Otomatis (${groups.map((g) => g.nama).join(', ')}) — tiap siswa mendapat 1 paket` : 'Satu set soal untuk semua siswa'],
+            ['Acak Urutan Soal', isAcak ? 'Ya — urutan tampil berbeda tiap siswa' : 'Tidak'],
+            ['Total Siswa', sortedSiswa.length],
+            [],
+            [isMulti ? 'REKAP PER PAKET' : 'REKAP NILAI'],
+            ['Paket', 'Jumlah Soal', 'Total Bobot', 'Jumlah Siswa', 'Sudah', 'Belum', 'Rata-rata', 'Tertinggi', 'Terendah'],
+            ...ringkasanPaket,
+            [],
+            ['CARA MEMBACA FILE INI'],
+            [isMulti
+                ? `• Setiap paket memiliki sheet sendiri: "Analisis <Paket>" (1 = benar, 0 = salah) dan "Jawaban <Paket>" (opsi yang dipilih siswa). Siswa hanya muncul di sheet paket yang ia kerjakan.`
+                : '• Sheet "Analisis Butir Soal" berisi 1 = benar, 0 = salah (esai berisi teks jawaban). Sheet "Pilihan Jawaban Siswa" berisi opsi yang dipilih siswa.'],
+            ['• Nomor soal (No.1, No.2, ...) adalah nomor MASTER yang sama dengan dokumen "Soal (PDF)" dan "Soal + Kunci (PDF)"' + (isMulti ? ' pada paket yang bersangkutan.' : '.')],
+            ...(isMulti ? [['• Soal bertanda [Umum] muncul di semua paket.']] : []),
+            ...(isAcak ? [['• Karena urutan soal diacak, lihat sheet "Urutan Soal per Siswa" untuk mengetahui urutan soal yang tampil di layar masing-masing siswa.']] : []),
+            ['• Sheet "Daftar Soal & Kunci" memuat isi soal, kunci jawaban, dan bobot' + (isMulti ? ', dikelompokkan per paket.' : '.')],
+        ];
+        const wsR = XLSX.utils.aoa_to_sheet(ringkasRows);
+        wsR['!cols'] = [{ wch: 20 }, { wch: 14 }, { wch: 12 }, { wch: 13 }, { wch: 9 }, { wch: 9 }, { wch: 11 }, { wch: 11 }, { wch: 11 }];
+
+        // Susun ulang: Ringkasan di depan, lalu sheet analisis per paket, kunci, urutan.
+        const finalWb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(finalWb, wsR, 'Ringkasan');
+        wb.SheetNames.forEach((name) => XLSX.utils.book_append_sheet(finalWb, wb.Sheets[name], name));
+        XLSX.utils.book_append_sheet(finalWb, wsK, 'Daftar Soal & Kunci');
+        if (wsU) XLSX.utils.book_append_sheet(finalWb, wsU, 'Urutan Soal per Siswa');
+
+        const suffix = isMulti ? `_${groups.length}Paket` : '';
+        XLSX.writeFile(finalWb, `Analisis_Soal_${buildExportBaseName(sesi)}${suffix}.xlsx`);
     };
 
     const showSuccessPopup = (title, message, type = null) => {
@@ -363,8 +590,11 @@ export default function GuruJadwalCbtPage({ session, onLogout }) {
                     waktu_mulai: sesiForm.waktu_mulai,
                     waktu_selesai: sesiForm.waktu_selesai,
                     durasi_menit: Number(sesiForm.durasi_menit),
+                    target_bobot_total: Number(sesiForm.target_bobot_total) > 0 ? Number(sesiForm.target_bobot_total) : 100,
                     boleh_ulang: sesiForm.boleh_ulang,
                     tampilkan_kunci: sesiForm.tampilkan_kunci,
+                    distribusi_paket: !!sesiForm.distribusi_paket,
+                    acak_soal: !!sesiForm.acak_soal,
                     token: sesiForm.token,
                     soal: soalArr,
                 }),
@@ -374,10 +604,12 @@ export default function GuruJadwalCbtPage({ session, onLogout }) {
             setIsSesiModalOpen(false);
             setEditingSesiId(null);
             setSelectedSoalMap({});
+            setAutoDistributeBobot(true);
             setSesiForm({
-                id_kelas: '', id_mapel: '', tipe_soal: '', jenis_asesmen: 'ujian', waktu_mulai: '', waktu_selesai: '', durasi_menit: 60, boleh_ulang: false, tampilkan_kunci: true, token: ''
+                id_kelas: '', id_mapel: '', tipe_soal: '', jenis_asesmen: 'ujian', waktu_mulai: '', waktu_selesai: '', durasi_menit: 60, target_bobot_total: 100, boleh_ulang: false, tampilkan_kunci: true, distribusi_paket: false, acak_soal: false, token: ''
             });
             setBankSearch('');
+            setBankFilterPaket('');
             setBankFilterLevel('');
             setBankFilterJenis('');
             await reloadWorkspace();
@@ -388,6 +620,7 @@ export default function GuruJadwalCbtPage({ session, onLogout }) {
 
     const openEditSesiAsesmen = (item) => {
         setEditingSesiId(item.id_sesi);
+        setAutoDistributeBobot(false); // Saat edit, pertahankan bobot tersimpan kecuali guru klik Bagi Rata
         setSesiForm({
             id_kelas: String(item.id_kelas || ''),
             id_mapel: String(item.id_mapel || ''),
@@ -396,14 +629,17 @@ export default function GuruJadwalCbtPage({ session, onLogout }) {
             waktu_mulai: item.waktu_mulai ? new Date(new Date(item.waktu_mulai).getTime() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16) : '',
             waktu_selesai: item.waktu_selesai ? new Date(new Date(item.waktu_selesai).getTime() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16) : '',
             durasi_menit: item.durasi_menit || 60,
+            target_bobot_total: item.target_bobot_total ? Number(item.target_bobot_total) : 100,
             boleh_ulang: !!item.boleh_ulang,
             tampilkan_kunci: item.tampilkan_kunci !== undefined ? !!item.tampilkan_kunci : true,
+            distribusi_paket: !!item.distribusi_paket,
+            acak_soal: !!item.acak_soal,
             token: item.token || '',
         });
 
         const soalMap = {};
         (item.detail_sesi_soal || []).forEach(ds => {
-            soalMap[ds.id_soal] = ds.bobot_nilai;
+            soalMap[ds.id_soal] = Number(ds.bobot_nilai);
         });
         setSelectedSoalMap(soalMap);
         
@@ -620,7 +856,19 @@ export default function GuruJadwalCbtPage({ session, onLogout }) {
                                 // warna untuk item dropdown yang dipilih
                                 dropdownAccentClass="bg-accent border-accent text-white shadow-md shadow-gold-900"
                             />
-                            <button onClick={() => setIsSesiModalOpen(true)} type="button" className="rounded-full bg-primary px-5 py-2 text-sm font-semibold text-white transition hover:bg-primary/85 whitespace-nowrap">
+                            <button
+                                onClick={() => {
+                                    setEditingSesiId(null);
+                                    setSelectedSoalMap({});
+                                    setAutoDistributeBobot(true);
+                                    setSesiForm({
+                                        id_kelas: '', id_mapel: '', tipe_soal: '', jenis_asesmen: 'ujian', waktu_mulai: '', waktu_selesai: '', durasi_menit: 60, target_bobot_total: 100, boleh_ulang: false, tampilkan_kunci: true, distribusi_paket: false, acak_soal: false, token: ''
+                                    });
+                                    setIsSesiModalOpen(true);
+                                }}
+                                type="button"
+                                className="rounded-full bg-primary px-5 py-2 text-sm font-semibold text-white transition hover:bg-primary/85 whitespace-nowrap"
+                            >
                                 + Buat Jadwal CBT
                             </button>
                         </div>
@@ -739,6 +987,12 @@ export default function GuruJadwalCbtPage({ session, onLogout }) {
                                             <div>
                                                 <p className="text-sm font-bold text-slate-800">Unduh Dokumen Sesi</p>
                                                 <p className="text-xs text-slate-500">Cetak soal untuk pembahasan di kelas, atau unduh analisis jawaban per soal (1 = benar, 0 = salah, esai berisi jawaban siswa).</p>
+                                                {(sesiDetailData.sesi?.multi_paket_aktif || sesiDetailData.sesi?.acak_soal) && (
+                                                    <p className="mt-1.5 text-[11px] leading-relaxed text-indigo-700 break-words">
+                                                        {sesiDetailData.sesi?.multi_paket_aktif && <>📦 Dokumen dipisah per paket ({(sesiDetailData.sesi?.paket_groups || []).map((g) => g.nama).join(', ')}). </>}
+                                                        {sesiDetailData.sesi?.acak_soal && <>🔀 Nomor soal = nomor master; urutan tampil tiap siswa ada di sheet "Urutan Soal per Siswa".</>}
+                                                    </p>
+                                                )}
                                             </div>
                                             <div className="flex flex-wrap gap-2">
                                                 <button
@@ -805,15 +1059,34 @@ export default function GuruJadwalCbtPage({ session, onLogout }) {
 
                                         {/* Daftar Soal */}
                                         <details className="group rounded-2xl border border-border">
-                                            <summary className="cursor-pointer px-5 py-4 font-semibold text-slate-800 flex items-center justify-between">
-                                                <span>📋 Daftar Soal ({sesiDetailData.soal.length} soal — Total Bobot: {sesiDetailData.total_bobot})</span>
+                                            <summary className="cursor-pointer px-5 py-4 font-semibold text-slate-800 flex items-center justify-between flex-wrap gap-2">
+                                                <div className="flex flex-wrap items-center gap-2">
+                                                    <span>📋 Daftar Soal ({sesiDetailData.soal.length} soal — Target Bobot Sesi: {sesiDetailData.total_bobot})</span>
+                                                    {sesiDetailData.sesi?.distribusi_paket && (
+                                                        <span className="inline-flex items-center gap-1 rounded-full bg-violet-100 px-2.5 py-0.5 text-xs font-bold text-violet-700 border border-violet-200">
+                                                            📦 Multi-Paket Otomatis
+                                                        </span>
+                                                    )}
+                                                    {sesiDetailData.sesi?.acak_soal && (
+                                                        <span className="inline-flex items-center gap-1 rounded-full bg-indigo-100 px-2.5 py-0.5 text-xs font-bold text-indigo-700 border border-indigo-200">
+                                                            🔀 Acak Urutan Soal
+                                                        </span>
+                                                    )}
+                                                </div>
                                                 <span className="text-slate-400 group-open:rotate-180 transition">▼</span>
                                             </summary>
                                             <div className="border-t border-border px-5 py-4 space-y-3">
                                                 {sesiDetailData.soal.map((s, idx) => (
                                                     <div key={s.id_detail} className="rounded-xl border border-slate-100 bg-slate-50/50 p-4">
-                                                        <div className="flex items-center justify-between mb-1">
-                                                            <span className="text-sm font-bold text-slate-700">Soal {idx + 1} <span className="font-normal text-slate-400">({s.jenis_soal})</span></span>
+                                                        <div className="flex flex-wrap items-center justify-between gap-2 mb-1">
+                                                            <div className="flex flex-wrap items-center gap-2">
+                                                                <span className="text-sm font-bold text-slate-700">Soal {idx + 1} <span className="font-normal text-slate-400">({s.jenis_soal})</span></span>
+                                                                {s.paket_soal && (
+                                                                    <span className="inline-flex items-center gap-1 rounded-md bg-violet-50 border border-violet-200 px-2 py-0.5 text-[10px] font-bold text-violet-700">
+                                                                        📦 {s.paket_soal}
+                                                                    </span>
+                                                                )}
+                                                            </div>
                                                             <span className="text-xs font-medium text-slate-500">Bobot: {s.bobot_nilai}</span>
                                                         </div>
                                                         <p className="text-sm text-slate-600 whitespace-pre-wrap">{s.isi_soal}</p>
@@ -930,6 +1203,11 @@ export default function GuruJadwalCbtPage({ session, onLogout }) {
                                                                                     </>
                                                                                 )}
                                                                             </span>
+                                                                            {sw.paket_aktif && (
+                                                                                <span className="inline-flex items-center gap-1 rounded-md bg-violet-50 px-2 py-0.5 text-[11px] font-bold text-violet-700 border border-violet-200">
+                                                                                    📦 {sw.paket_aktif}
+                                                                                </span>
+                                                                            )}
                                                                             {sw.status === 'sudah' && (
                                                                                 <span className="inline-flex items-center gap-1 rounded-md bg-blue-50 px-2 py-0.5 text-[11px] font-semibold text-blue-700 border border-blue-200">
                                                                                     <svg className="w-3 h-3 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -944,7 +1222,7 @@ export default function GuruJadwalCbtPage({ session, onLogout }) {
                                                                         {sw.status === 'sudah' ? (
                                                                              <div>
                                                                                 <div className="flex items-center gap-1.5">
-                                                                                    <span className="font-semibold text-slate-900">{sw.total_skor}/{sesiDetailData.total_bobot}</span>
+                                                                                    <span className="font-semibold text-slate-900">{sw.total_skor}/{sw.total_bobot_siswa || sesiDetailData.total_bobot}</span>
                                                                                     {sw.riwayat_percobaan && sw.riwayat_percobaan.length > 1 && (
                                                                                         <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded-full border border-emerald-200" title="Nilai tertinggi yang digunakan untuk penilaian">
                                                                                             Tertinggi
@@ -977,7 +1255,7 @@ export default function GuruJadwalCbtPage({ session, onLogout }) {
                                                                             </div>
                                                                         ) : '-'}
                                                                     </td>
-                                                                    <td className="px-4 py-3 text-slate-600">{sw.status === 'sudah' ? `${sw.jumlah_benar}/${sesiDetailData.soal.length}` : '-'}</td>
+                                                                    <td className="px-4 py-3 text-slate-600">{sw.status === 'sudah' ? `${sw.jumlah_benar}/${sw.jumlah_soal_siswa || sesiDetailData.soal.length}` : '-'}</td>
                                                                     <td className="px-4 py-3 text-right">
                                                                         {sw.status === 'sudah' && (
                                                                             <button onClick={() => requestAction(() => setExpandedSiswaId(expandedSiswaId === sw.id_siswa ? null : sw.id_siswa))} className="inline-flex items-center justify-center rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-primary/60 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1">
@@ -1064,7 +1342,18 @@ export default function GuruJadwalCbtPage({ session, onLogout }) {
                                                                                 )}
 
                                                                                 <div className="space-y-2">
-                                                                                    {sesiDetailData.soal.map((soal, sIdx) => {
+                                                                                    {(function () {
+                                                                                        if (activeAttempt?.data_jawaban && Array.isArray(activeAttempt.data_jawaban) && activeAttempt.data_jawaban.length > 0) {
+                                                                                            const attemptIds = new Set(activeAttempt.data_jawaban.map(d => d.id_detail));
+                                                                                            const matched = sesiDetailData.soal.filter(s => attemptIds.has(s.id_detail));
+                                                                                            if (matched.length > 0) return matched;
+                                                                                        }
+                                                                                        if (sesiDetailData.sesi?.distribusi_paket && sw.paket_aktif) {
+                                                                                            const matchedPkg = sesiDetailData.soal.filter(s => !s.paket_soal || s.paket_soal === sw.paket_aktif);
+                                                                                            if (matchedPkg.length > 0) return matchedPkg;
+                                                                                        }
+                                                                                        return sesiDetailData.soal;
+                                                                                    })().map((soal, sIdx) => {
                                                                                         let dj = null;
                                                                                         if (activeAttempt?.data_jawaban && Array.isArray(activeAttempt.data_jawaban)) {
                                                                                             const fromAtt = activeAttempt.data_jawaban.find(d => d.id_detail === soal.id_detail);
@@ -1094,7 +1383,14 @@ export default function GuruJadwalCbtPage({ session, onLogout }) {
                                                                                             <div key={soal.id_detail} className={`rounded-xl border px-4 py-3 text-xs ${isCorrect ? 'border-emerald-200 bg-emerald-50/50' : 'border-rose-200 bg-rose-50/50'}`}>
                                                                                                 <div className="flex items-center justify-between mb-3 border-b border-slate-200/50 pb-2">
                                                                                                     <div className="flex flex-col">
-                                                                                                        <span className="font-bold text-slate-700">Soal {sIdx + 1}</span>
+                                                                                                        <div className="flex items-center gap-2">
+                                                                                                            <span className="font-bold text-slate-700">Soal {sIdx + 1}</span>
+                                                                                                            {soal.paket_soal && (
+                                                                                                                <span className="inline-flex items-center gap-1 rounded bg-violet-100 px-1.5 py-0.5 text-[10px] font-bold text-violet-700">
+                                                                                                                    📦 {soal.paket_soal}
+                                                                                                                </span>
+                                                                                                            )}
+                                                                                                        </div>
                                                                                                     <span className="text-[10px] text-slate-400 mt-0.5">{soal.level_kognitif ? `Taksonomi Bloom: ${soal.level_kognitif}` : 'Level Kognitif tidak disetel'}</span>
                                                                                                 </div>
                                                                                                 <div className="text-right">
@@ -1368,50 +1664,351 @@ export default function GuruJadwalCbtPage({ session, onLogout }) {
                                     </label>
                                 </div>
 
-                                <div className="mt-4 flex items-center justify-between rounded-2xl border border-border bg-slate-50 px-5 py-4">
-                                    <div>
-                                        <p className="text-sm font-semibold text-slate-900">Boleh Dikerjakan Ulang</p>
-                                        <p className="text-xs text-slate-500">Jika aktif, siswa dapat mengerjakan ujian ini lebih dari satu kali.</p>
+                                <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                                    <div className="flex items-center justify-between gap-3 rounded-2xl border border-border bg-slate-50 px-4 py-3.5">
+                                        <div>
+                                            <p className="text-sm font-semibold text-slate-900">Boleh Dikerjakan Ulang</p>
+                                            <p className="text-xs text-slate-500">Siswa dapat mengerjakan ujian lebih dari satu kali.</p>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            role="switch"
+                                            aria-checked={sesiForm.boleh_ulang}
+                                            onClick={() => setSesiForm(c => ({...c, boleh_ulang: !c.boleh_ulang}))}
+                                            className={`relative inline-flex h-7 w-12 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${sesiForm.boleh_ulang ? 'bg-primary' : 'bg-slate-300'}`}
+                                        >
+                                            <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${sesiForm.boleh_ulang ? 'translate-x-5' : 'translate-x-0.5'}`} />
+                                        </button>
                                     </div>
-                                    <button
-                                        type="button"
-                                        role="switch"
-                                        aria-checked={sesiForm.boleh_ulang}
-                                        onClick={() => setSesiForm(c => ({...c, boleh_ulang: !c.boleh_ulang}))}
-                                        className={`relative inline-flex h-7 w-12 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${sesiForm.boleh_ulang ? 'bg-primary' : 'bg-slate-300'}`}
-                                    >
-                                        <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${sesiForm.boleh_ulang ? 'translate-x-5' : 'translate-x-0.5'}`} />
-                                    </button>
-                                </div>
 
-                                <div className="mt-4 flex items-center justify-between rounded-2xl border border-border bg-slate-50 px-5 py-4">
-                                    <div>
-                                        <p className="text-sm font-semibold text-slate-900">Tampilkan Kunci Jawaban ke Siswa</p>
-                                        <p className="text-xs text-slate-500">Jika aktif, siswa dapat melihat teks kunci jawaban setelah mereka mengumpulkan ujian (di menu Riwayat).</p>
+                                    <div className="flex items-center justify-between gap-3 rounded-2xl border border-border bg-slate-50 px-4 py-3.5">
+                                        <div>
+                                            <p className="text-sm font-semibold text-slate-900">Tampilkan Kunci Jawaban ke Siswa</p>
+                                            <p className="text-xs text-slate-500">Siswa dapat melihat kunci jawaban di menu Riwayat.</p>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            role="switch"
+                                            aria-checked={sesiForm.tampilkan_kunci}
+                                            onClick={() => setSesiForm(c => ({...c, tampilkan_kunci: !c.tampilkan_kunci}))}
+                                            className={`relative inline-flex h-7 w-12 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${sesiForm.tampilkan_kunci ? 'bg-primary' : 'bg-slate-300'}`}
+                                        >
+                                            <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${sesiForm.tampilkan_kunci ? 'translate-x-5' : 'translate-x-0.5'}`} />
+                                        </button>
                                     </div>
-                                    <button
-                                        type="button"
-                                        role="switch"
-                                        aria-checked={sesiForm.tampilkan_kunci}
-                                        onClick={() => setSesiForm(c => ({...c, tampilkan_kunci: !c.tampilkan_kunci}))}
-                                        className={`relative inline-flex h-7 w-12 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${sesiForm.tampilkan_kunci ? 'bg-primary' : 'bg-slate-300'}`}
-                                    >
-                                        <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${sesiForm.tampilkan_kunci ? 'translate-x-5' : 'translate-x-0.5'}`} />
-                                    </button>
+
+                                    <div className="flex items-center justify-between gap-3 rounded-2xl border border-violet-200 bg-violet-50/50 px-4 py-3.5">
+                                        <div>
+                                            <div className="flex items-center gap-1.5">
+                                                <p className="text-sm font-semibold text-slate-900">📦 Distribusi Multi-Paket Otomatis</p>
+                                                <span className="rounded-full bg-violet-100 px-2 py-0.5 text-[10px] font-bold text-violet-700">Anti-Menyontek</span>
+                                            </div>
+                                            <p className="text-xs text-slate-500 mt-0.5">Jika memilih &gt;1 Paket Soal (misal Paket A &amp; Paket B), tiap siswa otomatis mendapat 1 paket soal berbeda.</p>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            role="switch"
+                                            aria-checked={sesiForm.distribusi_paket}
+                                            onClick={() => {
+                                                const nextVal = !sesiForm.distribusi_paket;
+                                                setSesiForm(c => ({ ...c, distribusi_paket: nextVal }));
+                                                if (autoDistributeBobot) {
+                                                    setSelectedSoalMap(curr => computeDistributedBobotMap(Object.keys(curr), sharedBankSoal, sesiForm.target_bobot_total, nextVal));
+                                                }
+                                            }}
+                                            className={`relative inline-flex h-7 w-12 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${sesiForm.distribusi_paket ? 'bg-violet-600' : 'bg-slate-300'}`}
+                                        >
+                                            <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${sesiForm.distribusi_paket ? 'translate-x-5' : 'translate-x-0.5'}`} />
+                                        </button>
+                                    </div>
+
+                                    <div className="flex items-center justify-between gap-3 rounded-2xl border border-indigo-200 bg-indigo-50/40 px-4 py-3.5">
+                                        <div>
+                                            <div className="flex items-center gap-1.5">
+                                                <p className="text-sm font-semibold text-slate-900">🔀 Acak Urutan Nomor Soal</p>
+                                                <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-[10px] font-bold text-indigo-700">Per Siswa</span>
+                                            </div>
+                                            <p className="text-xs text-slate-500 mt-0.5">Urutan nomor soal yang tampil di layar tiap siswa akan diacak secara otomatis.</p>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            role="switch"
+                                            aria-checked={sesiForm.acak_soal}
+                                            onClick={() => setSesiForm(c => ({ ...c, acak_soal: !c.acak_soal }))}
+                                            className={`relative inline-flex h-7 w-12 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${sesiForm.acak_soal ? 'bg-indigo-600' : 'bg-slate-300'}`}
+                                        >
+                                            <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${sesiForm.acak_soal ? 'translate-x-5' : 'translate-x-0.5'}`} />
+                                        </button>
+                                    </div>
                                 </div>
 
                                 {(() => {
+                                    // Daftar paket unik di bank soal mata pelajaran ini
+                                    const paketSummaryMap = {};
+                                    sharedBankSoal.forEach(item => {
+                                        const p = (item.paket_soal || '').trim();
+                                        if (p) {
+                                            if (!paketSummaryMap[p]) paketSummaryMap[p] = [];
+                                            paketSummaryMap[p].push(item.id_soal);
+                                        }
+                                    });
+                                    const availablePackages = Object.keys(paketSummaryMap).sort((a, b) =>
+                                        a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' })
+                                    );
+
                                     const filteredBankSoal = sharedBankSoal.filter(item => {
                                         if (bankSearch && !item.isi_soal.toLowerCase().includes(bankSearch.toLowerCase())) return false;
+                                        if (bankFilterPaket === '__TANPA_PAKET__' && (item.paket_soal || '').trim() !== '') return false;
+                                        if (bankFilterPaket && bankFilterPaket !== '__TANPA_PAKET__' && (item.paket_soal || '').trim() !== bankFilterPaket) return false;
                                         if (bankFilterLevel && item.level_kognitif !== bankFilterLevel) return false;
                                         if (bankFilterJenis && item.jenis_soal !== bankFilterJenis) return false;
                                         return true;
                                     });
 
+                                    const selectedIds = Object.keys(selectedSoalMap).map(Number);
+                                    const targetBobot = Number(sesiForm.target_bobot_total) > 0 ? Number(sesiForm.target_bobot_total) : 100;
+                                    const currentTotalBobot = round2(
+                                        Object.values(selectedSoalMap).reduce((sum, val) => sum + (Number(val) || 0), 0)
+                                    );
+
+                                    // Hitung bobot per paket terpilih jika multi-paket aktif
+                                    const selectedPackagesWeight = {};
+                                    let selectedUmumWeight = 0;
+                                    selectedIds.forEach(id => {
+                                        const found = sharedBankSoal.find(s => Number(s.id_soal) === id);
+                                        const pkt = (found?.paket_soal || '').trim();
+                                        const w = Number(selectedSoalMap[id]) || 0;
+                                        if (pkt) {
+                                            selectedPackagesWeight[pkt] = round2((selectedPackagesWeight[pkt] || 0) + w);
+                                        } else {
+                                            selectedUmumWeight = round2(selectedUmumWeight + w);
+                                        }
+                                    });
+                                    const selectedPackageNames = Object.keys(selectedPackagesWeight).sort((a, b) =>
+                                        a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' })
+                                    );
+                                    const isEffectiveMultiPaket = sesiForm.distribusi_paket && selectedPackageNames.length > 1;
+
+                                    const isBobotMatched = selectedIds.length > 0 && (
+                                        isEffectiveMultiPaket
+                                            ? selectedPackageNames.every(p => Math.abs(round2(selectedPackagesWeight[p] + selectedUmumWeight) - targetBobot) < 0.05)
+                                            : Math.abs(currentTotalBobot - targetBobot) < 0.05
+                                    );
+
+                                    const handleRedistributeBobot = (customIds = null, customTarget = null, customMulti = null) => {
+                                        const idsToUse = customIds ?? Object.keys(selectedSoalMap);
+                                        const targetToUse = customTarget ?? sesiForm.target_bobot_total;
+                                        const multiToUse = customMulti ?? sesiForm.distribusi_paket;
+                                        setSelectedSoalMap(computeDistributedBobotMap(idsToUse, sharedBankSoal, targetToUse, multiToUse));
+                                    };
+
+                                    const toggleSelectPackage = (paketName) => {
+                                        const pkgIds = paketSummaryMap[paketName] || [];
+                                        if (pkgIds.length === 0) return;
+                                        const allAlreadySelected = pkgIds.every(id => !!selectedSoalMap[id]);
+                                        setSelectedSoalMap(curr => {
+                                            const next = { ...curr };
+                                            if (allAlreadySelected) {
+                                                pkgIds.forEach(id => delete next[id]);
+                                            } else {
+                                                pkgIds.forEach(id => {
+                                                    if (!next[id]) next[id] = 10;
+                                                });
+                                            }
+                                            if (autoDistributeBobot) {
+                                                return computeDistributedBobotMap(Object.keys(next), sharedBankSoal, sesiForm.target_bobot_total, sesiForm.distribusi_paket);
+                                            }
+                                            return next;
+                                        });
+                                    };
+
                                     return (
-                                        <div className="mt-6 pt-6 border-t border-border">
-                                            <div className="flex flex-col xl:flex-row items-start xl:items-center justify-between mb-4 gap-4">
-                                                <h4 className="text-base font-semibold text-slate-900 whitespace-nowrap">Pilih Soal dari Bank Soal ({Object.keys(selectedSoalMap).length} Terpilih)</h4>
+                                        <div className="mt-6 pt-6 border-t border-border space-y-4">
+                                            {/* Panel Pengaturan Total Nilai Sesi & Pembagian Bobot Otomatis */}
+                                            <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4 space-y-3">
+                                                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                                                    <div className="space-y-1">
+                                                        <div className="flex flex-wrap items-center gap-2">
+                                                            <h5 className="text-sm font-bold text-slate-900">⚖️ Pengaturan Total Nilai &amp; Pembagian Bobot Soal</h5>
+                                                            <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-[11px] font-bold text-emerald-800">
+                                                                Default 100
+                                                            </span>
+                                                        </div>
+                                                        <p className="text-xs text-slate-500">
+                                                            Sistem otomatis membagi rata bobot setiap soal terpilih agar total nilai pas sesuai target. Anda tetap dapat mengubah bobot per butir soal di tabel bawah.
+                                                        </p>
+                                                    </div>
+
+                                                    <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+                                                        <div className="flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-3 py-1.5 shadow-2xs">
+                                                            <span className="text-xs font-semibold text-slate-600 whitespace-nowrap">Target Total Nilai:</span>
+                                                            <input
+                                                                type="number"
+                                                                min="1"
+                                                                step="any"
+                                                                value={sesiForm.target_bobot_total}
+                                                                onChange={(e) => {
+                                                                    const val = e.target.value;
+                                                                    setSesiForm(c => ({ ...c, target_bobot_total: val }));
+                                                                    if (autoDistributeBobot && Number(val) > 0) {
+                                                                        handleRedistributeBobot(null, Number(val), null);
+                                                                    }
+                                                                }}
+                                                                className="w-20 rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 text-center text-sm font-bold text-slate-900 outline-none focus:border-primary focus:bg-white"
+                                                            />
+                                                        </div>
+                                                        <button
+                                                            type="button"
+                                                            disabled={selectedIds.length === 0}
+                                                            onClick={() => handleRedistributeBobot()}
+                                                            className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-3.5 py-2 text-xs font-bold text-white shadow-xs transition hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
+                                                        >
+                                                            ⚖️ Bagi Rata Bobot ({targetBobot})
+                                                        </button>
+                                                    </div>
+                                                </div>
+
+                                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-2 border-t border-slate-200/80 text-xs">
+                                                    <label className="inline-flex items-center gap-2 cursor-pointer text-slate-700 font-medium">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={autoDistributeBobot}
+                                                            onChange={(e) => {
+                                                                const checked = e.target.checked;
+                                                                setAutoDistributeBobot(checked);
+                                                                if (checked && selectedIds.length > 0) {
+                                                                    handleRedistributeBobot();
+                                                                }
+                                                            }}
+                                                            className="h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary"
+                                                        />
+                                                        <span>Bagi rata bobot otomatis saat memilih/mencentang soal</span>
+                                                    </label>
+
+                                                    {selectedIds.length > 0 && (
+                                                        <div className="flex flex-wrap items-center gap-2">
+                                                            {isEffectiveMultiPaket ? (
+                                                                <div className="flex flex-wrap items-center gap-1.5">
+                                                                    <span className="text-slate-500 font-medium">Bobot per Paket:</span>
+                                                                    {selectedPackageNames.map(pkt => {
+                                                                        const pkgTotal = round2(selectedPackagesWeight[pkt] + selectedUmumWeight);
+                                                                        const ok = Math.abs(pkgTotal - targetBobot) < 0.05;
+                                                                        return (
+                                                                            <span
+                                                                                key={pkt}
+                                                                                className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-bold border ${
+                                                                                    ok ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-amber-50 text-amber-700 border-amber-300'
+                                                                                }`}
+                                                                            >
+                                                                                📦 {pkt}: {pkgTotal}/{targetBobot}
+                                                                            </span>
+                                                                        );
+                                                                    })}
+                                                                </div>
+                                                            ) : (
+                                                                <span
+                                                                    className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold border ${
+                                                                        isBobotMatched
+                                                                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                                                            : 'bg-amber-50 text-amber-800 border-amber-300'
+                                                                    }`}
+                                                                >
+                                                                    {isBobotMatched ? '✅' : '⚠️'} Total Bobot Soal Terpilih: {currentTotalBobot} / {targetBobot}
+                                                                </span>
+                                                            )}
+                                                            {!isBobotMatched && (
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => handleRedistributeBobot()}
+                                                                    className="text-primary font-bold underline hover:text-primary/80"
+                                                                >
+                                                                    Sesuaikan Otomatis
+                                                                </button>
+                                                            )}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+
+                                            {/* Quick Select Paket Soal */}
+                                            {sesiForm.id_mapel && availablePackages.length > 0 && (
+                                                <div className="rounded-2xl border border-violet-200/80 bg-violet-50/40 p-3.5 space-y-2">
+                                                    <div className="flex flex-wrap items-center justify-between gap-2">
+                                                        <span className="text-xs font-bold text-violet-950 flex items-center gap-1.5">
+                                                            📦 Pilih Cepat Berdasarkan Paket Soal (Klik untuk pilih semua soal dalam paket):
+                                                        </span>
+                                                        {selectedIds.length > 0 && (
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => setSelectedSoalMap({})}
+                                                                className="text-[11px] font-semibold text-rose-600 hover:underline"
+                                                            >
+                                                                Reset Pilihan ({selectedIds.length})
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                    <div className="flex flex-wrap items-center gap-2">
+                                                        {availablePackages.map(pkt => {
+                                                            const pkgIds = paketSummaryMap[pkt] || [];
+                                                            const selectedCountInPkg = pkgIds.filter(id => !!selectedSoalMap[id]).length;
+                                                            const isAllSelected = pkgIds.length > 0 && selectedCountInPkg === pkgIds.length;
+                                                            return (
+                                                                <button
+                                                                    key={pkt}
+                                                                    type="button"
+                                                                    onClick={() => toggleSelectPackage(pkt)}
+                                                                    className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-bold transition border shadow-2xs ${
+                                                                        isAllSelected
+                                                                            ? 'bg-violet-600 text-white border-violet-600 hover:bg-violet-700'
+                                                                            : selectedCountInPkg > 0
+                                                                            ? 'bg-violet-100 text-violet-800 border-violet-300 hover:bg-violet-200'
+                                                                            : 'bg-white text-slate-700 border-slate-200 hover:border-violet-300 hover:bg-violet-50'
+                                                                    }`}
+                                                                >
+                                                                    <span>{isAllSelected ? '✓' : '+'} 📦 {pkt}</span>
+                                                                    <span className={`rounded-full px-1.5 py-0.2 text-[10px] ${isAllSelected ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-600'}`}>
+                                                                        {selectedCountInPkg > 0 ? `${selectedCountInPkg}/${pkgIds.length}` : `${pkgIds.length} Soal`}
+                                                                    </span>
+                                                                </button>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            <div className="flex flex-col xl:flex-row items-start xl:items-center justify-between mb-2 gap-4">
+                                                <div className="flex flex-wrap items-center gap-2">
+                                                    <h4 className="text-base font-semibold text-slate-900 whitespace-nowrap">
+                                                        Pilih Soal dari Bank Soal ({selectedIds.length} Terpilih)
+                                                    </h4>
+                                                    {filteredBankSoal.length > 0 && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => {
+                                                                const allFilteredSelected = filteredBankSoal.every(item => !!selectedSoalMap[item.id_soal]);
+                                                                setSelectedSoalMap(curr => {
+                                                                    const next = { ...curr };
+                                                                    if (allFilteredSelected) {
+                                                                        filteredBankSoal.forEach(item => delete next[item.id_soal]);
+                                                                    } else {
+                                                                        filteredBankSoal.forEach(item => {
+                                                                            if (!next[item.id_soal]) next[item.id_soal] = 10;
+                                                                        });
+                                                                    }
+                                                                    if (autoDistributeBobot) {
+                                                                        return computeDistributedBobotMap(Object.keys(next), sharedBankSoal, sesiForm.target_bobot_total, sesiForm.distribusi_paket);
+                                                                    }
+                                                                    return next;
+                                                                });
+                                                            }}
+                                                            className="rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition"
+                                                        >
+                                                            {filteredBankSoal.every(item => !!selectedSoalMap[item.id_soal])
+                                                                ? 'Batal Pilih Tampilan Ini'
+                                                                : `Pilih Semua Tampilan Ini (${filteredBankSoal.length})`}
+                                                        </button>
+                                                    )}
+                                                </div>
                                                 
                                                 {/* Filters */}
                                                 <div className="flex flex-wrap xl:flex-nowrap items-center gap-2 w-full xl:w-auto">
@@ -1420,7 +2017,18 @@ export default function GuruJadwalCbtPage({ session, onLogout }) {
                                                         placeholder="Cari isi soal..."
                                                         value={bankSearch}
                                                         onChange={(e) => setBankSearch(e.target.value)}
-                                                        className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary w-full sm:w-48"
+                                                        className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary w-full sm:w-44"
+                                                    />
+                                                    <FilterSelect
+                                                        value={bankFilterPaket}
+                                                        onChange={setBankFilterPaket}
+                                                        placeholder="Semua Paket"
+                                                        align="left"
+                                                        options={[
+                                                            { value: '', label: 'Semua Paket' },
+                                                            { value: '__TANPA_PAKET__', label: 'Tanpa Paket (Umum)' },
+                                                            ...availablePackages.map(p => ({ value: p, label: `📦 ${p}` })),
+                                                        ]}
                                                     />
                                                     <FilterSelect
                                                         value={bankFilterLevel}
@@ -1464,6 +2072,7 @@ export default function GuruJadwalCbtPage({ session, onLogout }) {
                                                 <tr>
                                                     <th className="px-4 py-3 font-semibold text-slate-600">Pilih</th>
                                                     <th className="px-4 py-3 font-semibold text-slate-600">Isi Soal</th>
+                                                    <th className="px-4 py-3 font-semibold text-slate-600">Paket</th>
                                                     <th className="px-4 py-3 font-semibold text-slate-600">Level Kognitif</th>
                                                     <th className="px-4 py-3 font-semibold text-slate-600">Tingkat</th>
                                                     <th className="px-4 py-3 font-semibold text-slate-600">Topik</th>
@@ -1472,7 +2081,7 @@ export default function GuruJadwalCbtPage({ session, onLogout }) {
                                                 </tr>
                                             </thead>
                                             <tbody className="divide-y divide-slate-100">
-                                                {sharedBankSoalLoading && <tr><td colSpan="7" className="px-4 py-8 text-center text-slate-500">Memuat bank soal...</td></tr>}
+                                                {sharedBankSoalLoading && <tr><td colSpan="8" className="px-4 py-8 text-center text-slate-500">Memuat bank soal...</td></tr>}
                                                 {!sharedBankSoalLoading && filteredBankSoal
                                                     .map(item => (
                                                     <tr key={item.id_soal} className="hover:bg-slate-50">
@@ -1486,13 +2095,25 @@ export default function GuruJadwalCbtPage({ session, onLogout }) {
                                                                         const next = {...curr};
                                                                         if (checked) next[item.id_soal] = 10;
                                                                         else delete next[item.id_soal];
+                                                                        if (autoDistributeBobot) {
+                                                                            return computeDistributedBobotMap(Object.keys(next), sharedBankSoal, sesiForm.target_bobot_total, sesiForm.distribusi_paket);
+                                                                        }
                                                                         return next;
                                                                     });
                                                                 }}
                                                                 className="h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary"
                                                             />
                                                         </td>
-                                                        <td className="px-4 py-3 min-w-[300px] max-w-md whitespace-pre-wrap break-words">{item.isi_soal}</td>
+                                                        <td className="px-4 py-3 min-w-[280px] max-w-md whitespace-pre-wrap break-words">{item.isi_soal}</td>
+                                                        <td className="px-4 py-3 whitespace-nowrap">
+                                                            {item.paket_soal ? (
+                                                                <span className="inline-flex items-center gap-1 rounded-md bg-violet-50 border border-violet-200 px-2 py-0.5 text-xs font-bold text-violet-700">
+                                                                    📦 {item.paket_soal}
+                                                                </span>
+                                                            ) : (
+                                                                <span className="text-xs text-slate-400">Umum</span>
+                                                            )}
+                                                        </td>
                                                         <td className="px-4 py-3"><span className="inline-flex px-2 py-1 rounded bg-slate-100 text-xs font-medium text-slate-600">{item.level_kognitif}</span></td>
                                                         <td className="px-4 py-3">
                                                             <div className="flex flex-col">
@@ -1506,20 +2127,28 @@ export default function GuruJadwalCbtPage({ session, onLogout }) {
                                                         <td className="px-4 py-3 capitalize">{item.jenis_soal.replace(/_/g, ' ')}</td>
                                                         <td className="px-4 py-3">
                                                             <input 
-                                                                type="number" min="1"
-                                                                value={selectedSoalMap[item.id_soal] || ''}
-                                                                onChange={e => setSelectedSoalMap(curr => ({...curr, [item.id_soal]: Number(e.target.value)}))}
-                                                                disabled={!selectedSoalMap[item.id_soal]}
-                                                                className="w-16 rounded border border-slate-300 px-2 py-1 text-sm disabled:bg-slate-100 outline-none transition focus:border-slate-900"
+                                                                type="number"
+                                                                min="0.01"
+                                                                step="any"
+                                                                value={selectedSoalMap[item.id_soal] ?? ''}
+                                                                onChange={e => {
+                                                                    const raw = e.target.value;
+                                                                    setSelectedSoalMap(curr => ({
+                                                                        ...curr,
+                                                                        [item.id_soal]: raw === '' ? '' : Number(raw),
+                                                                    }));
+                                                                }}
+                                                                disabled={!selectedSoalMap[item.id_soal] && selectedSoalMap[item.id_soal] !== 0 && selectedSoalMap[item.id_soal] !== ''}
+                                                                className="w-20 rounded-lg border border-slate-300 px-2.5 py-1.5 text-sm font-semibold disabled:bg-slate-100 outline-none transition focus:border-slate-900"
                                                             />
                                                         </td>
                                                     </tr>
                                                 ))}
                                                 {!sesiForm.id_mapel && (
-                                                    <tr><td colSpan="7" className="px-4 py-8 text-center text-slate-500">Silakan pilih Mata Pelajaran terlebih dahulu.</td></tr>
+                                                    <tr><td colSpan="8" className="px-4 py-8 text-center text-slate-500">Silakan pilih Mata Pelajaran terlebih dahulu.</td></tr>
                                                 )}
                                                 {!sharedBankSoalLoading && sesiForm.id_mapel && sharedBankSoal.length === 0 && (
-                                                    <tr><td colSpan="7" className="px-4 py-8 text-center text-slate-500">Bank soal kosong untuk mata pelajaran ini.</td></tr>
+                                                    <tr><td colSpan="8" className="px-4 py-8 text-center text-slate-500">Bank soal kosong untuk mata pelajaran ini.</td></tr>
                                                 )}
                                             </tbody>
                                         </table>

@@ -56,8 +56,11 @@ class BankSoal extends Model
         'opsi_jawaban',
         'kunci_jawaban',
         'topik_materi',
+        'paket_soal',
         'level_kognitif',
         'gambar_soal',
+        'audio_soal',
+        'batas_putar_audio',
         'keywords',
         'rule_weight',
         'lsa_weight',
@@ -74,15 +77,22 @@ class BankSoal extends Model
         'math_weight' => 'float',
         'tgate' => 'float',
         'required_keywords_count' => 'integer',
+        'batas_putar_audio' => 'integer',
     ];
 
     protected $appends = [
         'gambar_soal_url',
+        'audio_soal_url',
     ];
 
     public function getGambarSoalUrlAttribute(): ?string
     {
         return $this->gambar_soal ? asset('storage/' . $this->gambar_soal) : null;
+    }
+
+    public function getAudioSoalUrlAttribute(): ?string
+    {
+        return $this->audio_soal ? asset('storage/' . $this->audio_soal) : null;
     }
 
     public function pembuat(): BelongsTo

@@ -7,7 +7,8 @@ import useGuruWorkspace from '../hooks/useGuruWorkspace';
 import { guruNavigation } from './guru/guruNavigation';
 import * as XLSX from 'xlsx';
 import { ConfirmModal } from '../components/ui/ConfirmModal';
-import { downloadBankSoalTemplateExcel, parseBankSoalExcelRows } from '../lib/bankSoalExcel';
+import ImageLightboxModal from '../components/ui/ImageLightboxModal';
+import { downloadBankSoalTemplateExcel, parseBankSoalExcelRows, extractImagesByRowFromXlsxBinary } from '../lib/bankSoalExcel';
 
 const BLOOM_OPTIONS = ['C1', 'C2', 'C3', 'C4', 'C5', 'C6'];
 
@@ -15,6 +16,7 @@ export default function GuruBankSoalPage({ session, onLogout }) {
     const { summary, workspace, loading, reloadWorkspace } = useGuruWorkspace(session);
     
     const [successPopup, setSuccessPopup] = useState(null);
+    const [zoomedImageUrl, setZoomedImageUrl] = useState(null);
     const [bankForm, setBankForm] = useState({
         id_mapel: '',
         isi_soal: '',
@@ -23,10 +25,15 @@ export default function GuruBankSoalPage({ session, onLogout }) {
         kunci_jawaban: '',
         kunci_jawaban_kompleks: [],
         topik_materi: '',
+        paket_soal: '',
         level_kognitif: '',
         gambar_soal: null,
         gambar_soal_url: '',
         hapus_gambar: false,
+        audio_soal: null,
+        audio_soal_url: '',
+        hapus_audio: false,
+        batas_putar_audio: '',
         keywords: '',
         rule_weight: 0.5,
         lsa_weight: 0.5,
@@ -38,8 +45,10 @@ export default function GuruBankSoalPage({ session, onLogout }) {
     });
     const [bankSearch, setBankSearch] = useState('');
     const [bankFilterMapel, setBankFilterMapel] = useState('');
+    const [bankFilterPaket, setBankFilterPaket] = useState('');
     const [bankFilterJenis, setBankFilterJenis] = useState('');
     const [bankFilterLevel, setBankFilterLevel] = useState('');
+    const [importPaketName, setImportPaketName] = useState('');
     const [isFormOpen, setIsFormOpen] = useState(false);
     const [editingBankSoalId, setEditingBankSoalId] = useState(null);
     const [expandedBankFolders, setExpandedBankFolders] = useState({});
@@ -47,8 +56,11 @@ export default function GuruBankSoalPage({ session, onLogout }) {
     
     const [isImporting, setIsImporting] = useState(false);
     const [importResult, setImportResult] = useState(null);
+    const [pendingImportFile, setPendingImportFile] = useState(null);
 
     const fileInputRef = useRef(null);
+    const imageInputRef = useRef(null);
+    const audioInputRef = useRef(null);
     const formRef = useRef(null);
 
     const showSuccessPopup = (title, message, type = null) => {
@@ -58,11 +70,23 @@ export default function GuruBankSoalPage({ session, onLogout }) {
     const closeSuccessPopup = () => setSuccessPopup(null);
     const toggleBankFolder = (id) => setExpandedBankFolders(prev => ({...prev, [id]: !prev[id]}));
 
+    const paketOptions = useMemo(() => {
+        const set = new Set();
+        (workspace.bank_soal || []).forEach((item) => {
+            if (bankFilterMapel && String(item.id_mapel) !== String(bankFilterMapel)) return;
+            const p = (item.paket_soal || '').trim();
+            if (p) set.add(p);
+        });
+        return Array.from(set).sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
+    }, [workspace.bank_soal, bankFilterMapel]);
+
     const bankRows = useMemo(() => {
         const search = bankSearch.trim().toLowerCase();
 
         return (workspace.bank_soal || []).filter((item) => {
             if (bankFilterMapel && String(item.id_mapel) !== String(bankFilterMapel)) return false;
+            if (bankFilterPaket === '__TANPA_PAKET__' && (item.paket_soal || '').trim() !== '') return false;
+            if (bankFilterPaket && bankFilterPaket !== '__TANPA_PAKET__' && (item.paket_soal || '').trim() !== bankFilterPaket) return false;
             if (bankFilterJenis && item.jenis_soal !== bankFilterJenis) return false;
             if (bankFilterLevel && item.level_kognitif !== bankFilterLevel) return false;
 
@@ -73,6 +97,7 @@ export default function GuruBankSoalPage({ session, onLogout }) {
             return [
                 item.mata_pelajaran?.nama_mapel,
                 item.topik_materi,
+                item.paket_soal,
                 item.level_kognitif,
                 item.jenis_soal,
                 item.isi_soal,
@@ -80,7 +105,7 @@ export default function GuruBankSoalPage({ session, onLogout }) {
                 .filter(Boolean)
                 .some((value) => String(value).toLowerCase().includes(search));
         });
-    }, [bankSearch, bankFilterMapel, bankFilterJenis, bankFilterLevel, workspace.bank_soal]);
+    }, [bankSearch, bankFilterMapel, bankFilterPaket, bankFilterJenis, bankFilterLevel, workspace.bank_soal]);
 
     const groupedBankSoal = useMemo(() => {
         return bankRows.reduce((acc, soal) => {
@@ -106,10 +131,15 @@ export default function GuruBankSoalPage({ session, onLogout }) {
             kunci_jawaban: item.jenis_soal !== 'pilihan_ganda_kompleks' ? item.kunci_jawaban : '',
             kunci_jawaban_kompleks: item.jenis_soal === 'pilihan_ganda_kompleks' ? (function() { try { return JSON.parse(item.kunci_jawaban); } catch { return []; } })() : [],
             topik_materi: item.topik_materi || '',
+            paket_soal: item.paket_soal || '',
             level_kognitif: item.level_kognitif || '',
             gambar_soal: null,
             gambar_soal_url: item.gambar_soal ? `/storage/${item.gambar_soal}` : '',
             hapus_gambar: false,
+            audio_soal: null,
+            audio_soal_url: item.audio_soal ? `/storage/${item.audio_soal}` : '',
+            hapus_audio: false,
+            batas_putar_audio: item.batas_putar_audio ? String(item.batas_putar_audio) : '',
             keywords: item.keywords ? item.keywords.join('\n') : '',
             rule_weight: item.rule_weight || 0.5,
             lsa_weight: item.lsa_weight || 0.5,
@@ -122,12 +152,23 @@ export default function GuruBankSoalPage({ session, onLogout }) {
         
         // Smooth scroll ke arah form
         setTimeout(() => {
-            formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }, 50);
+            if (formRef.current) {
+                formRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            } else {
+                const el = document.getElementById('guru-bank-soal-form');
+                el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        }, 80);
     };
 
     const resetBankForm = () => {
         setEditingBankSoalId(null);
+        if (imageInputRef.current) {
+            imageInputRef.current.value = '';
+        }
+        if (audioInputRef.current) {
+            audioInputRef.current.value = '';
+        }
         setBankForm((current) => ({
             ...current,
             isi_soal: '',
@@ -135,10 +176,15 @@ export default function GuruBankSoalPage({ session, onLogout }) {
             kunci_jawaban: '',
             kunci_jawaban_kompleks: [],
             topik_materi: '',
+            paket_soal: '',
             level_kognitif: '',
             gambar_soal: null,
             gambar_soal_url: '',
             hapus_gambar: false,
+            audio_soal: null,
+            audio_soal_url: '',
+            hapus_audio: false,
+            batas_putar_audio: '',
             keywords: '',
             rule_weight: 0.5,
             lsa_weight: 0.5,
@@ -191,6 +237,7 @@ export default function GuruBankSoalPage({ session, onLogout }) {
             formData.append('isi_soal', bankForm.isi_soal);
             formData.append('jenis_soal', bankForm.jenis_soal);
             formData.append('topik_materi', bankForm.topik_materi);
+            formData.append('paket_soal', (bankForm.paket_soal || '').trim());
             formData.append('level_kognitif', bankForm.level_kognitif);
 
             if (bankForm.jenis_soal === 'pilihan_ganda' || bankForm.jenis_soal === 'pilihan_ganda_kompleks') {
@@ -236,6 +283,15 @@ export default function GuruBankSoalPage({ session, onLogout }) {
                 formData.append('hapus_gambar', 'true');
             }
 
+            if (bankForm.audio_soal instanceof File) {
+                formData.append('audio_soal', bankForm.audio_soal);
+            } else if (bankForm.hapus_audio) {
+                formData.append('hapus_audio', 'true');
+            }
+            if ((bankForm.audio_soal instanceof File || bankForm.audio_soal_url) && !bankForm.hapus_audio) {
+                formData.append('batas_putar_audio', bankForm.batas_putar_audio ? Number(bankForm.batas_putar_audio) : 0);
+            }
+
             if (isEditing) {
                 formData.append('_method', 'PATCH');
             }
@@ -255,8 +311,15 @@ export default function GuruBankSoalPage({ session, onLogout }) {
     };
 
     const handleFileUpload = (e) => {
-        const file = e.target.files[0];
+        const file = e.target.files?.[0];
         if (!file) return;
+        setPendingImportFile(file);
+        if (fileInputRef.current) fileInputRef.current.value = '';
+    };
+
+    const confirmImportExcelAction = () => {
+        if (!pendingImportFile) return;
+        const file = pendingImportFile;
 
         const reader = new FileReader();
         reader.onload = async (evt) => {
@@ -268,14 +331,20 @@ export default function GuruBankSoalPage({ session, onLogout }) {
                 const wb = XLSX.read(bstr, { type: 'binary' });
                 const wsname = wb.SheetNames[0];
                 const ws = wb.Sheets[wsname];
-                const data = XLSX.utils.sheet_to_json(ws);
+                const data = XLSX.utils.sheet_to_json(ws, { defval: '' });
                 
                 if (data.length === 0) {
+                    setPendingImportFile(null);
                     showSuccessPopup('Format File Tidak Valid', 'File Excel kosong atau format tidak sesuai.', 'error');
                     return;
                 }
 
-                const { mapelGroup, skippedRows } = parseBankSoalExcelRows(data, workspace?.mapel_options || [], { isGuru: true });
+                const rowImages = extractImagesByRowFromXlsxBinary(bstr);
+                const { mapelGroup, skippedRows } = parseBankSoalExcelRows(data, workspace?.mapel_options || [], {
+                    isGuru: true,
+                    rowImages,
+                    defaultPaket: importPaketName,
+                });
 
                 let totalCreated = 0;
                 for (const [idMapel, soalArray] of Object.entries(mapelGroup)) {
@@ -300,16 +369,17 @@ export default function GuruBankSoalPage({ session, onLogout }) {
                     })
                 });
                 
+                setPendingImportFile(null);
                 await reloadWorkspace();
             } catch (err) {
                 console.error(err);
+                setPendingImportFile(null);
                 showSuccessPopup('Gagal Import Excel', 'Terjadi kesalahan saat memproses file Excel: ' + (err.message || err), 'error');
             } finally {
                 setIsImporting(false);
             }
         };
         reader.readAsBinaryString(file);
-        if (fileInputRef.current) fileInputRef.current.value = '';
     };
 
     const downloadTemplateExcel = () => {
@@ -363,119 +433,337 @@ export default function GuruBankSoalPage({ session, onLogout }) {
                     </div>
                 </section>
 
-                <form ref={formRef} onSubmit={submitBankSoal} className="rounded-3xl border border-border bg-white p-6 shadow-sm scroll-mt-24">
-                    <h3 className="text-xl font-semibold text-slate-900 border-b border-border pb-4">Input soal digital terstruktur</h3>
-                    <div className="mt-6 grid gap-4 md:grid-cols-2">
-                        <label className="space-y-2 text-sm font-medium text-slate-700">
+                <form
+                    ref={formRef}
+                    id="guru-bank-soal-form"
+                    onSubmit={submitBankSoal}
+                    className="rounded-2xl sm:rounded-3xl border border-border bg-white p-4 sm:p-6 shadow-sm overflow-hidden scroll-mt-24 sm:scroll-mt-28"
+                >
+                    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border pb-4">
+                        <div>
+                            <p className="text-xs sm:text-sm font-medium uppercase tracking-[0.3em] text-slate-500">Bank Soal</p>
+                            <h3 className="mt-1 text-lg sm:text-xl font-semibold text-slate-900">
+                                {editingBankSoalId ? 'Edit Soal Digital' : 'Input Soal Digital Terstruktur'}
+                            </h3>
+                        </div>
+                        {editingBankSoalId && (
+                            <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-800 ring-1 ring-inset ring-amber-600/20">
+                                ✏️ Mode Edit Soal
+                            </span>
+                        )}
+                    </div>
+                    <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2">
+                        <label className="min-w-0 space-y-2 text-sm font-medium text-slate-700">
                             <span>Mata Pelajaran</span>
-                            <select required value={bankForm.id_mapel} onChange={(event) => setBankForm((current) => ({ ...current, id_mapel: event.target.value }))} className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-slate-900">
+                            <select required value={bankForm.id_mapel} onChange={(event) => setBankForm((current) => ({ ...current, id_mapel: event.target.value }))} className="w-full min-w-0 rounded-2xl border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-slate-900">
                                 <option value="">Pilih mapel</option>
                                 {(workspace.mapel_options || []).map((item) => (
                                     <option key={item.id_mapel} value={item.id_mapel}>{item.nama_lengkap || item.nama_mapel}</option>
                                 ))}
                             </select>
                         </label>
-                        <label className="space-y-2 text-sm font-medium text-slate-700">
+                        <label className="min-w-0 space-y-2 text-sm font-medium text-slate-700">
                             <span>Jenis Soal</span>
-                            <select required value={bankForm.jenis_soal} onChange={(event) => setBankForm((current) => ({ ...current, jenis_soal: event.target.value }))} className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-slate-900">
+                            <select required value={bankForm.jenis_soal} onChange={(event) => setBankForm((current) => ({ ...current, jenis_soal: event.target.value }))} className="w-full min-w-0 rounded-2xl border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-slate-900">
                                 <option value="pilihan_ganda">Pilihan Ganda</option>
                                 <option value="pilihan_ganda_kompleks">Pilihan Ganda Kompleks</option>
                                 <option value="esai">Esai</option>
                             </select>
                         </label>
-                        <label className="space-y-2 text-sm font-medium text-slate-700">
+                        <label className="min-w-0 space-y-2 text-sm font-medium text-slate-700">
                             <span>Topik Materi</span>
-                            <input required value={bankForm.topik_materi} onChange={(event) => setBankForm((current) => ({ ...current, topik_materi: event.target.value }))} className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-slate-900" placeholder="Contoh: Sistem Persamaan Linear" />
+                            <input required value={bankForm.topik_materi} onChange={(event) => setBankForm((current) => ({ ...current, topik_materi: event.target.value }))} className="w-full min-w-0 rounded-2xl border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-slate-900" placeholder="Contoh: Sistem Persamaan Linear" />
                         </label>
-                        <label className="space-y-2 text-sm font-medium text-slate-700">
+                        <label className="min-w-0 space-y-2 text-sm font-medium text-slate-700">
                             <span>Level Kognitif Bloom</span>
-                            <select required value={bankForm.level_kognitif} onChange={(event) => setBankForm((current) => ({ ...current, level_kognitif: event.target.value }))} className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-slate-900">
+                            <select required value={bankForm.level_kognitif} onChange={(event) => setBankForm((current) => ({ ...current, level_kognitif: event.target.value }))} className="w-full min-w-0 rounded-2xl border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-slate-900">
                                 <option value="">Pilih level Bloom</option>
                                 {BLOOM_OPTIONS.map((item) => <option key={item} value={item}>{item}</option>)}
                             </select>
                         </label>
-                        <label className="space-y-2 text-sm font-medium text-slate-700 md:col-span-2">
+                        <div className="min-w-0 space-y-2 text-sm font-medium text-slate-700 md:col-span-2">
+                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
+                                <label htmlFor="guru-input-paket-soal" className="font-semibold text-slate-800">
+                                    Kode / Nama Paket Soal <span className="text-xs font-normal text-slate-500">(Opsional)</span>
+                                </label>
+                                <span className="text-xs font-normal text-slate-500">Kosongkan jika soal bersifat umum (tanpa paket)</span>
+                            </div>
+                            <input
+                                id="guru-input-paket-soal"
+                                type="text"
+                                list="guru-paket-soal-suggestions"
+                                maxLength={100}
+                                value={bankForm.paket_soal || ''}
+                                onChange={(event) => setBankForm((current) => ({ ...current, paket_soal: event.target.value }))}
+                                className="w-full min-w-0 rounded-2xl border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-slate-900"
+                                placeholder="Misal: Paket A"
+                            />
+                            <datalist id="guru-paket-soal-suggestions">
+                                <option value="Paket A" />
+                                <option value="Paket B" />
+                                <option value="Paket C" />
+                                <option value="Paket D" />
+                                <option value="Paket Susulan" />
+                                {paketOptions.map((p) => (
+                                    <option key={p} value={p} />
+                                ))}
+                            </datalist>
+                            <div className="space-y-1.5 pt-0.5">
+                                <p className="text-xs font-normal leading-relaxed text-slate-500 break-words">
+                                    💡 <strong>Contoh penamaan:</strong> <span className="font-medium text-slate-700">Paket A</span>, <span className="font-medium text-slate-700">Paket B</span>, atau <span className="font-medium text-slate-700">UTS Ganjil - Paket A</span>.
+                                </p>
+                                <div className="flex flex-wrap items-center gap-1.5">
+                                    <span className="text-[11px] font-medium text-slate-400">Pilihan cepat:</span>
+                                    {['Paket A', 'Paket B', 'Paket C'].map((pkg) => (
+                                        <button
+                                            key={pkg}
+                                            type="button"
+                                            onClick={() => setBankForm((current) => ({ ...current, paket_soal: pkg }))}
+                                            className={`rounded-lg border px-2.5 py-1 text-xs font-medium transition ${
+                                                bankForm.paket_soal === pkg
+                                                    ? 'border-emerald-500 bg-emerald-50 text-emerald-700 font-semibold'
+                                                    : 'border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100'
+                                            }`}
+                                        >
+                                            {pkg}
+                                        </button>
+                                    ))}
+                                    {bankForm.paket_soal && (
+                                        <button
+                                            type="button"
+                                            onClick={() => setBankForm((current) => ({ ...current, paket_soal: '' }))}
+                                            className="rounded-lg border border-rose-200 bg-rose-50/70 px-2.5 py-1 text-xs text-rose-600 hover:bg-rose-100 transition"
+                                        >
+                                            ✕ Jadikan Umum (Tanpa Paket)
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                        <label className="min-w-0 space-y-2 text-sm font-medium text-slate-700 md:col-span-2">
                             <span>Isi Soal</span>
-                            <textarea required rows="4" value={bankForm.isi_soal} onChange={(event) => setBankForm((current) => ({ ...current, isi_soal: event.target.value }))} className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-slate-900" placeholder="Tulis soal secara lengkap" />
+                            <textarea required rows="4" value={bankForm.isi_soal} onChange={(event) => setBankForm((current) => ({ ...current, isi_soal: event.target.value }))} className="w-full min-w-0 rounded-2xl border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-slate-900" placeholder="Tulis soal secara lengkap" />
                         </label>
-                        <div className="md:col-span-2">
-                            <label className="space-y-2 text-sm font-medium text-slate-700">
-                                <span>Gambar Pendukung (Opsional)</span>
-                                <div className="flex flex-col gap-3">
+                        <div className="min-w-0 md:col-span-2 grid grid-cols-1 lg:grid-cols-2 gap-4">
+                            {/* Gambar Pendukung (Opsional) */}
+                            <div className="min-w-0 rounded-2xl border border-slate-200/80 bg-slate-50/50 p-3.5 sm:p-4 space-y-2.5 text-sm font-medium text-slate-700">
+                                <div>
+                                    <span className="block font-semibold text-slate-800">Gambar Pendukung (Opsional)</span>
+                                    <p className="mt-0.5 text-xs font-normal text-slate-500">
+                                        Format berkas yang didukung: <span className="font-semibold text-slate-700">JPG, JPEG, PNG</span> (Maks. <span className="font-semibold text-slate-700">2 MB</span>).
+                                    </p>
+                                </div>
+                                <div className="flex min-w-0 flex-col items-start gap-3">
                                     {bankForm.gambar_soal_url && !bankForm.hapus_gambar && (
-                                        <div className="relative w-max">
-                                            <img src={bankForm.gambar_soal_url} alt="Gambar Soal" className="max-h-40 rounded-xl border border-border object-cover shadow-sm" />
-                                            <button type="button" onClick={() => setBankForm(curr => ({ ...curr, hapus_gambar: true, gambar_soal: null }))} className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full bg-rose-500 text-white hover:bg-rose-600 shadow" title="Hapus Gambar">
+                                        <div className="relative inline-block max-w-full rounded-2xl border border-slate-200 bg-white p-2.5 shadow-xs">
+                                            <img
+                                                src={bankForm.gambar_soal_url}
+                                                alt="Preview Gambar Soal"
+                                                onClick={() => setZoomedImageUrl(bankForm.gambar_soal_url)}
+                                                title="Klik untuk memperbesar gambar"
+                                                className="max-h-44 sm:max-h-52 w-auto max-w-full cursor-zoom-in rounded-xl object-contain transition hover:opacity-95"
+                                            />
+                                            <div className="mt-1.5 flex flex-wrap items-center justify-between gap-2 text-xs font-normal text-slate-500">
+                                                {bankForm.gambar_soal?.name ? (
+                                                    <span className="max-w-[180px] sm:max-w-xs truncate">{bankForm.gambar_soal.name}</span>
+                                                ) : (
+                                                    <span>Gambar tersimpan</span>
+                                                )}
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setZoomedImageUrl(bankForm.gambar_soal_url)}
+                                                    className="text-primary hover:underline font-medium"
+                                                >
+                                                    🔍 Klik untuk perbesar
+                                                </button>
+                                            </div>
+                                            <button
+                                                type="button"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    if (imageInputRef.current) imageInputRef.current.value = '';
+                                                    setBankForm(curr => ({ ...curr, hapus_gambar: true, gambar_soal: null, gambar_soal_url: '' }));
+                                                }}
+                                                className="absolute -right-2 -top-2 flex h-7 w-7 items-center justify-center rounded-full bg-rose-500 text-white hover:bg-rose-600 shadow-md transition"
+                                                title="Hapus Gambar"
+                                            >
                                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" /></svg>
                                             </button>
                                         </div>
                                     )}
-                                    <input type="file" accept=".jpg,.jpeg,.png" onChange={(e) => { if (e.target.files && e.target.files[0]) { setBankForm(curr => ({ ...curr, gambar_soal: e.target.files[0], hapus_gambar: false })); } }} className="block w-full text-sm text-slate-500 file:mr-4 file:rounded-full file:border-0 file:bg-primary/5 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-primary hover:file:bg-primary/10" />
+                                    <input
+                                        ref={imageInputRef}
+                                        type="file"
+                                        accept=".jpg,.jpeg,.png"
+                                        onChange={(e) => {
+                                            if (e.target.files && e.target.files[0]) {
+                                                const file = e.target.files[0];
+                                                const previewUrl = URL.createObjectURL(file);
+                                                setBankForm(curr => ({
+                                                    ...curr,
+                                                    gambar_soal: file,
+                                                    gambar_soal_url: previewUrl,
+                                                    hapus_gambar: false
+                                                }));
+                                            }
+                                        }}
+                                        className="block w-full min-w-0 max-w-full text-xs sm:text-sm text-slate-500 file:mr-3 sm:file:mr-4 file:rounded-full file:border-0 file:bg-primary/10 file:px-3 sm:file:px-4 file:py-2 file:text-xs sm:file:text-sm file:font-semibold file:text-primary hover:file:bg-primary/15"
+                                    />
                                 </div>
-                            </label>
+                            </div>
+
+                            {/* Audio / Suara Pendukung - Listening (Opsional) */}
+                            <div className="min-w-0 rounded-2xl border border-indigo-200/80 bg-indigo-50/30 p-3.5 sm:p-4 space-y-2.5 text-sm font-medium text-slate-700">
+                                <div>
+                                    <div className="flex flex-wrap items-center gap-2">
+                                        <span className="font-semibold text-slate-800">Audio / Suara Pendukung (Opsional)</span>
+                                        <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-indigo-700">
+                                            Listening CBT
+                                        </span>
+                                    </div>
+                                    <p className="mt-0.5 text-xs font-normal text-slate-500">
+                                        Format berkas yang didukung: <span className="font-semibold text-slate-700">MP3, WAV, M4A, OGG, AAC</span> (Maks. <span className="font-semibold text-slate-700">10 MB</span>).
+                                    </p>
+                                </div>
+
+                                <div className="flex min-w-0 flex-col items-stretch gap-3">
+                                    {bankForm.audio_soal_url && !bankForm.hapus_audio && (
+                                        <div className="relative rounded-2xl border border-indigo-200 bg-white p-3 shadow-xs space-y-2">
+                                            <div className="flex items-center justify-between gap-2 pr-6">
+                                                <span className="text-xs font-semibold text-indigo-950 truncate">
+                                                    🎵 {bankForm.audio_soal?.name || 'Audio soal tersimpan'}
+                                                </span>
+                                            </div>
+                                            <audio
+                                                controls
+                                                controlsList="nodownload"
+                                                src={bankForm.audio_soal_url}
+                                                className="h-10 w-full max-w-full"
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    if (audioInputRef.current) audioInputRef.current.value = '';
+                                                    setBankForm(curr => ({
+                                                        ...curr,
+                                                        hapus_audio: true,
+                                                        audio_soal: null,
+                                                        audio_soal_url: '',
+                                                        batas_putar_audio: ''
+                                                    }));
+                                                }}
+                                                className="absolute -right-2 -top-2 flex h-7 w-7 items-center justify-center rounded-full bg-rose-500 text-white hover:bg-rose-600 shadow-md transition"
+                                                title="Hapus Audio"
+                                            >
+                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" /></svg>
+                                            </button>
+                                        </div>
+                                    )}
+
+                                    <input
+                                        ref={audioInputRef}
+                                        type="file"
+                                        accept=".mp3,.wav,.m4a,.ogg,.aac,audio/*"
+                                        onChange={(e) => {
+                                            if (e.target.files && e.target.files[0]) {
+                                                const file = e.target.files[0];
+                                                const previewUrl = URL.createObjectURL(file);
+                                                setBankForm(curr => ({
+                                                    ...curr,
+                                                    audio_soal: file,
+                                                    audio_soal_url: previewUrl,
+                                                    hapus_audio: false,
+                                                    batas_putar_audio: curr.batas_putar_audio || '2'
+                                                }));
+                                            }
+                                        }}
+                                        className="block w-full min-w-0 max-w-full text-xs sm:text-sm text-slate-500 file:mr-3 sm:file:mr-4 file:rounded-full file:border-0 file:bg-indigo-600/10 file:px-3 sm:file:px-4 file:py-2 file:text-xs sm:file:text-sm file:font-semibold file:text-indigo-700 hover:file:bg-indigo-600/15"
+                                    />
+
+                                    {bankForm.audio_soal_url && !bankForm.hapus_audio && (
+                                        <div className="pt-1">
+                                            <label className="block space-y-1 text-xs font-semibold text-slate-700">
+                                                <span>Batas Pemutaran Ulang Audio oleh Siswa (Standar Listening)</span>
+                                                <select
+                                                    value={bankForm.batas_putar_audio ?? ''}
+                                                    onChange={(e) => setBankForm(curr => ({ ...curr, batas_putar_audio: e.target.value }))}
+                                                    className="w-full min-w-0 rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs sm:text-sm font-medium text-slate-800 outline-none transition focus:border-indigo-600"
+                                                >
+                                                    <option value="">Tanpa Batas (Bebas Putar Ulang)</option>
+                                                    <option value="1">1 Kali Putar (Standar TOEFL Ketat)</option>
+                                                    <option value="2">2 Kali Putar (Standar Ujian Sekolah)</option>
+                                                    <option value="3">3 Kali Putar</option>
+                                                    <option value="5">5 Kali Putar</option>
+                                                </select>
+                                            </label>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
                         </div>
                         {bankForm.jenis_soal === 'pilihan_ganda' || bankForm.jenis_soal === 'pilihan_ganda_kompleks' ? (
-                            <div className="md:col-span-2 space-y-3">
+                            <div className="min-w-0 md:col-span-2 space-y-3">
                                 {bankForm.opsi_jawaban.map((opsi, idx) => (
-                                    <label key={idx} className="flex flex-col space-y-2 text-sm font-medium text-slate-700">
+                                    <label key={idx} className="flex min-w-0 flex-col space-y-2 text-sm font-medium text-slate-700">
                                         <div className="flex items-center justify-between">
                                             <span>Opsi {String.fromCharCode(65 + idx)}</span>
                                             {bankForm.opsi_jawaban.length > 2 && (
                                                 <button type="button" onClick={() => { const newOpsi = [...bankForm.opsi_jawaban]; newOpsi.splice(idx, 1); setBankForm(curr => ({ ...curr, opsi_jawaban: newOpsi })); }} className="text-rose-500 hover:text-rose-700 text-xs">Hapus</button>
                                             )}
                                         </div>
-                                        <input value={opsi} onChange={(event) => { const newOpsi = [...bankForm.opsi_jawaban]; newOpsi[idx] = event.target.value; setBankForm(curr => ({ ...curr, opsi_jawaban: newOpsi })); }} className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-slate-900" />
+                                        <input value={opsi} onChange={(event) => { const newOpsi = [...bankForm.opsi_jawaban]; newOpsi[idx] = event.target.value; setBankForm(curr => ({ ...curr, opsi_jawaban: newOpsi })); }} className="w-full min-w-0 rounded-2xl border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-slate-900" />
                                     </label>
                                 ))}
                                 <button type="button" onClick={() => setBankForm(curr => ({ ...curr, opsi_jawaban: [...curr.opsi_jawaban, ''] }))} className="mt-2 text-sm text-primary font-semibold hover:text-primary/85">+ Tambah Opsi Jawaban</button>
                             </div>
                         ) : null}
-                        <label className="space-y-2 text-sm font-medium text-slate-700 md:col-span-2">
+                        <label className="min-w-0 space-y-2 text-sm font-medium text-slate-700 md:col-span-2">
                             <span>Kunci Jawaban</span>
                             {bankForm.jenis_soal === 'pilihan_ganda_kompleks' ? (
                                 <div className="flex flex-wrap gap-4 pt-2">
                                     {bankForm.opsi_jawaban.filter(Boolean).map((opsi, idx) => (
                                         <label key={idx} className="flex items-center gap-2 cursor-pointer">
                                             <input type="checkbox" value={opsi} checked={bankForm.kunci_jawaban_kompleks.includes(opsi)} onChange={(e) => { const checked = e.target.checked; const val = e.target.value; setBankForm(curr => { const next = new Set(curr.kunci_jawaban_kompleks); if (checked) next.add(val); else next.delete(val); return { ...curr, kunci_jawaban_kompleks: Array.from(next) }; }); }} className="h-4 w-4 rounded border-slate-300 text-slate-900 focus:ring-slate-900" />
-                                            <span className="text-sm font-normal text-slate-700">{opsi}</span>
+                                            <span className="text-sm font-normal text-slate-700 break-words">{opsi}</span>
                                         </label>
                                     ))}
                                     {bankForm.opsi_jawaban.filter(Boolean).length === 0 && <span className="text-xs text-slate-400">Isi opsi jawaban terlebih dahulu.</span>}
                                 </div>
                             ) : (
-                                <input required value={bankForm.kunci_jawaban} onChange={(event) => setBankForm((current) => ({ ...current, kunci_jawaban: event.target.value }))} className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-slate-900" placeholder={bankForm.jenis_soal === 'esai' ? 'Panduan jawaban esai' : 'Harus sama dengan salah satu opsi'} />
+                                <input required value={bankForm.kunci_jawaban} onChange={(event) => setBankForm((current) => ({ ...current, kunci_jawaban: event.target.value }))} className="w-full min-w-0 rounded-2xl border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-slate-900" placeholder={bankForm.jenis_soal === 'esai' ? 'Panduan jawaban esai' : 'Harus sama dengan salah satu opsi'} />
                             )}
                         </label>
                         {bankForm.jenis_soal === 'esai' && (
                             <>
-                                <label className="space-y-2 text-sm font-medium text-slate-700 md:col-span-2">
+                                <label className="min-w-0 space-y-2 text-sm font-medium text-slate-700 md:col-span-2">
                                     <span>Kata Kunci Penilaian AI (Satu per baris)</span>
                                     <p className="text-xs font-normal text-slate-500">Gunakan <code>;</code> untuk memisahkan sinonim. Gunakan <code>**</code> untuk wajib persis. <br/>Contoh: <code>**Soekarno;Bung Karno</code></p>
-                                    <textarea rows="3" value={bankForm.keywords} onChange={(event) => setBankForm((current) => ({ ...current, keywords: event.target.value }))} className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-slate-900" placeholder="Kata kunci 1&#10;Kata kunci 2;Sinonim 2" />
+                                    <textarea rows="3" value={bankForm.keywords} onChange={(event) => setBankForm((current) => ({ ...current, keywords: event.target.value }))} className="w-full min-w-0 rounded-2xl border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-slate-900" placeholder="Kata kunci 1&#10;Kata kunci 2;Sinonim 2" />
                                 </label>
-                                <label className="space-y-2 text-sm font-medium text-slate-700">
+                                <label className="min-w-0 space-y-2 text-sm font-medium text-slate-700">
                                     <span>Bobot Aturan (Rule-Based)</span>
-                                    <input type="number" step="0.1" min="0" max="1" value={bankForm.rule_weight} onChange={(event) => setBankForm((current) => ({ ...current, rule_weight: event.target.value }))} className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-slate-900" />
+                                    <input type="number" step="0.1" min="0" max="1" value={bankForm.rule_weight} onChange={(event) => setBankForm((current) => ({ ...current, rule_weight: event.target.value }))} className="w-full min-w-0 rounded-2xl border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-slate-900" />
                                 </label>
-                                <label className="space-y-2 text-sm font-medium text-slate-700">
+                                <label className="min-w-0 space-y-2 text-sm font-medium text-slate-700">
                                     <span>Bobot Makna (LSA)</span>
-                                    <input type="number" step="0.1" min="0" max="1" value={bankForm.lsa_weight} onChange={(event) => setBankForm((current) => ({ ...current, lsa_weight: event.target.value }))} className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-slate-900" />
+                                    <input type="number" step="0.1" min="0" max="1" value={bankForm.lsa_weight} onChange={(event) => setBankForm((current) => ({ ...current, lsa_weight: event.target.value }))} className="w-full min-w-0 rounded-2xl border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-slate-900" />
                                 </label>
-                                <label className="space-y-2 text-sm font-medium text-slate-700 md:col-span-2">
+                                <label className="min-w-0 space-y-2 text-sm font-medium text-slate-700 md:col-span-2">
                                     <span>Ambang Minimal Kata Kunci / Tgate (%)</span>
                                     <p className="text-xs font-normal text-slate-500">Persentase minimal kata kunci (dan langkah matematis) yang harus disebut siswa agar penilaian makna (LSA) diaktifkan. Di bawah ambang ini, nilai dipotong penalti. Isi <code>0</code> untuk menonaktifkan.</p>
-                                    <input type="number" step="5" min="0" max="100" value={bankForm.tgate} onChange={(event) => setBankForm((current) => ({ ...current, tgate: event.target.value }))} className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-slate-900" />
+                                    <input type="number" step="5" min="0" max="100" value={bankForm.tgate} onChange={(event) => setBankForm((current) => ({ ...current, tgate: event.target.value }))} className="w-full min-w-0 rounded-2xl border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-slate-900" />
                                 </label>
-                                <label className="space-y-2 text-sm font-medium text-slate-700 md:col-span-2">
+                                <label className="min-w-0 space-y-2 text-sm font-medium text-slate-700 md:col-span-2">
                                     <span>Target Minimal Kata Kunci (Opsional)</span>
                                     <p className="text-xs font-normal text-slate-500">Gunakan jika soal meminta siswa menyebutkan sebagian opsi (contoh: minta 5 dari 8 opsi yang didaftarkan). Siswa yang menjawab sejumlah target ini akan mendapat nilai penuh 100%. Kosongkan jika seluruh kata kunci wajib ada.</p>
-                                    <input type="number" min="1" placeholder="Contoh: 5 (Kosongkan jika semua kata kunci wajib)" value={bankForm.required_keywords_count ?? ''} onChange={(event) => setBankForm((current) => ({ ...current, required_keywords_count: event.target.value }))} className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-slate-900" />
+                                    <input type="number" min="1" placeholder="Contoh: 5" value={bankForm.required_keywords_count ?? ''} onChange={(event) => setBankForm((current) => ({ ...current, required_keywords_count: event.target.value }))} className="w-full min-w-0 rounded-2xl border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-slate-900" />
                                 </label>
                                 
-                                <div className="md:col-span-2 mt-4 pt-4 border-t border-slate-200">
+                                <div className="min-w-0 md:col-span-2 mt-4 pt-4 border-t border-slate-200">
                                     <label className="flex items-center gap-3 cursor-pointer p-4 rounded-2xl border border-slate-200 bg-slate-50 hover:bg-slate-100 transition">
-                                        <input type="checkbox" checked={bankForm.use_math} onChange={(e) => setBankForm(c => ({...c, use_math: e.target.checked}))} className="h-5 w-5 rounded border-slate-300 text-primary focus:ring-primary" />
-                                        <div>
+                                        <input type="checkbox" checked={bankForm.use_math} onChange={(e) => setBankForm(c => ({...c, use_math: e.target.checked}))} className="h-5 w-5 shrink-0 rounded border-slate-300 text-primary focus:ring-primary" />
+                                        <div className="min-w-0">
                                             <span className="block text-sm font-bold text-slate-800">Gunakan Penilaian Matematis (SymPy AI)</span>
                                             <span className="block text-xs font-normal text-slate-500 mt-0.5">Aktifkan untuk soal yang butuh evaluasi kebenaran rumus/persamaan secara mutlak.</span>
                                         </div>
@@ -484,14 +772,14 @@ export default function GuruBankSoalPage({ session, onLogout }) {
 
                                 {bankForm.use_math && (
                                     <>
-                                        <label className="space-y-2 text-sm font-medium text-slate-700 md:col-span-2">
+                                        <label className="min-w-0 space-y-2 text-sm font-medium text-slate-700 md:col-span-2">
                                             <span>Langkah Matematis (Satu persamaan per baris)</span>
                                             <p className="text-xs font-normal text-slate-500">Contoh: <code>Q = 1000 - 0.5P</code></p>
-                                            <textarea rows="3" value={bankForm.math_steps} onChange={(event) => setBankForm((current) => ({ ...current, math_steps: event.target.value }))} className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-slate-900" placeholder="Langkah 1&#10;Langkah 2" />
+                                            <textarea rows="3" value={bankForm.math_steps} onChange={(event) => setBankForm((current) => ({ ...current, math_steps: event.target.value }))} className="w-full min-w-0 rounded-2xl border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-slate-900" placeholder="Langkah 1&#10;Langkah 2" />
                                         </label>
-                                        <label className="space-y-2 text-sm font-medium text-slate-700 md:col-span-2">
+                                        <label className="min-w-0 space-y-2 text-sm font-medium text-slate-700 md:col-span-2">
                                             <span>Bobot Matematika (SymPy)</span>
-                                            <input type="number" step="0.1" min="0" max="1" value={bankForm.math_weight} onChange={(event) => setBankForm((current) => ({ ...current, math_weight: event.target.value }))} className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-slate-900" />
+                                            <input type="number" step="0.1" min="0" max="1" value={bankForm.math_weight} onChange={(event) => setBankForm((current) => ({ ...current, math_weight: event.target.value }))} className="w-full min-w-0 rounded-2xl border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-slate-900" />
                                         </label>
                                     </>
                                 )}
@@ -515,7 +803,7 @@ export default function GuruBankSoalPage({ session, onLogout }) {
                         </svg>
                     </div>
                     
-                    <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-8">
+                    <div className="relative z-10 flex flex-col lg:flex-row lg:items-start justify-between gap-6 sm:gap-8">
                         <div className="flex-1 space-y-4">
                             <div className="inline-flex items-center gap-2 rounded-full bg-emerald-100/80 px-3 py-1.5 text-xs font-semibold text-emerald-800 ring-1 ring-inset ring-emerald-600/20">
                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
@@ -524,29 +812,70 @@ export default function GuruBankSoalPage({ session, onLogout }) {
                             
                             <div>
                                 <h4 className="text-xl font-bold text-slate-900">Import Soal Massal (Excel)</h4>
-                                <p className="text-sm text-slate-600 mt-2 leading-relaxed max-w-xl">
-                                    Hemat waktu Anda! Tambahkan puluhan hingga ratusan soal sekaligus menggunakan file Excel. Pastikan nama kolom dan format isian sesuai dengan template yang disediakan agar proses import berjalan lancar.
+                                <p className="text-sm text-slate-600 mt-2 leading-relaxed max-w-2xl">
+                                    Hemat waktu Anda! Tambahkan puluhan hingga ratusan soal sekaligus menggunakan file Excel (<code>.xlsx</code>). Anda juga dapat menyisipkan <strong>Gambar Pendukung</strong> langsung di dalam baris soal pada file Excel.
                                 </p>
                             </div>
                             
-                            <div className="flex flex-col sm:flex-row gap-4 pt-2">
-                                <div className="flex items-center gap-2 text-xs font-medium text-slate-600">
+                            <div className="flex flex-col sm:flex-row sm:flex-wrap gap-3 sm:gap-5 pt-1">
+                                <div className="flex items-center gap-2 text-xs font-medium text-slate-700">
                                     <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-100 font-bold text-emerald-700">1</div>
-                                    Unduh template
+                                    Unduh template Excel (<code>.xlsx</code>)
                                 </div>
-                                <div className="flex items-center gap-2 text-xs font-medium text-slate-600">
+                                <div className="flex items-center gap-2 text-xs font-medium text-slate-700">
                                     <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-100 font-bold text-emerald-700">2</div>
-                                    Isi data soal
+                                    Isi data soal & sisipkan gambar (jika ada)
                                 </div>
-                                <div className="flex items-center gap-2 text-xs font-medium text-slate-600">
+                                <div className="flex items-center gap-2 text-xs font-medium text-slate-700">
                                     <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-100 font-bold text-emerald-700">3</div>
-                                    Upload & Selesai!
+                                    Klik Pilih & Import Excel
                                 </div>
+                            </div>
+
+                            <div className="mt-3 rounded-2xl border border-emerald-200/80 bg-white/90 p-4 text-xs text-slate-600 space-y-2 shadow-sm">
+                                <p className="font-bold text-slate-800 flex items-center gap-1.5">
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-emerald-600 shrink-0" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                                    </svg>
+                                    Panduan & Persyaratan Import Soal Excel:
+                                </p>
+                                <ul className="list-disc pl-5 space-y-1 leading-relaxed text-slate-600">
+                                    <li><strong>Format File:</strong> Gunakan file berformat <code>.xlsx</code> (disarankan menggunakan template resmi dari tombol <strong>Unduh Template</strong>).</li>
+                                    <li><strong>Kolom Wajib:</strong> <code>Mata Pelajaran</code> (harus sesuai dengan mapel yang Anda ampu, misal: <em>Informatika (XI)</em>), <code>Isi Soal</code>, <code>Jenis Soal</code> (<em>Pilihan Ganda</em>, <em>Pilihan Ganda Kompleks</em>, atau <em>Esai</em>), <code>Kunci Jawaban</code>, dan <code>Level Kognitif Bloom</code> (<em>C1–C6</em>).</li>
+                                    <li><strong>Paket Soal (Opsional):</strong> Anda dapat mengisi kolom <code>Paket Soal (Opsional)</code> di Excel (misal: <em>Paket A</em>, <em>Paket B</em>) atau menetapkan nama paket secara langsung pada kolom input di samping sebelum mengklik <strong>Pilih &amp; Import Excel</strong>.</li>
+                                    <li><strong>Aturan Opsi & Kunci:</strong> Untuk <em>Pilihan Ganda</em> & <em>Pilihan Ganda Kompleks</em>, isi minimal 2 opsi (<code>Opsi A</code> s/d <code>Opsi E</code>) dan pastikan teks <code>Kunci Jawaban</code> sama persis dengan salah satu opsi (pisahkan dengan koma <code>,</code> jika jawaban benar lebih dari satu pada Pilihan Ganda Kompleks).</li>
+                                    <li><strong>Cara Menyisipkan Gambar Pendukung (Opsional):</strong> Pada kolom <code>Gambar Pendukung (Opsional)</code> di baris soal yang diinginkan, klik menu <strong>Insert &rarr; Pictures</strong> di Excel (bisa menggunakan <em>Place in Cell</em> maupun <em>Place over Cells</em> pada baris tersebut). Format gambar yang didukung: <strong>JPG, JPEG, PNG</strong> (maksimal <strong>2 MB</strong> per gambar).</li>
+                                </ul>
                             </div>
                         </div>
 
-                        <div className="flex flex-col gap-3 min-w-[200px] w-full md:w-auto">
+                        <div className="flex flex-col gap-3 min-w-[240px] w-full lg:w-72 lg:pt-2">
                             <input type="file" accept=".xlsx, .xls" className="hidden" ref={fileInputRef} onChange={handleFileUpload} />
+                            <div className="rounded-xl border border-emerald-200/90 bg-white/95 p-3 shadow-xs space-y-1.5">
+                                <label className="block text-[11px] font-bold uppercase tracking-wider text-emerald-800">
+                                    📦 Nama Paket Soal File Ini (Opsional)
+                                </label>
+                                <input
+                                    type="text"
+                                    list="guru-import-paket-list"
+                                    value={importPaketName}
+                                    onChange={(e) => setImportPaketName(e.target.value)}
+                                    placeholder="Misal: Paket A"
+                                    className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs text-slate-800 outline-none transition focus:border-emerald-600 focus:ring-2 focus:ring-emerald-500/20"
+                                />
+                                <datalist id="guru-import-paket-list">
+                                    <option value="Paket A" />
+                                    <option value="Paket B" />
+                                    <option value="Paket C" />
+                                    <option value="Paket D" />
+                                    {paketOptions.map((p) => (
+                                        <option key={p} value={p} />
+                                    ))}
+                                </datalist>
+                                <p className="text-[10px] leading-snug text-slate-500">
+                                    Jika diisi, baris di Excel yang kolom Paket-nya kosong otomatis masuk ke paket ini.
+                                </p>
+                            </div>
                             <button type="button" onClick={downloadTemplateExcel} className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-emerald-200 bg-white px-5 py-3 text-sm font-bold text-emerald-700 transition-all hover:border-emerald-300 hover:bg-emerald-50 active:scale-95 shadow-sm">
                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
                                 Unduh Template
@@ -620,7 +949,7 @@ export default function GuruBankSoalPage({ session, onLogout }) {
                         <p className="text-sm text-slate-500 mt-1">Daftar soal yang telah Anda buat atau unggah. Pastikan topik dan level Bloom terisi.</p>
                     </div>
                     <div className="border-b border-border px-5 py-4">
-                        <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4 lg:items-end">
+                        <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-5 lg:items-end">
                             <label className="space-y-2 text-sm font-medium text-slate-700">
                                 <span>Filter Mapel</span>
                                 <FilterSelect
@@ -634,11 +963,26 @@ export default function GuruBankSoalPage({ session, onLogout }) {
                                     icon="📚"
                                     align="left"
                                     className="w-full"
-                                    // warna untuk tombol Utama filter aktif
                                     accentClass="bg-primary border-primary text-white shadow-md shadow-blue-900"
-
-                                    // warna untuk item dropdown yang dipilih
                                     dropdownAccentClass="bg-primary border-primary text-white shadow-md shadow-blue-900"
+                                />
+                            </label>
+                            <label className="space-y-2 text-sm font-medium text-slate-700">
+                                <span>Paket Soal</span>
+                                <FilterSelect
+                                    value={bankFilterPaket}
+                                    onChange={setBankFilterPaket}
+                                    options={[
+                                        { value: '', label: 'Semua Paket' },
+                                        { value: '__TANPA_PAKET__', label: 'Tanpa Paket (Umum)' },
+                                        ...paketOptions.map((p) => ({ value: p, label: `📦 ${p}` })),
+                                    ]}
+                                    placeholder="Semua Paket"
+                                    icon="📦"
+                                    align="left"
+                                    className="w-full"
+                                    accentClass="bg-violet-700 border-violet-700 text-white shadow-md"
+                                    dropdownAccentClass="bg-violet-700 border-violet-700 text-white shadow-md"
                                 />
                             </label>
                             <label className="space-y-2 text-sm font-medium text-slate-700">
@@ -736,9 +1080,30 @@ export default function GuruBankSoalPage({ session, onLogout }) {
                                             {currentSoals.map((item, index) => (
                                                 <tr key={item.id_soal} className="align-top transition-colors hover:bg-slate-50/80">
                                                     <td className="px-5 py-4 font-semibold text-slate-400">{(currentPage - 1) * itemsPerPage + index + 1}</td>
-                                                    <td className="px-5 py-4 text-slate-600 whitespace-nowrap">{item.topik_materi}</td>
+                                                    <td className="px-5 py-4 text-slate-600 whitespace-nowrap">
+                                                        <div>{item.topik_materi}</div>
+                                                        {item.paket_soal && (
+                                                            <span className="mt-1 inline-flex items-center gap-1 rounded-md bg-violet-50 border border-violet-200 px-2 py-0.5 text-[10px] font-bold text-violet-700">
+                                                                📦 {item.paket_soal}
+                                                            </span>
+                                                        )}
+                                                    </td>
                                                     <td className="px-5 py-4 text-slate-800 min-w-[250px]">
-                                                        {item.isi_soal.length > 100 ? item.isi_soal.substring(0, 100) + '...' : item.isi_soal}
+                                                        <p>{item.isi_soal.length > 100 ? item.isi_soal.substring(0, 100) + '...' : item.isi_soal}</p>
+                                                        {(item.gambar_soal || item.audio_soal) && (
+                                                            <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                                                                {item.gambar_soal && (
+                                                                    <span className="inline-flex items-center gap-1 rounded-md bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-600">
+                                                                        🖼️ Gambar
+                                                                    </span>
+                                                                )}
+                                                                {item.audio_soal && (
+                                                                    <span className="inline-flex items-center gap-1 rounded-md bg-indigo-50 px-1.5 py-0.5 text-[10px] font-semibold text-indigo-700">
+                                                                        🎵 Audio {item.batas_putar_audio ? `(${item.batas_putar_audio}x)` : '(∞)'}
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                        )}
                                                     </td>
                                                     <td className="px-5 py-4 text-slate-600 whitespace-nowrap">
                                                         <span className="inline-flex items-center rounded-md bg-slate-100 px-2 py-1 text-[11px] font-medium text-slate-600">
@@ -843,6 +1208,25 @@ export default function GuruBankSoalPage({ session, onLogout }) {
                 loading={confirmDeleteSoal.loading}
                 onConfirm={confirmDeleteBankSoalAction}
                 onCancel={() => setConfirmDeleteSoal({ isOpen: false, id: null, loading: false })}
+            />
+            <ConfirmModal
+                isOpen={!!pendingImportFile}
+                title="Konfirmasi Import Soal Excel"
+                message={`Apakah Anda yakin ingin mengimpor soal dari berkas "${pendingImportFile?.name || ''}"?\n\nPastikan nama kolom dan format isian sudah sesuai dengan template.`}
+                confirmText="Ya, Import Sekarang"
+                cancelText="Batal"
+                variant="success"
+                loading={isImporting}
+                onConfirm={confirmImportExcelAction}
+                onCancel={() => {
+                    if (!isImporting) setPendingImportFile(null);
+                }}
+            />
+            <ImageLightboxModal
+                imageUrl={zoomedImageUrl}
+                alt="Pratinjau Gambar Diperbesar"
+                caption={bankForm.gambar_soal?.name || ''}
+                onClose={() => setZoomedImageUrl(null)}
             />
         </DashboardLayout>
     );

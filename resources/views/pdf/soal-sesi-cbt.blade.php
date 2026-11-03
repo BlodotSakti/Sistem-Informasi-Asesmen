@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
     <meta charset="UTF-8">
     <title>Soal {{ $mapel }} - {{ $kelas }}</title>
     <style>
@@ -88,6 +89,22 @@
         }
         .footer { position: fixed; bottom: -24px; left: 0; right: 0; text-align: center; font-size: 9px; color: #94a3b8; }
         .footer .page:after { content: counter(page); }
+        .page-break { page-break-before: always; }
+        .paket-banner { margin: 0 0 10px 0; padding: 6px 10px; background: #1e293b; color: #ffffff; border-radius: 4px; }
+        .paket-banner table { width: 100%; border-collapse: collapse; }
+        .paket-banner td { vertical-align: middle; padding: 0; color: #ffffff; }
+        .paket-banner .nama { font-size: 16px; font-weight: bold; letter-spacing: 1px; }
+        .paket-banner .info { text-align: right; font-size: 9.5px; color: #e2e8f0; }
+        .info-sesi { border: 1px dashed #94a3b8; background: #fffbeb; padding: 6px 10px; margin-bottom: 12px; font-size: 9.5px; color: #78350f; }
+        .info-sesi ul { margin: 2px 0 0 0; padding-left: 14px; }
+        .tag-umum { display: inline-block; padding: 0 5px; margin-left: 4px; background: #e2e8f0; color: #334155; font-size: 8px; font-weight: bold; border-radius: 3px; vertical-align: middle; }
+        .tag-paket { display: inline-block; padding: 0 5px; margin-left: 4px; background: #e0e7ff; color: #3730a3; font-size: 8px; font-weight: bold; border-radius: 3px; vertical-align: middle; }
+        .ringkasan-title { font-size: 12px; font-weight: bold; margin: 4px 0 6px 0; padding-bottom: 3px; border-bottom: 1px solid #cbd5e1; }
+        table.tbl-ringkas { width: 100%; border-collapse: collapse; font-size: 10px; margin-bottom: 10px; }
+        table.tbl-ringkas th, table.tbl-ringkas td { border: 1px solid #cbd5e1; padding: 3px 5px; vertical-align: top; text-align: left; }
+        table.tbl-ringkas th { background: #f1f5f9; font-weight: bold; }
+        table.tbl-ringkas td.c { text-align: center; width: 34px; }
+        table.tbl-ringkas td.r { text-align: right; width: 50px; }
     </style>
 </head>
 <body>
@@ -99,9 +116,15 @@
         'esai' => 'Esai',
     ];
     $jenisAsesmen = ucwords(str_replace('_', ' ', (string) $sesi->jenis_asesmen));
+    $fmtBobot = fn ($v) => rtrim(rtrim(number_format((float) $v, 2, ',', ''), '0'), ',');
+    $daftarPaket = $paketGroups->pluck('nama')->filter()->implode(', ');
 @endphp
 
     <div class="footer">{{ $mapel }} &mdash; {{ $kelas }} &bull; Halaman <span class="page"></span></div>
+
+@foreach ($paketGroups as $gIdx => $group)
+    @php $soalList = $group['soal']; @endphp
+    <div class="{{ $gIdx > 0 ? 'page-break' : '' }}">
 
     <div class="header">
         <h1>{{ $jenisAsesmen }} {{ $sesi->tipe_soal ? '- ' . $sesi->tipe_soal : '' }}</h1>
@@ -116,6 +139,43 @@
         @endif
     </div>
 
+    @if ($isMultiPaket)
+        <div class="paket-banner">
+            <table>
+                <tr>
+                    <td class="nama">{{ strtoupper($group['nama']) }}</td>
+                    <td class="info">
+                        Paket {{ $gIdx + 1 }} dari {{ $paketGroups->count() }}
+                        &nbsp;&bull;&nbsp; {{ $soalList->count() }} soal
+                        @if ($group['jumlah_umum'] > 0)
+                            (termasuk {{ $group['jumlah_umum'] }} soal umum)
+                        @endif
+                        @if ($withKunci)
+                            &nbsp;&bull;&nbsp; Total bobot: {{ $fmtBobot($group['total_bobot']) }}
+                        @endif
+                    </td>
+                </tr>
+            </table>
+        </div>
+    @endif
+
+    @if ($withKunci && ($isMultiPaket || $acakSoal))
+        <div class="info-sesi">
+            <strong>Catatan Pengaturan Sesi:</strong>
+            <ul>
+                @if ($isMultiPaket)
+                    <li>Sesi ini memakai <strong>Distribusi Multi-Paket</strong> ({{ $daftarPaket }}). Setiap siswa hanya mengerjakan <strong>satu paket</strong>; dokumen ini memuat paket-paket tersebut pada halaman terpisah.</li>
+                    @if ($group['jumlah_umum'] > 0)
+                        <li>Soal bertanda <span class="tag-umum">UMUM</span> muncul di semua paket.</li>
+                    @endif
+                @endif
+                @if ($acakSoal)
+                    <li><strong>Acak Urutan Soal aktif:</strong> urutan soal di layar CBT berbeda untuk tiap siswa. Nomor pada dokumen ini adalah <strong>nomor master</strong> (sama dengan kolom nomor soal di file Analisis Excel).</li>
+                @endif
+            </ul>
+        </div>
+    @endif
+
     @unless ($withKunci)
         <table class="identitas">
             <tr>
@@ -124,7 +184,7 @@
             </tr>
             <tr>
                 <td class="label">Kelas</td><td>: ..............................................................</td>
-                <td class="label">Nilai</td><td>: ....................</td>
+                <td class="label">{{ $isMultiPaket ? 'Paket / Nilai' : 'Nilai' }}</td><td>: {{ $isMultiPaket ? $group['nama'] . ' / ' : '' }}....................</td>
             </tr>
         </table>
 
@@ -226,11 +286,66 @@
                         @endif
                     </td>
                     @if ($withKunci)
-                        <td class="bobot">Bobot: {{ rtrim(rtrim(number_format((float) $soal['bobot_nilai'], 2, ',', ''), '0'), ',') }}</td>
+                        <td class="bobot">
+                            Bobot: {{ $fmtBobot($soal['bobot_nilai']) }}
+                            @if ($isMultiPaket && $soal['paket_soal'] === null)
+                                <br><span class="tag-umum">UMUM</span>
+                            @elseif (! $isMultiPaket && $soal['paket_soal'])
+                                <br><span class="tag-paket">{{ $soal['paket_soal'] }}</span>
+                            @endif
+                        </td>
                     @endif
                 </tr>
             </table>
         </div>
     @endforeach
+
+    @if ($withKunci && $soalList->count() > 0)
+        <div style="page-break-inside: avoid; margin-top: 14px;">
+            <div class="ringkasan-title">Ringkasan Kunci Jawaban @if ($isMultiPaket) &mdash; {{ $group['nama'] }} @endif</div>
+            <table class="tbl-ringkas">
+                <thead>
+                    <tr>
+                        <th style="width: 34px; text-align: center;">No</th>
+                        <th style="width: 70px;">Jenis</th>
+                        <th>Kunci Jawaban</th>
+                        <th style="width: 50px; text-align: right;">Bobot</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach ($soalList as $idx => $soal)
+                        @php
+                            $kunciArr = is_array($soal['kunci_jawaban']) ? array_map('trim', $soal['kunci_jawaban']) : [trim((string) $soal['kunci_jawaban'])];
+                            if (in_array($soal['jenis_soal'], ['pilihan_ganda', 'pilihan_ganda_kompleks'])) {
+                                $labels = [];
+                                foreach ($soal['opsi_jawaban'] as $oIdx => $opsi) {
+                                    if (in_array(trim((string) $opsi), $kunciArr, true)) {
+                                        $labels[] = $huruf[$oIdx] ?? ($oIdx + 1);
+                                    }
+                                }
+                                $ringkas = empty($labels) ? implode(', ', $kunciArr) : implode(', ', $labels);
+                            } else {
+                                $ringkas = \Illuminate\Support\Str::limit($kunciArr[0] ?? '-', 90);
+                            }
+                            $jenisPendek = $soal['jenis_soal'] === 'esai' ? 'Esai' : ($soal['jenis_soal'] === 'pilihan_ganda_kompleks' ? 'PG Kompleks' : 'PG');
+                        @endphp
+                        <tr>
+                            <td class="c">{{ $idx + 1 }}</td>
+                            <td>{{ $jenisPendek }}@if ($isMultiPaket && $soal['paket_soal'] === null) <span class="tag-umum">UMUM</span>@endif</td>
+                            <td><strong>{{ $ringkas }}</strong></td>
+                            <td class="r">{{ $fmtBobot($soal['bobot_nilai']) }}</td>
+                        </tr>
+                    @endforeach
+                    <tr>
+                        <td colspan="3" style="text-align: right; font-weight: bold;">Total Bobot</td>
+                        <td class="r"><strong>{{ $fmtBobot($group['total_bobot']) }}</strong></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    @endif
+
+    </div>
+@endforeach
 </body>
 </html>

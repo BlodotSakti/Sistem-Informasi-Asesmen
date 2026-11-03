@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import AnalisisDiagnostikCard from '../components/ui/AnalisisDiagnostikCard';
+import ImageLightboxModal from '../components/ui/ImageLightboxModal';
+import CbtAudioPlayer from '../components/ui/CbtAudioPlayer';
 
 function apiBase(path) {
     return `${window.location.origin}${path}`;
@@ -26,6 +28,7 @@ export default function SiswaCbtPage({ session, onLogout, idSesi }) {
     const [submitErrorPopup, setSubmitErrorPopup] = useState(null);
     const [isLockedOut, setIsLockedOut] = useState(false);
     const [lockdownMessage, setLockdownMessage] = useState(null);
+    const [zoomedImageUrl, setZoomedImageUrl] = useState(null);
 
     const warningTimerRef = useRef(null);
 
@@ -261,6 +264,9 @@ export default function SiswaCbtPage({ session, onLogout, idSesi }) {
                     if (!studentStartTime || ((data.jawaban_tersimpan || []).length === 0 && (parseInt(studentStartTime, 10) + durationMs) <= now)) {
                         studentStartTime = now;
                         localStorage.setItem(`${STORAGE_PREFIX}start-${idSesi}`, studentStartTime);
+                        (data.soal || []).forEach((s) => {
+                            try { localStorage.removeItem(`cbt-audio-play-${idSesi}-${s.id_detail}`); } catch { /* ignore */ }
+                        });
                     }
                     
                     let endTime = parseInt(studentStartTime, 10) + durationMs;
@@ -315,10 +321,15 @@ export default function SiswaCbtPage({ session, onLogout, idSesi }) {
         if (submitting) return;
         setSubmitting(true);
 
-        const payload = Object.entries(jawaban).map(([id_detail, teks_jawaban]) => ({
-            id_detail: parseInt(id_detail, 10),
-            teks_jawaban,
-        }));
+        const payload = (soalData && soalData.length > 0)
+            ? soalData.map((s) => ({
+                id_detail: parseInt(s.id_detail, 10),
+                teks_jawaban: jawaban[s.id_detail] ?? '',
+            }))
+            : Object.entries(jawaban).map(([id_detail, teks_jawaban]) => ({
+                id_detail: parseInt(id_detail, 10),
+                teks_jawaban,
+            }));
 
         try {
             const response = await fetch(apiBase(`/api/siswa/cbt/${idSesi}/submit`), {
@@ -348,6 +359,9 @@ export default function SiswaCbtPage({ session, onLogout, idSesi }) {
             try { 
                 localStorage.removeItem(storageKey); 
                 localStorage.removeItem(`${STORAGE_PREFIX}start-${idSesi}`);
+                (soalData || []).forEach((s) => {
+                    localStorage.removeItem(`cbt-audio-play-${idSesi}-${s.id_detail}`);
+                });
             } catch { /* ignore */ }
 
             setResultData(result);
@@ -433,6 +447,14 @@ export default function SiswaCbtPage({ session, onLogout, idSesi }) {
         return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
     };
 
+    const renderZoomModal = () => (
+        <ImageLightboxModal
+            imageUrl={zoomedImageUrl}
+            alt="Pratinjau Gambar Soal Diperbesar"
+            onClose={() => setZoomedImageUrl(null)}
+        />
+    );
+
     // --- RESULT SCREEN ---
     if (resultData) {
         const persen = resultData.total_bobot > 0 ? Number(((resultData.total_skor / resultData.total_bobot) * 100).toFixed(2)) : 0;
@@ -484,7 +506,33 @@ export default function SiswaCbtPage({ session, onLogout, idSesi }) {
                                 <p className="mt-2 text-sm text-slate-600 whitespace-pre-wrap">{item.isi_soal}</p>
                                 {item.gambar_soal && (
                                     <div className="mt-3">
-                                        <img src={`/storage/${item.gambar_soal}`} alt="Gambar Soal" className="max-h-48 rounded-lg border border-border object-contain shadow-sm" />
+                                        <div className="inline-block max-w-full">
+                                            <img
+                                                src={`/storage/${item.gambar_soal}`}
+                                                alt="Gambar Soal"
+                                                onClick={() => setZoomedImageUrl(`/storage/${item.gambar_soal}`)}
+                                                title="Klik untuk memperbesar gambar"
+                                                className="max-h-48 sm:max-h-56 max-w-full cursor-zoom-in rounded-lg border border-border object-contain shadow-sm transition hover:opacity-95"
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={() => setZoomedImageUrl(`/storage/${item.gambar_soal}`)}
+                                                className="mt-1.5 flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+                                            >
+                                                🔍 Klik gambar untuk memperbesar
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+                                {item.audio_soal && (
+                                    <div className="mt-4">
+                                        <CbtAudioPlayer
+                                            src={`/storage/${item.audio_soal}`}
+                                            idSesi={idSesi}
+                                            idDetail={item.id_detail}
+                                            batasPutar={item.batas_putar_audio}
+                                            isReview={true}
+                                        />
                                     </div>
                                 )}
                                 {item.opsi_jawaban && item.opsi_jawaban.length > 0 && (
@@ -567,6 +615,7 @@ export default function SiswaCbtPage({ session, onLogout, idSesi }) {
                         </a>
                     </div>
                 </div>
+                {renderZoomModal()}
             </div>
         );
     }
@@ -759,6 +808,7 @@ export default function SiswaCbtPage({ session, onLogout, idSesi }) {
                         <h1 className="font-semibold leading-tight text-accent truncate text-sm sm:text-base">{sesiData?.mata_pelajaran || 'Ujian'}</h1>
                         <p className="text-[10px] sm:text-xs font-medium text-accent/80 uppercase tracking-widest truncate">
                             {sesiData?.tipe_soal || 'CBT'} • {sesiData?.jenis_asesmen}
+                            {sesiData?.paket_aktif ? ` • 📦 ${sesiData.paket_aktif}` : ''}
                         </p>
                     </div>
                 </div>
@@ -887,10 +937,38 @@ export default function SiswaCbtPage({ session, onLogout, idSesi }) {
                                 {activeSoal.isi_soal}
                                 {activeSoal.gambar_soal && (
                                     <div className="mt-4">
-                                        <img src={`/storage/${activeSoal.gambar_soal}`} alt="Ilustrasi Soal" onDragStart={(e) => e.preventDefault()} className="max-h-64 max-w-full rounded-xl border border-border shadow-sm pointer-events-none" />
+                                        <div className="inline-block max-w-full">
+                                            <img
+                                                src={`/storage/${activeSoal.gambar_soal}`}
+                                                alt="Ilustrasi Soal"
+                                                onDragStart={(e) => e.preventDefault()}
+                                                onClick={() => setZoomedImageUrl(`/storage/${activeSoal.gambar_soal}`)}
+                                                title="Klik untuk memperbesar gambar"
+                                                className="max-h-64 max-w-full cursor-zoom-in rounded-xl border border-border object-contain shadow-sm transition hover:opacity-95"
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={() => setZoomedImageUrl(`/storage/${activeSoal.gambar_soal}`)}
+                                                className="mt-1.5 flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+                                            >
+                                                🔍 Klik gambar untuk memperbesar
+                                            </button>
+                                        </div>
                                     </div>
                                 )}
                             </div>
+
+                            {activeSoal.audio_soal && (
+                                <div className="mt-6">
+                                    <CbtAudioPlayer
+                                        src={`/storage/${activeSoal.audio_soal}`}
+                                        idSesi={idSesi}
+                                        idDetail={activeSoal.id_detail}
+                                        batasPutar={activeSoal.batas_putar_audio}
+                                        isReview={false}
+                                    />
+                                </div>
+                            )}
 
                             <div className="mt-8 space-y-4">
                                 {activeSoal.jenis_soal === 'pilihan_ganda' || activeSoal.jenis_soal === 'pilihan_ganda_kompleks' ? (
@@ -1077,6 +1155,7 @@ export default function SiswaCbtPage({ session, onLogout, idSesi }) {
                     </div>
                 </div>
             )}
+            {renderZoomModal()}
         </div>
     );
 }

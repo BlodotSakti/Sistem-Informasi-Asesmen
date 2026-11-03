@@ -28,10 +28,13 @@ class AdminBankSoalController extends Controller
             'jenis_soal' => ['required', 'in:pilihan_ganda,esai,pilihan_ganda_kompleks'],
             'kunci_jawaban' => ['required'],
             'topik_materi' => ['required', 'string', 'max:255'],
+            'paket_soal' => ['nullable', 'string', 'max:100'],
             'level_kognitif' => ['required', 'in:C1,C2,C3,C4,C5,C6'],
             'opsi_jawaban' => ['nullable', 'array'],
             'opsi_jawaban.*' => ['nullable', 'string', 'max:255'],
             'gambar_soal' => ['nullable', 'image', 'mimes:jpeg,png,jpg', 'max:2048'],
+            'audio_soal' => ['nullable', 'file', 'mimes:mp3,wav,m4a,ogg,aac,webm,mp4,mpeg', 'max:10240'],
+            'batas_putar_audio' => ['nullable', 'integer', 'min:0', 'max:20'],
             'keywords' => ['nullable', 'array'],
             'keywords.*' => ['string'],
             'rule_weight' => ['nullable', 'numeric', 'min:0', 'max:1'],
@@ -79,6 +82,11 @@ class AdminBankSoalController extends Controller
             $data['gambar_soal'] = $request->file('gambar_soal')->store('soal_images', 'public');
         }
 
+        if ($request->hasFile('audio_soal')) {
+            $data['audio_soal'] = $request->file('audio_soal')->store('soal_audio', 'public');
+        }
+        $data['batas_putar_audio'] = !empty($data['batas_putar_audio']) && (int) $data['batas_putar_audio'] > 0 ? (int) $data['batas_putar_audio'] : null;
+
         $cleanOptions = collect($data['opsi_jawaban'] ?? [])->map(fn ($item) => trim((string) $item))->filter()->values()->all();
 
         if ($data['jenis_soal'] === 'esai') {
@@ -99,6 +107,7 @@ class AdminBankSoalController extends Controller
 
         $data['created_by'] = $request->user()->id_pengguna;
         $data['opsi_jawaban'] = $cleanOptions;
+        $data['paket_soal'] = isset($data['paket_soal']) && trim((string) $data['paket_soal']) !== '' ? trim((string) $data['paket_soal']) : null;
 
         $soal = BankSoal::create($data);
         $namaMapel = $soal->mataPelajaran->nama_lengkap ?? "ID {$data['id_mapel']}";
@@ -122,10 +131,13 @@ class AdminBankSoalController extends Controller
             'jenis_soal' => ['required', 'in:pilihan_ganda,esai,pilihan_ganda_kompleks'],
             'kunci_jawaban' => ['required'],
             'topik_materi' => ['required', 'string', 'max:255'],
+            'paket_soal' => ['nullable', 'string', 'max:100'],
             'level_kognitif' => ['required', 'in:C1,C2,C3,C4,C5,C6'],
             'opsi_jawaban' => ['nullable', 'array'],
             'opsi_jawaban.*' => ['nullable', 'string', 'max:255'],
             'gambar_soal' => ['nullable', 'image', 'mimes:jpeg,png,jpg', 'max:2048'],
+            'audio_soal' => ['nullable', 'file', 'mimes:mp3,wav,m4a,ogg,aac,webm,mp4,mpeg', 'max:10240'],
+            'batas_putar_audio' => ['nullable', 'integer', 'min:0', 'max:20'],
             'keywords' => ['nullable', 'array'],
             'keywords.*' => ['string'],
             'rule_weight' => ['nullable', 'numeric', 'min:0', 'max:1'],
@@ -180,6 +192,23 @@ class AdminBankSoalController extends Controller
             $data['gambar_soal'] = null;
         }
 
+        if ($request->hasFile('audio_soal')) {
+            if ($bankSoal->audio_soal) {
+                \Illuminate\Support\Facades\Storage::disk('public')->delete($bankSoal->audio_soal);
+            }
+            $data['audio_soal'] = $request->file('audio_soal')->store('soal_audio', 'public');
+        } elseif ($request->input('hapus_audio') === 'true') {
+            if ($bankSoal->audio_soal) {
+                \Illuminate\Support\Facades\Storage::disk('public')->delete($bankSoal->audio_soal);
+            }
+            $data['audio_soal'] = null;
+            $data['batas_putar_audio'] = null;
+        }
+
+        if (array_key_exists('batas_putar_audio', $data) && ($data['audio_soal'] ?? $bankSoal->audio_soal)) {
+            $data['batas_putar_audio'] = !empty($data['batas_putar_audio']) && (int) $data['batas_putar_audio'] > 0 ? (int) $data['batas_putar_audio'] : null;
+        }
+
         $cleanOptions = collect($data['opsi_jawaban'] ?? [])->map(fn ($item) => trim((string) $item))->filter()->values()->all();
 
         if ($data['jenis_soal'] === 'esai') {
@@ -199,6 +228,7 @@ class AdminBankSoalController extends Controller
         }
 
         $data['opsi_jawaban'] = $cleanOptions;
+        $data['paket_soal'] = isset($data['paket_soal']) && trim((string) $data['paket_soal']) !== '' ? trim((string) $data['paket_soal']) : null;
 
         $bankSoal->update($data);
 
@@ -211,9 +241,13 @@ class AdminBankSoalController extends Controller
 
         try {
             $gambar_soal = $bankSoal->gambar_soal;
+            $audio_soal = $bankSoal->audio_soal;
             $bankSoal->delete();
             if ($gambar_soal) {
                 \Illuminate\Support\Facades\Storage::disk('public')->delete($gambar_soal);
+            }
+            if ($audio_soal) {
+                \Illuminate\Support\Facades\Storage::disk('public')->delete($audio_soal);
             }
             return response()->json(['message' => 'Soal berhasil dihapus.']);
         } catch (\Illuminate\Database\QueryException $e) {
@@ -233,6 +267,7 @@ class AdminBankSoalController extends Controller
             'soal.*.jenis_soal' => ['required', 'in:pilihan_ganda,esai,pilihan_ganda_kompleks'],
             'soal.*.kunci_jawaban' => ['required'],
             'soal.*.topik_materi' => ['required', 'string', 'max:255'],
+            'soal.*.paket_soal' => ['nullable', 'string', 'max:100'],
             'soal.*.level_kognitif' => ['required', 'in:C1,C2,C3,C4,C5,C6'],
             'soal.*.opsi_jawaban' => ['nullable', 'array'],
             'soal.*.keywords' => ['nullable', 'array'],
@@ -242,6 +277,7 @@ class AdminBankSoalController extends Controller
             'soal.*.math_weight' => ['nullable', 'numeric'],
             'soal.*.tgate' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'soal.*.required_keywords_count' => ['nullable', 'integer', 'min:1'],
+            'soal.*.gambar_soal_base64' => ['nullable', 'string'],
         ]);
 
         $penggunaId = $request->user()->id_pengguna;
@@ -252,6 +288,25 @@ class AdminBankSoalController extends Controller
         foreach ($data['soal'] as $index => $soal) {
             $soal['created_by'] = $penggunaId;
             $soal['id_mapel'] = $data['id_mapel'];
+
+            $decodedImage = null;
+            if (!empty($soal['gambar_soal_base64'])) {
+                if (preg_match('/^data:image\/(png|jpe?g);base64,(.+)$/i', $soal['gambar_soal_base64'], $matches)) {
+                    $ext = strtolower($matches[1]) === 'jpeg' ? 'jpg' : strtolower($matches[1]);
+                    $binary = base64_decode($matches[2], true);
+                    if ($binary === false) {
+                        $errors[] = "Baris " . ($index + 2) . ": Data gambar pendukung tidak valid.";
+                    } elseif (strlen($binary) > 2 * 1024 * 1024) {
+                        $errors[] = "Baris " . ($index + 2) . ": Ukuran gambar pendukung melebihi 2 MB.";
+                    } else {
+                        $decodedImage = ['ext' => $ext, 'binary' => $binary];
+                    }
+                } else {
+                    $errors[] = "Baris " . ($index + 2) . ": Format gambar pendukung harus JPG, JPEG, atau PNG.";
+                }
+            }
+            unset($soal['gambar_soal_base64']);
+            $soal['_decoded_image'] = $decodedImage;
 
             if ($soal['jenis_soal'] === 'esai') {
                 $soal['opsi_jawaban'] = [];
@@ -284,6 +339,7 @@ class AdminBankSoalController extends Controller
             $soal['math_weight'] = $soal['math_weight'] ?? 0;
             $soal['tgate'] = $soal['tgate'] ?? 0;
             $soal['required_keywords_count'] = !empty($soal['required_keywords_count']) ? (int) $soal['required_keywords_count'] : null;
+            $soal['paket_soal'] = isset($soal['paket_soal']) && trim((string) $soal['paket_soal']) !== '' ? trim((string) $soal['paket_soal']) : null;
 
             $created[] = $soal;
         }
@@ -301,6 +357,13 @@ class AdminBankSoalController extends Controller
 
         $inserted = [];
         foreach ($created as $soal) {
+            $decodedImage = $soal['_decoded_image'] ?? null;
+            unset($soal['_decoded_image']);
+            if ($decodedImage) {
+                $filename = 'soal_images/' . \Illuminate\Support\Str::uuid() . '.' . $decodedImage['ext'];
+                \Illuminate\Support\Facades\Storage::disk('public')->put($filename, $decodedImage['binary']);
+                $soal['gambar_soal'] = $filename;
+            }
             $inserted[] = BankSoal::create($soal);
         }
 

@@ -1,8 +1,10 @@
 import * as XLSX from 'xlsx';
+import * as CFB from 'cfb';
 
 export const BANK_SOAL_EXCEL_HEADERS = [
     'Mata Pelajaran',
     'Isi Soal',
+    'Gambar Pendukung (Opsional)',
     'Opsi A',
     'Opsi B',
     'Opsi C',
@@ -11,6 +13,7 @@ export const BANK_SOAL_EXCEL_HEADERS = [
     'Kunci Jawaban',
     'Jenis Soal',
     'Topik Materi',
+    'Paket Soal (Opsional)',
     'Level Kognitif Bloom',
     'Kata Kunci Penilaian AI',
     'Bobot Aturan (Rule-Based)',
@@ -21,11 +24,14 @@ export const BANK_SOAL_EXCEL_HEADERS = [
     'Bobot Matematika (SymPy)',
 ];
 
+const MAX_IMAGE_BYTES = 2 * 1024 * 1024; // 2 MB
+
 export function downloadBankSoalTemplateExcel(filename = 'Template_Import_Soal_SMAN.xlsx') {
     const exampleData = [
         {
             'Mata Pelajaran': 'Bahasa Indonesia (X)',
             'Isi Soal': 'Siapakah penemu bola lampu?',
+            'Gambar Pendukung (Opsional)': '',
             'Opsi A': 'Albert Einstein',
             'Opsi B': 'Thomas Edison',
             'Opsi C': 'Nikola Tesla',
@@ -34,6 +40,7 @@ export function downloadBankSoalTemplateExcel(filename = 'Template_Import_Soal_S
             'Kunci Jawaban': 'Thomas Edison',
             'Jenis Soal': 'Pilihan Ganda',
             'Topik Materi': 'Sejarah Penemuan',
+            'Paket Soal (Opsional)': 'Paket A',
             'Level Kognitif Bloom': 'C1',
             'Kata Kunci Penilaian AI': '',
             'Bobot Aturan (Rule-Based)': '',
@@ -46,6 +53,7 @@ export function downloadBankSoalTemplateExcel(filename = 'Template_Import_Soal_S
         {
             'Mata Pelajaran': 'Bahasa Indonesia (X)',
             'Isi Soal': 'Jelaskan apa yang dimaksud dengan majas personifikasi beserta satu contohnya!',
+            'Gambar Pendukung (Opsional)': '',
             'Opsi A': '',
             'Opsi B': '',
             'Opsi C': '',
@@ -54,6 +62,7 @@ export function downloadBankSoalTemplateExcel(filename = 'Template_Import_Soal_S
             'Kunci Jawaban': 'Majas personifikasi adalah gaya bahasa yang memberikan sifat-sifat manusia kepada benda mati. Contoh: Angin menari-nari di sela dedaunan.',
             'Jenis Soal': 'Esai',
             'Topik Materi': 'Gaya Bahasa',
+            'Paket Soal (Opsional)': 'Paket A',
             'Level Kognitif Bloom': 'C3',
             'Kata Kunci Penilaian AI': 'majas, gaya bahasa, sifat manusia, benda mati',
             'Bobot Aturan (Rule-Based)': 0.4,
@@ -66,6 +75,7 @@ export function downloadBankSoalTemplateExcel(filename = 'Template_Import_Soal_S
         {
             'Mata Pelajaran': 'Bahasa Indonesia (X)',
             'Isi Soal': 'Manakah dari berikut ini yang merupakan bahasa pemrograman?',
+            'Gambar Pendukung (Opsional)': '',
             'Opsi A': 'Python',
             'Opsi B': 'Kobra',
             'Opsi C': 'JavaScript',
@@ -74,6 +84,7 @@ export function downloadBankSoalTemplateExcel(filename = 'Template_Import_Soal_S
             'Kunci Jawaban': 'Python, JavaScript, C++',
             'Jenis Soal': 'Pilihan Ganda Kompleks',
             'Topik Materi': 'Informatika',
+            'Paket Soal (Opsional)': 'Paket B',
             'Level Kognitif Bloom': 'C2',
             'Kata Kunci Penilaian AI': '',
             'Bobot Aturan (Rule-Based)': '',
@@ -92,6 +103,7 @@ export function downloadBankSoalTemplateExcel(filename = 'Template_Import_Soal_S
     worksheet['!cols'] = [
         { wch: 26 }, // Mata Pelajaran
         { wch: 45 }, // Isi Soal
+        { wch: 28 }, // Gambar Pendukung (Opsional)
         { wch: 20 }, // Opsi A
         { wch: 20 }, // Opsi B
         { wch: 20 }, // Opsi C
@@ -100,6 +112,7 @@ export function downloadBankSoalTemplateExcel(filename = 'Template_Import_Soal_S
         { wch: 32 }, // Kunci Jawaban
         { wch: 24 }, // Jenis Soal
         { wch: 22 }, // Topik Materi
+        { wch: 24 }, // Paket Soal (Opsional)
         { wch: 22 }, // Level Kognitif Bloom
         { wch: 34 }, // Kata Kunci Penilaian AI
         { wch: 26 }, // Bobot Aturan (Rule-Based)
@@ -111,6 +124,213 @@ export function downloadBankSoalTemplateExcel(filename = 'Template_Import_Soal_S
     ];
 
     XLSX.writeFile(workbook, filename);
+}
+
+function uint8ToUtf8(bytes) {
+    if (!bytes) return '';
+    const u8 = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
+    if (typeof TextDecoder !== 'undefined') {
+        return new TextDecoder('utf-8').decode(u8);
+    }
+    let str = '';
+    for (let i = 0; i < u8.length; i++) {
+        str += String.fromCharCode(u8[i]);
+    }
+    return str;
+}
+
+function uint8ToBase64(bytes) {
+    const u8 = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
+    let binary = '';
+    const chunkSize = 0x8000;
+    for (let i = 0; i < u8.length; i += chunkSize) {
+        const chunk = u8.subarray(i, i + chunkSize);
+        binary += String.fromCharCode.apply(null, chunk);
+    }
+    if (typeof btoa === 'function') {
+        return btoa(binary);
+    }
+    return Buffer.from(u8).toString('base64');
+}
+
+function detectImageMime(bytes, targetPath = '') {
+    const u8 = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
+    if (u8.length >= 4 && u8[0] === 0x89 && u8[1] === 0x50 && u8[2] === 0x4e && u8[3] === 0x47) {
+        return 'image/png';
+    }
+    if (u8.length >= 3 && u8[0] === 0xff && u8[1] === 0xd8 && u8[2] === 0xff) {
+        return 'image/jpeg';
+    }
+    const lower = String(targetPath).toLowerCase();
+    if (lower.endsWith('.png')) return 'image/png';
+    if (lower.endsWith('.jpg') || lower.endsWith('.jpeg')) return 'image/jpeg';
+    return null;
+}
+
+function parseRelsXml(xmlStr) {
+    const relMap = {};
+    if (!xmlStr) return relMap;
+    const tagRegex = /<Relationship\b[^>]*>/gi;
+    let match;
+    while ((match = tagRegex.exec(xmlStr)) !== null) {
+        const tag = match[0];
+        const idMatch = tag.match(/\bId\s*=\s*["']([^"']+)["']/i);
+        const targetMatch = tag.match(/\bTarget\s*=\s*["']([^"']+)["']/i);
+        if (idMatch && targetMatch) {
+            relMap[idMatch[1]] = targetMatch[1];
+        }
+    }
+    return relMap;
+}
+
+function resolveXlMediaPath(target) {
+    if (!target) return null;
+    const cleaned = String(target).replace(/^(\.\.\/)+/, '').replace(/^\/+/, '');
+    if (cleaned.startsWith('xl/')) return `/${cleaned}`;
+    return `/xl/${cleaned}`;
+}
+
+function buildImageEntryResult(cfb, targetPath) {
+    const cfbPath = resolveXlMediaPath(targetPath);
+    if (!cfbPath || !CFB) return null;
+    const entry = CFB.find(cfb, cfbPath);
+    if (!entry || !entry.content) return null;
+
+    const u8 = entry.content instanceof Uint8Array ? entry.content : new Uint8Array(entry.content);
+    const mime = detectImageMime(u8, cfbPath);
+    if (!mime) {
+        return { error: 'Format gambar pada Excel tidak didukung (gunakan JPG, JPEG, atau PNG).' };
+    }
+    if (u8.length > MAX_IMAGE_BYTES) {
+        return { error: 'Ukuran gambar pada Excel melebihi batas maksimal 2 MB.' };
+    }
+    const base64 = uint8ToBase64(u8);
+    return { dataUrl: `data:${mime};base64,${base64}` };
+}
+
+/**
+ * Mengekstrak gambar yang disisipkan di dalam file .xlsx (baik melalui Insert -> Picture / Place over Cells
+ * maupun Excel 365 Place in Cell) dan memetakannya ke nomor baris Excel (1-based: baris 2 = soal pertama).
+ */
+export function extractImagesByRowFromXlsxBinary(bstr) {
+    const rowImages = {};
+    if (!bstr || !CFB) return rowImages;
+
+    try {
+        const cfb = CFB.read(bstr, { type: 'binary' });
+        if (!cfb) return rowImages;
+
+        // 1. Classic / Floating Drawings (xl/drawings/drawing1.xml)
+        const drawingEntry = CFB.find(cfb, '/xl/drawings/drawing1.xml');
+        const drawingRelsEntry = CFB.find(cfb, '/xl/drawings/_rels/drawing1.xml.rels');
+
+        if (drawingEntry && drawingEntry.content && drawingRelsEntry && drawingRelsEntry.content) {
+            const drawingXml = uint8ToUtf8(drawingEntry.content);
+            const relMap = parseRelsXml(uint8ToUtf8(drawingRelsEntry.content));
+
+            const anchorRegex = /<(?:xdr:)?(?:twoCellAnchor|oneCellAnchor)\b[\s\S]*?<\/(?:xdr:)?(?:twoCellAnchor|oneCellAnchor)>/gi;
+            let anchorMatch;
+            while ((anchorMatch = anchorRegex.exec(drawingXml)) !== null) {
+                const block = anchorMatch[0];
+                const fromMatch = block.match(/<(?:xdr:)?from\b[\s\S]*?<\/(?:xdr:)?from>/i);
+                if (!fromMatch) continue;
+
+                const rowMatch = fromMatch[0].match(/<(?:xdr:)?row>\s*(\d+)\s*<\/(?:xdr:)?row>/i);
+                const blipMatch = block.match(/<(?:a:)?blip\b[^>]*?\b(?:r:)?embed\s*=\s*["']([^"']+)["']/i);
+                if (!rowMatch || !blipMatch) continue;
+
+                const excelRow = parseInt(rowMatch[1], 10) + 1; // 0-based -> 1-based Excel row
+                const rId = blipMatch[1];
+                const target = relMap[rId];
+                if (!target || excelRow < 2) continue;
+
+                const imgResult = buildImageEntryResult(cfb, target);
+                if (imgResult && !rowImages[excelRow]) {
+                    rowImages[excelRow] = imgResult;
+                }
+            }
+        }
+
+        // 2. Modern Excel 365 "Place in Cell" (RichData vm="..." in xl/worksheets/sheet1.xml)
+        const sheetEntry = CFB.find(cfb, '/xl/worksheets/sheet1.xml');
+        const richRelEntry = CFB.find(cfb, '/xl/richData/richValueRel.xml');
+        const richRelRelsEntry = CFB.find(cfb, '/xl/richData/_rels/richValueRel.xml.rels');
+
+        if (sheetEntry && sheetEntry.content && richRelEntry && richRelEntry.content && richRelRelsEntry && richRelRelsEntry.content) {
+            const sheetXml = uint8ToUtf8(sheetEntry.content);
+            const richRelXml = uint8ToUtf8(richRelEntry.content);
+            const richRelMap = parseRelsXml(uint8ToUtf8(richRelRelsEntry.content));
+
+            // Ordered list of rIds in richValueRel.xml
+            const orderedRIds = [];
+            const relTagRegex = /<(?:[\w]+:)?rel\b[^>]*?\b(?:r:)?id\s*=\s*["']([^"']+)["'][^>]*>/gi;
+            let relMatch;
+            while ((relMatch = relTagRegex.exec(richRelXml)) !== null) {
+                orderedRIds.push(relMatch[1]);
+            }
+
+            // Optional rdrichvalue.xml mapping (rv index -> rel index)
+            const rvToRelIdx = [];
+            const rdRichValEntry = CFB.find(cfb, '/xl/richData/rdrichvalue.xml');
+            if (rdRichValEntry && rdRichValEntry.content) {
+                const rdXml = uint8ToUtf8(rdRichValEntry.content);
+                const rvRegex = /<(?:[\w]+:)?rv\b[^>]*>([\s\S]*?)<\/(?:[\w]+:)?rv>/gi;
+                let rvMatch;
+                while ((rvMatch = rvRegex.exec(rdXml)) !== null) {
+                    const firstV = rvMatch[1].match(/<(?:[\w]+:)?v>\s*(\d+)\s*<\/(?:[\w]+:)?v>/i);
+                    rvToRelIdx.push(firstV ? parseInt(firstV[1], 10) : rvToRelIdx.length);
+                }
+            }
+
+            // Optional metadata.xml mapping (vm 1-based -> rv index)
+            const vmToRvIdx = {};
+            const metaEntry = CFB.find(cfb, '/xl/metadata.xml');
+            if (metaEntry && metaEntry.content) {
+                const metaXml = uint8ToUtf8(metaEntry.content);
+                const rvbIndices = [];
+                const rvbRegex = /<(?:[\w]+:)?rvb\b[^>]*?\bi\s*=\s*["'](\d+)["']/gi;
+                let rvbMatch;
+                while ((rvbMatch = rvbRegex.exec(metaXml)) !== null) {
+                    rvbIndices.push(parseInt(rvbMatch[1], 10));
+                }
+
+                const valMetaMatch = metaXml.match(/<valueMetadata\b[\s\S]*?<\/valueMetadata>/i);
+                if (valMetaMatch) {
+                    const bkRegex = /<bk>[\s\S]*?<rc\b[^>]*?\bv\s*=\s*["'](\d+)["'][^>]*>[\s\S]*?<\/bk>/gi;
+                    let bkMatch;
+                    let vmIdx = 1;
+                    while ((bkMatch = bkRegex.exec(valMetaMatch[0])) !== null) {
+                        const vIdx = parseInt(bkMatch[1], 10);
+                        vmToRvIdx[vmIdx] = rvbIndices[vIdx] !== undefined ? rvbIndices[vIdx] : vIdx;
+                        vmIdx++;
+                    }
+                }
+            }
+
+            const cellRegex = /<c\b[^>]*?\br\s*=\s*["'][A-Z]+(\d+)["'][^>]*?\bvm\s*=\s*["'](\d+)["'][^>]*>/gi;
+            let cellMatch;
+            while ((cellMatch = cellRegex.exec(sheetXml)) !== null) {
+                const excelRow = parseInt(cellMatch[1], 10);
+                const vmOneBased = parseInt(cellMatch[2], 10);
+                if (excelRow < 2 || !vmOneBased) continue;
+
+                const rvIdx = vmToRvIdx[vmOneBased] !== undefined ? vmToRvIdx[vmOneBased] : vmOneBased - 1;
+                const relIdx = rvToRelIdx[rvIdx] !== undefined ? rvToRelIdx[rvIdx] : rvIdx;
+                const rId = orderedRIds[relIdx];
+                const target = rId ? richRelMap[rId] : null;
+                if (!target) continue;
+
+                const imgResult = buildImageEntryResult(cfb, target);
+                if (imgResult && !rowImages[excelRow]) {
+                    rowImages[excelRow] = imgResult;
+                }
+            }
+        }
+    } catch (err) {
+        console.warn('Gagal mengekstrak gambar dari file Excel:', err);
+    }
+
+    return rowImages;
 }
 
 function getRowField(normalizedRow, aliases) {
@@ -172,16 +392,40 @@ export function buildMapelLookup(mapelList = []) {
 }
 
 export function parseBankSoalExcelRows(dataRows, mapelList = [], options = {}) {
-    const { isGuru = false } = options;
+    const { isGuru = false, rowImages = {}, defaultPaket = '' } = options;
     const mapelLookup = buildMapelLookup(mapelList);
     const mapelGroup = {};
     const skippedRows = [];
 
     dataRows.forEach((rawRow, idx) => {
+        const excelRow = Number.isInteger(rawRow?.__rowNum__) ? rawRow.__rowNum__ + 1 : idx + 2;
         const normalizedRow = {};
+        let hasAnyText = false;
+
         Object.entries(rawRow || {}).forEach(([k, v]) => {
-            normalizedRow[String(k).toLowerCase().trim()] = v;
+            const key = String(k).toLowerCase().trim();
+            normalizedRow[key] = v;
+            if (
+                v !== undefined &&
+                v !== null &&
+                String(v).trim() !== '' &&
+                !key.startsWith('gambar pendukung')
+            ) {
+                hasAnyText = true;
+            }
         });
+
+        const embeddedImg = rowImages[excelRow];
+
+        // Abaikan baris yang benar-benar kosong
+        if (!hasAnyText && !embeddedImg) {
+            return;
+        }
+
+        if (embeddedImg?.error) {
+            skippedRows.push(`Baris ${excelRow}: ${embeddedImg.error}`);
+            return;
+        }
 
         const rawMapel = getRowField(normalizedRow, [
             'mata pelajaran',
@@ -199,8 +443,8 @@ export function parseBankSoalExcelRows(dataRows, mapelList = [], options = {}) {
             if (!resolvedId) {
                 skippedRows.push(
                     isGuru
-                        ? `Baris ${idx + 2}: Mata Pelajaran '${rawMapel}' tidak ditemukan atau Anda tidak mengampu mata pelajaran ini.`
-                        : `Baris ${idx + 2}: Mata Pelajaran '${rawMapel}' tidak ditemukan.`
+                        ? `Baris ${excelRow}: Mata Pelajaran '${rawMapel}' tidak ditemukan atau Anda tidak mengampu mata pelajaran ini.`
+                        : `Baris ${excelRow}: Mata Pelajaran '${rawMapel}' tidak ditemukan.`
                 );
                 return;
             }
@@ -209,19 +453,19 @@ export function parseBankSoalExcelRows(dataRows, mapelList = [], options = {}) {
         }
 
         if (!resolvedId) {
-            skippedRows.push(`Baris ${idx + 2}: Kolom 'Mata Pelajaran' kosong.`);
+            skippedRows.push(`Baris ${excelRow}: Kolom 'Mata Pelajaran' kosong.`);
             return;
         }
 
         const isiSoal = getRowField(normalizedRow, ['isi soal', 'isi_soal', 'pertanyaan', 'soal']);
         if (isiSoal === undefined || String(isiSoal).trim() === '') {
-            skippedRows.push(`Baris ${idx + 2}: Kolom 'Isi Soal' kosong.`);
+            skippedRows.push(`Baris ${excelRow}: Kolom 'Isi Soal' kosong.`);
             return;
         }
 
         const kunciJawaban = getRowField(normalizedRow, ['kunci jawaban', 'kunci_jawaban', 'kunci']);
         if (kunciJawaban === undefined || String(kunciJawaban).trim() === '') {
-            skippedRows.push(`Baris ${idx + 2}: Kolom 'Kunci Jawaban' kosong.`);
+            skippedRows.push(`Baris ${excelRow}: Kolom 'Kunci Jawaban' kosong.`);
             return;
         }
 
@@ -230,6 +474,18 @@ export function parseBankSoalExcelRows(dataRows, mapelList = [], options = {}) {
 
         const rawTopik = getRowField(normalizedRow, ['topik materi', 'topik_materi', 'topik', 'materi']);
         const topikMateri = rawTopik !== undefined ? String(rawTopik).trim() : 'Umum';
+
+        const rawPaket = getRowField(normalizedRow, [
+            'paket soal (opsional)',
+            'paket soal',
+            'paket_soal',
+            'kode paket',
+            'nama paket',
+            'paket',
+        ]);
+        const rowPaket = rawPaket !== undefined && String(rawPaket).trim() !== '' ? String(rawPaket).trim() : '';
+        const fallbackPaket = defaultPaket ? String(defaultPaket).trim() : '';
+        const paketSoal = rowPaket || fallbackPaket || null;
 
         const rawLevel = getRowField(normalizedRow, [
             'level kognitif bloom',
@@ -331,8 +587,10 @@ export function parseBankSoalExcelRows(dataRows, mapelList = [], options = {}) {
             jenis_soal: jenisSoal,
             kunci_jawaban: String(kunciJawaban).trim(),
             topik_materi: topikMateri,
+            paket_soal: paketSoal,
             level_kognitif: levelKognitif,
             opsi_jawaban: opsi,
+            gambar_soal_base64: embeddedImg?.dataUrl || null,
             keywords,
             rule_weight: parseDecimal(rawRuleWeight, 0),
             lsa_weight: parseDecimal(rawLsaWeight, 0),
@@ -345,4 +603,3 @@ export function parseBankSoalExcelRows(dataRows, mapelList = [], options = {}) {
 
     return { mapelGroup, skippedRows };
 }
-

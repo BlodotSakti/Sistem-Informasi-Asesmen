@@ -28,7 +28,7 @@ class SiswaController extends Controller
         $idSiswa = $siswa?->id_siswa;
 
         $query = SesiAsesmen::query()
-            ->with(['kelas', 'mataPelajaran', 'detailSesiSoal'])
+            ->with(['kelas', 'mataPelajaran', 'detailSesiSoal.bankSoal'])
             ->latest('waktu_mulai');
 
         if ($idKelas) {
@@ -41,6 +41,18 @@ class SiswaController extends Controller
 
         // Add sudah_dikerjakan flag per session
         if ($idSiswa) {
+            $sessionIds = $paginated->getCollection()->pluck('id_sesi')->unique()->values();
+
+            $percobaanBySesi = PercobaanCbt::where('id_siswa', $idSiswa)
+                ->whereIn('id_sesi', $sessionIds)
+                ->get()
+                ->groupBy('id_sesi');
+
+            $analisisSesiIds = AnalisisDiagnostik::where('id_siswa', $idSiswa)
+                ->whereIn('id_sesi', $sessionIds)
+                ->pluck('id_sesi')
+                ->toArray();
+
             $allDetailIds = $paginated->getCollection()->flatMap(function ($sesi) {
                 return $sesi->detailSesiSoal->pluck('id_detail');
             })->unique()->values();
@@ -50,10 +62,17 @@ class SiswaController extends Controller
                 ->pluck('id_detail')
                 ->toArray();
 
-            $paginated->getCollection()->transform(function ($sesi) use ($answeredDetailIds) {
-                $sesiDetailIds = $sesi->detailSesiSoal->pluck('id_detail')->toArray();
+            $paginated->getCollection()->transform(function ($sesi) use ($idSiswa, $percobaanBySesi, $analisisSesiIds, $answeredDetailIds) {
+                $attemptCount = $percobaanBySesi->get($sesi->id_sesi)?->count() ?? 0;
+                $resolved = $sesi->resolveSoalForSiswa($idSiswa, max(0, $attemptCount - 1));
+                $sesiDetailIds = $resolved['details']->pluck('id_detail')->toArray();
                 $answeredCount = count(array_intersect($sesiDetailIds, $answeredDetailIds));
-                $sesi->sudah_dikerjakan = $answeredCount > 0 && $answeredCount >= count($sesiDetailIds);
+                $hasSubmitted = $attemptCount > 0 || in_array($sesi->id_sesi, $analisisSesiIds);
+
+                $sesi->sudah_dikerjakan = $hasSubmitted || ($answeredCount > 0 && $answeredCount >= count($sesiDetailIds));
+                $sesi->ada_soal_baru = $hasSubmitted && $answeredCount < count($sesiDetailIds);
+                $sesi->jumlah_soal_siswa = count($sesiDetailIds);
+                $sesi->paket_aktif = $resolved['paket_aktif'];
                 $sesi->has_token = !empty($sesi->token);
                 return $sesi;
             });
@@ -483,13 +502,25 @@ class SiswaController extends Controller
             ], 403);
         }
 
+        $attemptCount = PercobaanCbt::where('id_siswa', $siswa->id_siswa)
+            ->where('id_sesi', $id_sesi)
+            ->count();
+
+        $hasSubmittedAttempt = $attemptCount > 0
+            || AnalisisDiagnostik::where('id_siswa', $siswa->id_siswa)
+                ->where('id_sesi', $id_sesi)
+                ->exists();
+
+        $resolved = $sesi->resolveSoalForSiswa($siswa->id_siswa, $attemptCount);
+        $studentDetails = $resolved['details'];
+
         // Check if student already completed and retakes not allowed
         if (!$sesi->boleh_ulang) {
-            $totalSoal = $sesi->detailSesiSoal->count();
+            $totalSoal = $studentDetails->count();
             $answeredCount = JawabanSiswa::where('id_siswa', $siswa->id_siswa)
-                ->whereIn('id_detail', $sesi->detailSesiSoal->pluck('id_detail'))
+                ->whereIn('id_detail', $studentDetails->pluck('id_detail'))
                 ->count();
-            if ($answeredCount > 0 && $answeredCount >= $totalSoal) {
+            if ($hasSubmittedAttempt || ($answeredCount > 0 && $answeredCount >= $totalSoal)) {
                 return response()->json([
                     'message' => 'Anda sudah mengerjakan ujian ini dan tidak diperbolehkan mengulang.',
                     'sudah_dikerjakan' => true,
@@ -497,17 +528,19 @@ class SiswaController extends Controller
             }
         }
 
-        $soal = $sesi->detailSesiSoal->map(function ($detail) {
+        $soal = $studentDetails->map(function ($detail) {
             $bankSoal = $detail->bankSoal;
             return [
                 'id_detail' => $detail->id_detail,
                 'jenis_soal' => $bankSoal->jenis_soal,
                 'isi_soal' => $bankSoal->isi_soal,
                 'gambar_soal' => $bankSoal->gambar_soal,
+                'audio_soal' => $bankSoal->audio_soal,
+                'batas_putar_audio' => $bankSoal->batas_putar_audio,
                 'opsi_jawaban' => $bankSoal->opsi_jawaban,
                 'bobot_nilai' => $detail->bobot_nilai,
             ];
-        });
+        })->values();
 
         // Get existing answers
         $jawaban = JawabanSiswa::query()
@@ -517,13 +550,8 @@ class SiswaController extends Controller
             ->keyBy('id_detail');
 
         // SAFE RETAKE LOGIC:
-        // Jika sudah ada AnalisisDiagnostik (artinya sudah pernah submit ujian ini),
-        // Jangan kembalikan jawaban lama ke frontend agar tampilan bersih.
-        $hasAnalisis = AnalisisDiagnostik::where('id_siswa', $siswa->id_siswa)
-            ->where('id_sesi', $id_sesi)
-            ->exists();
-
-        if ($hasAnalisis && $sesi->boleh_ulang) {
+        // Jika sudah pernah submit ujian ini, jangan kembalikan jawaban lama ke frontend agar tampilan bersih.
+        if ($hasSubmittedAttempt && $sesi->boleh_ulang) {
             $jawaban = collect(); // Kosongkan riwayat yang dikirim ke frontend
         }
 
@@ -536,6 +564,9 @@ class SiswaController extends Controller
                 'waktu_mulai' => $sesi->waktu_mulai,
                 'waktu_selesai' => $sesi->waktu_selesai,
                 'mata_pelajaran' => $sesi->mataPelajaran?->nama_mapel,
+                'paket_aktif' => $resolved['paket_aktif'],
+                'distribusi_paket' => (bool) $sesi->distribusi_paket,
+                'acak_soal' => (bool) $sesi->acak_soal,
             ],
             'soal' => $soal,
             'jawaban_tersimpan' => $jawaban->values()->map(function ($item) {
@@ -551,7 +582,7 @@ class SiswaController extends Controller
     {
         $siswa = $request->user()->siswa;
         $data = $request->validate([
-            'jawaban' => ['required', 'array'],
+            'jawaban' => ['present', 'array'],
             'jawaban.*.id_detail' => ['required', 'integer', 'exists:detail_sesi_soal,id_detail'],
             'jawaban.*.teks_jawaban' => ['nullable', 'string'],
         ]);
@@ -581,13 +612,27 @@ class SiswaController extends Controller
             return response()->json(['message' => 'Ujian belum dimulai'], 403);
         }
 
+        $attemptCount = PercobaanCbt::where('id_siswa', $siswa->id_siswa)
+            ->where('id_sesi', $id_sesi)
+            ->count();
+
+        $resolved = $sesi->resolveSoalForSiswa($siswa->id_siswa, $attemptCount);
+        $studentDetails = $resolved['details'];
+
         $details = $sesi->detailSesiSoal->keyBy('id_detail');
         $totalSkor = 0;
-        $totalBobot = $sesi->detailSesiSoal->sum('bobot_nilai');
+        $totalBobot = (float) $studentDetails->sum('bobot_nilai');
         $resultPerSoal = [];
 
-        // Deduplikasi: hanya ambil jawaban terakhir per id_detail
-        $jawabanByDetail = collect($data['jawaban'])->keyBy('id_detail')->values()->all();
+        // Pastikan seluruh soal yang ditugaskan ke siswa pada saat submit dievaluasi dan tercatat
+        $submittedMap = collect($data['jawaban'] ?? [])->keyBy('id_detail');
+        $jawabanByDetail = $studentDetails->map(function ($detail) use ($submittedMap) {
+            $item = $submittedMap->get($detail->id_detail);
+            return [
+                'id_detail' => $detail->id_detail,
+                'teks_jawaban' => is_array($item) ? ($item['teks_jawaban'] ?? '') : '',
+            ];
+        })->values()->all();
 
         // --- Auto-Grading Essay API Calls ---
         $essayGrades = [];
@@ -719,6 +764,8 @@ class SiswaController extends Controller
                     'id_detail' => $detail->id_detail,
                     'isi_soal' => $bankSoal->isi_soal,
                     'gambar_soal' => $bankSoal->gambar_soal,
+                    'audio_soal' => $bankSoal->audio_soal,
+                    'batas_putar_audio' => $bankSoal->batas_putar_audio,
                     'jenis_soal' => $bankSoal->jenis_soal,
                     'opsi_jawaban' => $bankSoal->opsi_jawaban,
                     'jawaban_siswa' => $teksJawaban,
@@ -906,12 +953,16 @@ class SiswaController extends Controller
             ->get()
             ->groupBy('id_sesi');
 
+        $analisisSesiIds = AnalisisDiagnostik::where('id_siswa', $siswa->id_siswa)
+            ->pluck('id_sesi')
+            ->toArray();
+
         $sessions = SesiAsesmen::query()
-            ->with(['kelas', 'mataPelajaran', 'detailSesiSoal'])
+            ->with(['kelas', 'mataPelajaran', 'detailSesiSoal.bankSoal'])
             ->whereIn('id_kelas', $kelasIds)
             ->latest('waktu_mulai')
             ->get()
-            ->filter(function (SesiAsesmen $sesi) use ($siswa, $allPercobaan) {
+            ->filter(function (SesiAsesmen $sesi) use ($siswa, $allPercobaan, $analisisSesiIds) {
                 $isEnded = $sesi->waktu_selesai && \Carbon\Carbon::parse($sesi->waktu_selesai)->isPast();
                 if ($isEnded) {
                     return true;
@@ -921,20 +972,24 @@ class SiswaController extends Controller
                     return true;
                 }
 
-                $detailIds = $sesi->detailSesiSoal->pluck('id_detail');
-                return JawabanSiswa::where('id_siswa', $siswa->id_siswa)
-                    ->whereIn('id_detail', $detailIds)
-                    ->exists();
+                if (in_array($sesi->id_sesi, $analisisSesiIds)) {
+                    return true;
+                }
+
+                return false;
             })
-            ->map(function (SesiAsesmen $sesi) use ($siswa, $allPercobaan) {
+            ->map(function (SesiAsesmen $sesi) use ($siswa, $allPercobaan, $analisisSesiIds) {
                 $detailIds = $sesi->detailSesiSoal->pluck('id_detail');
                 $jawaban = JawabanSiswa::where('id_siswa', $siswa->id_siswa)
                     ->whereIn('id_detail', $detailIds)
                     ->get();
 
-                $totalBobot = $sesi->detailSesiSoal->sum('bobot_nilai');
+                $totalBobot = $sesi->effectiveTotalBobot();
                 $percobaanList = $allPercobaan->get($sesi->id_sesi, collect());
                 $percobaanTertinggi = 1;
+                $resolvedFallback = $sesi->resolveSoalForSiswa($siswa->id_siswa, 0);
+                $jumlahSoal = $jawaban->count() > 0 ? $jawaban->count() : $resolvedFallback['details']->count();
+                $jumlahDijawab = $jawaban->count();
 
                 if ($percobaanList->isNotEmpty()) {
                     $highest = $percobaanList->sort(function ($a, $b) {
@@ -950,6 +1005,11 @@ class SiswaController extends Controller
                     $totalBobot = (float) $highest->total_bobot;
                     $jumlahBenar = $highest->jumlah_benar;
                     $percobaanTertinggi = $highest->percobaan_ke;
+                    $jumlahSoal = (int) $highest->jumlah_soal;
+                    $answeredInAttempt = collect($highest->data_jawaban ?? [])
+                        ->filter(fn ($d) => isset($d['jawaban_siswa']) && trim((string) $d['jawaban_siswa']) !== '')
+                        ->count();
+                    $jumlahDijawab = $answeredInAttempt > 0 ? $answeredInAttempt : (int) $highest->jumlah_soal;
                 } else {
                     $totalSkor = $jawaban->sum('skor_diperoleh');
                     $jumlahBenar = $jawaban->where('is_correct', true)->count();
@@ -982,8 +1042,8 @@ class SiswaController extends Controller
                     'waktu_mulai' => $sesi->waktu_mulai,
                     'durasi_menit' => $sesi->durasi_menit,
                     'boleh_ulang' => (bool) $sesi->boleh_ulang,
-                    'jumlah_soal' => $sesi->detailSesiSoal->count(),
-                    'jumlah_dijawab' => $jawaban->count(),
+                    'jumlah_soal' => $jumlahSoal,
+                    'jumlah_dijawab' => $jumlahDijawab,
                     'jumlah_benar' => $jumlahBenar,
                     'total_skor' => round($totalSkor, 2),
                     'total_bobot' => round($totalBobot, 2),
@@ -991,9 +1051,7 @@ class SiswaController extends Controller
                     'percobaan_tertinggi' => $percobaanTertinggi,
                     'riwayat_percobaan' => $riwayatPercobaan,
                     'submitted_at' => $jawaban->max('updated_at') ?? ($percobaanList->last()?->created_at?->toIso8601String()),
-                    'has_analisis' => AnalisisDiagnostik::where('id_siswa', $siswa->id_siswa)
-                        ->where('id_sesi', $sesi->id_sesi)
-                        ->exists(),
+                    'has_analisis' => in_array($sesi->id_sesi, $analisisSesiIds),
                     'has_token' => !empty($sesi->token),
                 ];
             });
@@ -1015,15 +1073,49 @@ class SiswaController extends Controller
             ->get()
             ->keyBy('id_detail');
 
-        // Only allow review if the student has at least one answer
-        if ($jawaban->isEmpty()) {
-            return response()->json(['message' => 'Anda belum mengerjakan ujian ini.'], 403);
+        $riwayatPercobaanRaw = PercobaanCbt::where('id_siswa', $siswa->id_siswa)
+            ->where('id_sesi', $id_sesi)
+            ->orderBy('percobaan_ke', 'asc')
+            ->get();
+
+        $analisis = AnalisisDiagnostik::where('id_siswa', $siswa->id_siswa)
+            ->where('id_sesi', $id_sesi)
+            ->first();
+
+        $isEnded = $sesi->waktu_selesai && \Carbon\Carbon::parse($sesi->waktu_selesai)->isPast();
+
+        // Hanya izinkan review jika siswa sudah pernah submit ujian (ada di PercobaanCbt / AnalisisDiagnostik)
+        // atau jika waktu ujian sudah berakhir dan siswa memiliki jawaban tersimpan.
+        if ($riwayatPercobaanRaw->isEmpty() && !$analisis && (!$isEnded || $jawaban->isEmpty())) {
+            return response()->json(['message' => 'Anda belum menyelesaikan pengerjaan ujian ini.'], 403);
+        }
+
+        // KEAMANAN: Hanya tampilkan soal yang benar-benar sudah pernah dikerjakan/disubmit oleh siswa.
+        // Soal baru yang ditambahkan oleh Guru setelah siswa mengerjakan TIDAK BOLEH ditampilkan
+        // sebelum siswa mengerjakan ulang dan mengumpulkan soal tersebut.
+        $attemptedDetailIds = collect();
+        if ($riwayatPercobaanRaw->isNotEmpty()) {
+            $attemptedDetailIds = $riwayatPercobaanRaw
+                ->flatMap(fn ($p) => collect($p->data_jawaban ?? [])->pluck('id_detail'))
+                ->filter()
+                ->map(fn ($id) => (int) $id)
+                ->unique()
+                ->values();
+        }
+        if ($attemptedDetailIds->isEmpty()) {
+            $attemptedDetailIds = $jawaban->keys()->map(fn ($id) => (int) $id)->values();
         }
 
         $totalSkor = 0;
         $totalBobot = 0;
 
-        $soalReview = $sesi->detailSesiSoal->map(function ($detail) use ($jawaban, &$totalSkor, &$totalBobot) {
+        $attemptedDetails = $sesi->detailSesiSoal
+            ->filter(fn ($detail) => $attemptedDetailIds->contains((int) $detail->id_detail))
+            ->values();
+
+        $attemptedDetailsMap = $attemptedDetails->keyBy('id_detail');
+
+        $soalReview = $attemptedDetails->map(function ($detail) use ($jawaban, &$totalSkor, &$totalBobot) {
             $bankSoal = $detail->bankSoal;
             $answer = $jawaban->get($detail->id_detail);
             $totalBobot += $detail->bobot_nilai;
@@ -1035,8 +1127,10 @@ class SiswaController extends Controller
                 'id_detail' => $detail->id_detail,
                 'isi_soal' => $bankSoal->isi_soal,
                 'gambar_soal' => $bankSoal->gambar_soal,
+                'audio_soal' => $bankSoal->audio_soal,
+                'batas_putar_audio' => $bankSoal->batas_putar_audio,
                 'jenis_soal' => $bankSoal->jenis_soal,
-                'taksonomi_bloom' => $bankSoal->taksonomi_bloom,
+                'taksonomi_bloom' => $bankSoal->taksonomi_bloom ?? $bankSoal->level_kognitif,
                 'opsi_jawaban' => $bankSoal->opsi_jawaban,
                 'kunci_jawaban' => $bankSoal->kunci_jawaban,
                 'bobot_nilai' => $detail->bobot_nilai,
@@ -1045,11 +1139,6 @@ class SiswaController extends Controller
                 'skor_diperoleh' => $skorDiperoleh,
             ];
         });
-
-        // Include Analisis Diagnostik if exists
-        $analisis = AnalisisDiagnostik::where('id_siswa', $siswa->id_siswa)
-            ->where('id_sesi', $id_sesi)
-            ->first();
 
         $analisisDiagnostik = null;
         if ($analisis) {
@@ -1063,11 +1152,6 @@ class SiswaController extends Controller
                 'rekap_kognitif' => $geminiService->buildRekapCognitive($siswa->id_siswa, $id_sesi)['rekap_level_kognitif'] ?? null,
             ];
         }
-
-        $riwayatPercobaanRaw = PercobaanCbt::where('id_siswa', $siswa->id_siswa)
-            ->where('id_sesi', $id_sesi)
-            ->orderBy('percobaan_ke', 'asc')
-            ->get();
 
         $percobaanTertinggi = 1;
         if ($riwayatPercobaanRaw->isNotEmpty()) {
@@ -1088,7 +1172,18 @@ class SiswaController extends Controller
             $jumlahBenar = $soalReview->where('is_correct', true)->count();
         }
 
-        $riwayatPercobaan = $riwayatPercobaanRaw->map(function ($p) {
+        $riwayatPercobaan = $riwayatPercobaanRaw->map(function ($p) use ($attemptedDetailsMap) {
+            $enrichedJawaban = collect($p->data_jawaban ?? [])->map(function ($dj) use ($attemptedDetailsMap) {
+                $detail = isset($dj['id_detail']) ? $attemptedDetailsMap->get((int) $dj['id_detail']) : null;
+                $bs = $detail?->bankSoal;
+                return array_merge($dj, [
+                    'gambar_soal' => $dj['gambar_soal'] ?? $bs?->gambar_soal,
+                    'audio_soal' => $dj['audio_soal'] ?? $bs?->audio_soal,
+                    'batas_putar_audio' => $dj['batas_putar_audio'] ?? $bs?->batas_putar_audio,
+                    'taksonomi_bloom' => $dj['taksonomi_bloom'] ?? $bs?->taksonomi_bloom ?? $bs?->level_kognitif,
+                ]);
+            })->values()->all();
+
             return [
                 'id_percobaan' => $p->id_percobaan,
                 'percobaan_ke' => $p->percobaan_ke,
@@ -1097,7 +1192,7 @@ class SiswaController extends Controller
                 'jumlah_soal' => $p->jumlah_soal,
                 'jumlah_benar' => $p->jumlah_benar,
                 'jumlah_salah' => $p->jumlah_salah,
-                'data_jawaban' => $p->data_jawaban,
+                'data_jawaban' => $enrichedJawaban,
                 'submitted_at' => $p->created_at?->format('Y-m-d H:i:s'),
             ];
         })->values();
