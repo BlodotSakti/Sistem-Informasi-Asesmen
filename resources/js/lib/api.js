@@ -24,7 +24,18 @@ export async function apiFetch(path, session, options = {}) {
             window.location.replace('/login');
             return;
         }
-        const message = typeof payload === 'string' ? payload : payload?.message || payload?.error || 'Request gagal.';
+        let message = 'Request gagal.';
+        if (typeof payload === 'string') {
+            message = payload;
+        } else if (payload?.errors && typeof payload.errors === 'object') {
+            const firstKey = Object.keys(payload.errors)[0];
+            const errVal = payload.errors[firstKey];
+            message = Array.isArray(errVal) ? errVal[0] : (payload.message || 'Validasi gagal.');
+        } else if (payload?.message) {
+            message = payload.message;
+        } else if (payload?.error) {
+            message = payload.error;
+        }
         throw new Error(message);
     }
 

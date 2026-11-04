@@ -144,7 +144,7 @@ class GuruController extends Controller
             'level_kognitif' => ['required', 'in:C1,C2,C3,C4,C5,C6'],
             'opsi_jawaban' => ['nullable', 'array'],
             'opsi_jawaban.*' => ['nullable', 'string', 'max:255'],
-            'gambar_soal' => ['nullable', 'image', 'mimes:jpeg,png,jpg', 'max:2048'],
+            'gambar_soal' => ['nullable', 'image', 'mimes:jpeg,png,jpg,webp', 'max:2048'],
             'audio_soal' => ['nullable', 'file', 'mimes:mp3,wav,m4a,ogg,aac,webm,mp4,mpeg', 'max:10240'],
             'batas_putar_audio' => ['nullable', 'integer', 'min:0', 'max:20'],
             'keywords' => ['nullable', 'array'],
@@ -156,6 +156,12 @@ class GuruController extends Controller
             'math_weight' => ['nullable', 'numeric', 'min:0', 'max:1'],
             'tgate' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'required_keywords_count' => ['nullable', 'integer', 'min:1'],
+        ], [
+            'gambar_soal.max' => 'Ukuran berkas gambar pendukung tidak boleh melebihi 2 MB.',
+            'gambar_soal.mimes' => 'Format berkas gambar harus berupa JPG, JPEG, PNG, atau WEBP.',
+            'gambar_soal.image' => 'Berkas gambar pendukung harus berupa gambar yang valid.',
+            'audio_soal.max' => 'Ukuran berkas audio pendukung tidak boleh melebihi 10 MB.',
+            'audio_soal.mimes' => 'Format berkas audio harus berupa MP3, WAV, M4A, OGG, atau AAC.',
         ]);
 
         $validator->after(function ($validator) use ($request): void {
@@ -251,7 +257,7 @@ class GuruController extends Controller
             'level_kognitif' => ['required', 'in:C1,C2,C3,C4,C5,C6'],
             'opsi_jawaban' => ['nullable', 'array'],
             'opsi_jawaban.*' => ['nullable', 'string', 'max:255'],
-            'gambar_soal' => ['nullable', 'image', 'mimes:jpeg,png,jpg', 'max:2048'],
+            'gambar_soal' => ['nullable', 'image', 'mimes:jpeg,png,jpg,webp', 'max:2048'],
             'audio_soal' => ['nullable', 'file', 'mimes:mp3,wav,m4a,ogg,aac,webm,mp4,mpeg', 'max:10240'],
             'batas_putar_audio' => ['nullable', 'integer', 'min:0', 'max:20'],
             'keywords' => ['nullable', 'array'],
@@ -263,6 +269,12 @@ class GuruController extends Controller
             'math_weight' => ['nullable', 'numeric', 'min:0', 'max:1'],
             'tgate' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'required_keywords_count' => ['nullable', 'integer', 'min:1'],
+        ], [
+            'gambar_soal.max' => 'Ukuran berkas gambar pendukung tidak boleh melebihi 2 MB.',
+            'gambar_soal.mimes' => 'Format berkas gambar harus berupa JPG, JPEG, PNG, atau WEBP.',
+            'gambar_soal.image' => 'Berkas gambar pendukung harus berupa gambar yang valid.',
+            'audio_soal.max' => 'Ukuran berkas audio pendukung tidak boleh melebihi 10 MB.',
+            'audio_soal.mimes' => 'Format berkas audio harus berupa MP3, WAV, M4A, OGG, atau AAC.',
         ]);
 
         $validator->after(function ($validator) use ($request): void {

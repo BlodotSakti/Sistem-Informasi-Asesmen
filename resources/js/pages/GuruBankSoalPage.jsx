@@ -217,6 +217,63 @@ export default function GuruBankSoalPage({ session, onLogout }) {
         }
     };
 
+    const handleImageFileChange = (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        if (file.size > 2 * 1024 * 1024) {
+            const sizeMb = (file.size / (1024 * 1024)).toFixed(1);
+            if (imageInputRef.current) imageInputRef.current.value = '';
+            showSuccessPopup('Ukuran Gambar Terlalu Besar', `Berkas gambar "${file.name}" berukuran ${sizeMb} MB. Batas maksimal ukuran gambar adalah 2 MB.`, 'error');
+            return;
+        }
+
+        const validExtensions = ['.jpg', '.jpeg', '.png', '.webp'];
+        const ext = '.' + (file.name.split('.').pop() || '').toLowerCase();
+        if (!validExtensions.includes(ext) && !file.type.startsWith('image/')) {
+            if (imageInputRef.current) imageInputRef.current.value = '';
+            showSuccessPopup('Format Gambar Tidak Didukung', `Format gambar "${file.name}" tidak didukung. Silakan gunakan format JPG, JPEG, PNG, atau WEBP.`, 'error');
+            return;
+        }
+
+        const previewUrl = URL.createObjectURL(file);
+        setBankForm(curr => ({
+            ...curr,
+            gambar_soal: file,
+            gambar_soal_url: previewUrl,
+            hapus_gambar: false
+        }));
+    };
+
+    const handleAudioFileChange = (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        if (file.size > 10 * 1024 * 1024) {
+            const sizeMb = (file.size / (1024 * 1024)).toFixed(1);
+            if (audioInputRef.current) audioInputRef.current.value = '';
+            showSuccessPopup('Ukuran Audio Terlalu Besar', `Berkas audio "${file.name}" berukuran ${sizeMb} MB. Batas maksimal berkas audio listening adalah 10 MB (durasi ideal 1-3 menit).`, 'error');
+            return;
+        }
+
+        const validExtensions = ['.mp3', '.wav', '.m4a', '.ogg', '.aac'];
+        const ext = '.' + (file.name.split('.').pop() || '').toLowerCase();
+        if (!validExtensions.includes(ext) && !file.type.startsWith('audio/')) {
+            if (audioInputRef.current) audioInputRef.current.value = '';
+            showSuccessPopup('Format Audio Tidak Didukung', `Format audio "${file.name}" tidak didukung. Silakan gunakan format MP3, WAV, M4A, OGG, atau AAC.`, 'error');
+            return;
+        }
+
+        const previewUrl = URL.createObjectURL(file);
+        setBankForm(curr => ({
+            ...curr,
+            audio_soal: file,
+            audio_soal_url: previewUrl,
+            hapus_audio: false,
+            batas_putar_audio: curr.batas_putar_audio || '2'
+        }));
+    };
+
     const submitBankSoal = async (event) => {
         event.preventDefault();
 
@@ -278,12 +335,20 @@ export default function GuruBankSoalPage({ session, onLogout }) {
             }
 
             if (bankForm.gambar_soal instanceof File) {
+                if (bankForm.gambar_soal.size > 2 * 1024 * 1024) {
+                    showSuccessPopup('Validasi Gagal', `Ukuran berkas gambar (${(bankForm.gambar_soal.size / (1024 * 1024)).toFixed(1)} MB) melebihi batas maksimal 2 MB.`, 'error');
+                    return;
+                }
                 formData.append('gambar_soal', bankForm.gambar_soal);
             } else if (bankForm.hapus_gambar) {
                 formData.append('hapus_gambar', 'true');
             }
 
             if (bankForm.audio_soal instanceof File) {
+                if (bankForm.audio_soal.size > 10 * 1024 * 1024) {
+                    showSuccessPopup('Validasi Gagal', `Ukuran berkas audio (${(bankForm.audio_soal.size / (1024 * 1024)).toFixed(1)} MB) melebihi batas maksimal 10 MB.`, 'error');
+                    return;
+                }
                 formData.append('audio_soal', bankForm.audio_soal);
             } else if (bankForm.hapus_audio) {
                 formData.append('hapus_audio', 'true');
@@ -550,7 +615,7 @@ export default function GuruBankSoalPage({ session, onLogout }) {
                                 <div>
                                     <span className="block font-semibold text-slate-800">Gambar Pendukung (Opsional)</span>
                                     <p className="mt-0.5 text-xs font-normal text-slate-500">
-                                        Format berkas yang didukung: <span className="font-semibold text-slate-700">JPG, JPEG, PNG</span> (Maks. <span className="font-semibold text-slate-700">2 MB</span>).
+                                        Format berkas yang didukung: <span className="font-semibold text-slate-700">JPG, JPEG, PNG, WEBP</span> (Maks. <span className="font-semibold text-slate-700">2 MB</span>).
                                     </p>
                                 </div>
                                 <div className="flex min-w-0 flex-col items-start gap-3">
@@ -594,19 +659,8 @@ export default function GuruBankSoalPage({ session, onLogout }) {
                                     <input
                                         ref={imageInputRef}
                                         type="file"
-                                        accept=".jpg,.jpeg,.png"
-                                        onChange={(e) => {
-                                            if (e.target.files && e.target.files[0]) {
-                                                const file = e.target.files[0];
-                                                const previewUrl = URL.createObjectURL(file);
-                                                setBankForm(curr => ({
-                                                    ...curr,
-                                                    gambar_soal: file,
-                                                    gambar_soal_url: previewUrl,
-                                                    hapus_gambar: false
-                                                }));
-                                            }
-                                        }}
+                                        accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+                                        onChange={handleImageFileChange}
                                         className="block w-full min-w-0 max-w-full text-xs sm:text-sm text-slate-500 file:mr-3 sm:file:mr-4 file:rounded-full file:border-0 file:bg-primary/10 file:px-3 sm:file:px-4 file:py-2 file:text-xs sm:file:text-sm file:font-semibold file:text-primary hover:file:bg-primary/15"
                                     />
                                 </div>
@@ -665,19 +719,7 @@ export default function GuruBankSoalPage({ session, onLogout }) {
                                         ref={audioInputRef}
                                         type="file"
                                         accept=".mp3,.wav,.m4a,.ogg,.aac,audio/*"
-                                        onChange={(e) => {
-                                            if (e.target.files && e.target.files[0]) {
-                                                const file = e.target.files[0];
-                                                const previewUrl = URL.createObjectURL(file);
-                                                setBankForm(curr => ({
-                                                    ...curr,
-                                                    audio_soal: file,
-                                                    audio_soal_url: previewUrl,
-                                                    hapus_audio: false,
-                                                    batas_putar_audio: curr.batas_putar_audio || '2'
-                                                }));
-                                            }
-                                        }}
+                                        onChange={handleAudioFileChange}
                                         className="block w-full min-w-0 max-w-full text-xs sm:text-sm text-slate-500 file:mr-3 sm:file:mr-4 file:rounded-full file:border-0 file:bg-indigo-600/10 file:px-3 sm:file:px-4 file:py-2 file:text-xs sm:file:text-sm file:font-semibold file:text-indigo-700 hover:file:bg-indigo-600/15"
                                     />
 

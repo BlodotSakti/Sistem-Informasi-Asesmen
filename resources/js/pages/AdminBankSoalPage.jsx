@@ -249,12 +249,20 @@ export default function AdminBankSoalPage({ session, onLogout }) {
             }
 
             if (bankForm.gambar_soal instanceof File) {
+                if (bankForm.gambar_soal.size > 2 * 1024 * 1024) {
+                    showPopup('Validasi Gagal', `Ukuran berkas gambar (${(bankForm.gambar_soal.size / (1024 * 1024)).toFixed(1)} MB) melebihi batas maksimal 2 MB.`, 'error');
+                    return;
+                }
                 formData.append('gambar_soal', bankForm.gambar_soal);
             } else if (bankForm.hapus_gambar) {
                 formData.append('hapus_gambar', 'true');
             }
 
             if (bankForm.audio_soal instanceof File) {
+                if (bankForm.audio_soal.size > 10 * 1024 * 1024) {
+                    showPopup('Validasi Gagal', `Ukuran berkas audio (${(bankForm.audio_soal.size / (1024 * 1024)).toFixed(1)} MB) melebihi batas maksimal 10 MB.`, 'error');
+                    return;
+                }
                 formData.append('audio_soal', bankForm.audio_soal);
             } else if (bankForm.hapus_audio) {
                 formData.append('hapus_audio', 'true');
@@ -490,6 +498,7 @@ export default function AdminBankSoalPage({ session, onLogout }) {
                         onSubmit={handleSaveBankSoal}
                         onCancel={resetBankForm}
                         isEditing={!!editingBankSoalId}
+                        onWarning={(title, msg) => showPopup(title, msg, 'error')}
                     />
                 )}
 

@@ -2,6 +2,8 @@ import React, { useState, useRef, useEffect } from 'react';
 import ImageLightboxModal from './ImageLightboxModal';
 
 const BLOOM_OPTIONS = ['C1', 'C2', 'C3', 'C4', 'C5', 'C6'];
+const MAX_IMAGE_SIZE = 2 * 1024 * 1024; // 2 MB
+const MAX_AUDIO_SIZE = 10 * 1024 * 1024; // 10 MB
 
 export default function BankSoalForm({
     bankForm,
@@ -11,10 +13,88 @@ export default function BankSoalForm({
     onCancel,
     isEditing,
     formRef = null,
+    onWarning = null,
 }) {
     const imageInputRef = useRef(null);
     const audioInputRef = useRef(null);
     const [zoomedImageUrl, setZoomedImageUrl] = useState(null);
+
+    const handleImageFileChange = (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        if (file.size > MAX_IMAGE_SIZE) {
+            const sizeMb = (file.size / (1024 * 1024)).toFixed(1);
+            if (imageInputRef.current) imageInputRef.current.value = '';
+            const msg = `Berkas gambar "${file.name}" berukuran ${sizeMb} MB. Batas maksimal ukuran gambar soal adalah 2 MB.`;
+            if (onWarning) {
+                onWarning('Ukuran Gambar Terlalu Besar', msg, 'error');
+            } else {
+                alert(msg);
+            }
+            return;
+        }
+
+        const validExtensions = ['.jpg', '.jpeg', '.png', '.webp'];
+        const ext = '.' + (file.name.split('.').pop() || '').toLowerCase();
+        if (!validExtensions.includes(ext) && !file.type.startsWith('image/')) {
+            if (imageInputRef.current) imageInputRef.current.value = '';
+            const msg = `Format gambar "${file.name}" tidak didukung. Silakan gunakan format JPG, JPEG, PNG, atau WEBP.`;
+            if (onWarning) {
+                onWarning('Format Gambar Tidak Didukung', msg, 'error');
+            } else {
+                alert(msg);
+            }
+            return;
+        }
+
+        const previewUrl = URL.createObjectURL(file);
+        setBankForm(curr => ({
+            ...curr,
+            gambar_soal: file,
+            gambar_soal_url: previewUrl,
+            hapus_gambar: false
+        }));
+    };
+
+    const handleAudioFileChange = (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        if (file.size > MAX_AUDIO_SIZE) {
+            const sizeMb = (file.size / (1024 * 1024)).toFixed(1);
+            if (audioInputRef.current) audioInputRef.current.value = '';
+            const msg = `Berkas audio "${file.name}" berukuran ${sizeMb} MB. Batas maksimal berkas audio listening adalah 10 MB (durasi ideal 1-3 menit).`;
+            if (onWarning) {
+                onWarning('Ukuran Audio Terlalu Besar', msg, 'error');
+            } else {
+                alert(msg);
+            }
+            return;
+        }
+
+        const validExtensions = ['.mp3', '.wav', '.m4a', '.ogg', '.aac'];
+        const ext = '.' + (file.name.split('.').pop() || '').toLowerCase();
+        if (!validExtensions.includes(ext) && !file.type.startsWith('audio/')) {
+            if (audioInputRef.current) audioInputRef.current.value = '';
+            const msg = `Format audio "${file.name}" tidak didukung. Silakan gunakan format MP3, WAV, M4A, OGG, atau AAC.`;
+            if (onWarning) {
+                onWarning('Format Audio Tidak Didukung', msg, 'error');
+            } else {
+                alert(msg);
+            }
+            return;
+        }
+
+        const previewUrl = URL.createObjectURL(file);
+        setBankForm(curr => ({
+            ...curr,
+            audio_soal: file,
+            audio_soal_url: previewUrl,
+            hapus_audio: false,
+            batas_putar_audio: curr.batas_putar_audio || '2'
+        }));
+    };
 
     useEffect(() => {
         if (!bankForm.gambar_soal && imageInputRef.current) {
@@ -185,7 +265,7 @@ export default function BankSoalForm({
                         <div>
                             <span className="block font-semibold text-slate-800">Gambar Pendukung (Opsional)</span>
                             <p className="mt-0.5 text-xs font-normal text-slate-500">
-                                Format berkas yang didukung: <span className="font-semibold text-slate-700">JPG, JPEG, PNG</span> (Maks. <span className="font-semibold text-slate-700">2 MB</span>).
+                                Format berkas yang didukung: <span className="font-semibold text-slate-700">JPG, JPEG, PNG, WEBP</span> (Maks. <span className="font-semibold text-slate-700">2 MB</span>).
                             </p>
                         </div>
                         <div className="flex min-w-0 flex-col items-start gap-3">
@@ -231,19 +311,8 @@ export default function BankSoalForm({
                             <input
                                 ref={imageInputRef}
                                 type="file"
-                                accept=".jpg,.jpeg,.png"
-                                onChange={(e) => {
-                                    if (e.target.files && e.target.files[0]) {
-                                        const file = e.target.files[0];
-                                        const previewUrl = URL.createObjectURL(file);
-                                        setBankForm(curr => ({
-                                            ...curr,
-                                            gambar_soal: file,
-                                            gambar_soal_url: previewUrl,
-                                            hapus_gambar: false
-                                        }));
-                                    }
-                                }}
+                                accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+                                onChange={handleImageFileChange}
                                 className="block w-full min-w-0 max-w-full text-xs sm:text-sm text-slate-500 file:mr-3 sm:file:mr-4 file:rounded-full file:border-0 file:bg-primary/10 file:px-3 sm:file:px-4 file:py-2 file:text-xs sm:file:text-sm file:font-semibold file:text-primary hover:file:bg-primary/15"
                             />
                         </div>
@@ -304,19 +373,7 @@ export default function BankSoalForm({
                                 ref={audioInputRef}
                                 type="file"
                                 accept=".mp3,.wav,.m4a,.ogg,.aac,audio/*"
-                                onChange={(e) => {
-                                    if (e.target.files && e.target.files[0]) {
-                                        const file = e.target.files[0];
-                                        const previewUrl = URL.createObjectURL(file);
-                                        setBankForm(curr => ({
-                                            ...curr,
-                                            audio_soal: file,
-                                            audio_soal_url: previewUrl,
-                                            hapus_audio: false,
-                                            batas_putar_audio: curr.batas_putar_audio || '2'
-                                        }));
-                                    }
-                                }}
+                                onChange={handleAudioFileChange}
                                 className="block w-full min-w-0 max-w-full text-xs sm:text-sm text-slate-500 file:mr-3 sm:file:mr-4 file:rounded-full file:border-0 file:bg-indigo-600/10 file:px-3 sm:file:px-4 file:py-2 file:text-xs sm:file:text-sm file:font-semibold file:text-indigo-700 hover:file:bg-indigo-600/15"
                             />
 
