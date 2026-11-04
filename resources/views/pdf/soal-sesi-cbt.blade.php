@@ -20,7 +20,7 @@
         .soal-head { width: 100%; border-collapse: collapse; }
         .soal-head td { vertical-align: top; padding: 0; }
         .soal-head td.no { width: 24px; font-weight: bold; }
-        .soal-head td.bobot { width: 70px; text-align: right; font-size: 9px; color: #64748b; }
+        .soal-head td.bobot { width: 75px; text-align: right; font-size: 9.5px; color: #475569; white-space: nowrap; padding-left: 6px; }
         .isi { white-space: pre-wrap; }
         .ket-jenis { font-size: 9px; font-style: italic; color: #64748b; }
         .gambar { margin: 6px 0; }
@@ -101,7 +101,7 @@
         .tag-paket { display: inline-block; padding: 0 5px; margin-left: 4px; background: #e0e7ff; color: #3730a3; font-size: 8px; font-weight: bold; border-radius: 3px; vertical-align: middle; }
         .ringkasan-title { font-size: 12px; font-weight: bold; margin: 4px 0 6px 0; padding-bottom: 3px; border-bottom: 1px solid #cbd5e1; }
         table.tbl-ringkas { width: 100%; border-collapse: collapse; font-size: 10px; margin-bottom: 10px; }
-        table.tbl-ringkas th, table.tbl-ringkas td { border: 1px solid #cbd5e1; padding: 3px 5px; vertical-align: top; text-align: left; }
+        table.tbl-ringkas th, table.tbl-ringkas td { border: 1px solid #cbd5e1; padding: 4px 6px; vertical-align: top; text-align: left; word-wrap: break-word; }
         table.tbl-ringkas th { background: #f1f5f9; font-weight: bold; }
         table.tbl-ringkas td.c { text-align: center; width: 34px; }
         table.tbl-ringkas td.r { text-align: right; width: 50px; }
@@ -285,16 +285,16 @@
                             </div>
                         @endif
                     </td>
-                    @if ($withKunci)
-                        <td class="bobot">
-                            Bobot: {{ $fmtBobot($soal['bobot_nilai']) }}
+                    <td class="bobot">
+                        Bobot: {{ $fmtBobot($soal['bobot_nilai']) }}
+                        @if ($withKunci)
                             @if ($isMultiPaket && $soal['paket_soal'] === null)
                                 <br><span class="tag-umum">UMUM</span>
                             @elseif (! $isMultiPaket && $soal['paket_soal'])
                                 <br><span class="tag-paket">{{ $soal['paket_soal'] }}</span>
                             @endif
-                        </td>
-                    @endif
+                        @endif
+                    </td>
                 </tr>
             </table>
         </div>
@@ -325,14 +325,14 @@
                                 }
                                 $ringkas = empty($labels) ? implode(', ', $kunciArr) : implode(', ', $labels);
                             } else {
-                                $ringkas = \Illuminate\Support\Str::limit($kunciArr[0] ?? '-', 90);
+                                $ringkas = trim((string) ($kunciArr[0] ?? '-'));
                             }
                             $jenisPendek = $soal['jenis_soal'] === 'esai' ? 'Esai' : ($soal['jenis_soal'] === 'pilihan_ganda_kompleks' ? 'PG Kompleks' : 'PG');
                         @endphp
                         <tr>
                             <td class="c">{{ $idx + 1 }}</td>
                             <td>{{ $jenisPendek }}@if ($isMultiPaket && $soal['paket_soal'] === null) <span class="tag-umum">UMUM</span>@endif</td>
-                            <td><strong>{{ $ringkas }}</strong></td>
+                            <td><strong>{!! nl2br(e($ringkas)) !!}</strong></td>
                             <td class="r">{{ $fmtBobot($soal['bobot_nilai']) }}</td>
                         </tr>
                     @endforeach
