@@ -1,2 +1,7 @@
 *
 !.gitignore
+!soal_images/
+!soal_images/**
+!soal_audio/
+!soal_audio/**
+

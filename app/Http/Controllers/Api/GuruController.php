@@ -572,6 +572,10 @@ class GuruController extends Controller
         $totalBobot = $sesi->effectiveTotalBobot();
         $siswaResults = [];
         $skorSemua = [];
+        $lockedStudentIds = \App\Models\LogPelanggaranCbt::where('id_sesi', $id_sesi)
+            ->where('is_resolved', false)
+            ->pluck('id_siswa')
+            ->toArray();
 
         foreach ($siswaAssignments as $assignment) {
             $siswa = $assignment->siswa;
@@ -667,6 +671,7 @@ class GuruController extends Controller
                 'nama_lengkap' => $siswa->nama_lengkap,
                 'nisn' => $siswa->nisn,
                 'status' => $sudahMengerjakan ? 'sudah' : 'belum',
+                'is_locked' => in_array($siswa->id_siswa, $lockedStudentIds),
                 'total_skor' => round($totalSkor, 2),
                 'total_bobot_siswa' => round($totalBobotSiswa, 2),
                 'jumlah_soal_siswa' => $jumlahSoalSiswa,
@@ -1622,26 +1627,16 @@ class GuruController extends Controller
         $this->scopeGuruSesiAsesmen($query, $guruId);
         $query->firstOrFail();
 
-        \App\Models\LogPelanggaranCbt::where('id_sesi', $id_sesi)
+        $updated = \App\Models\LogPelanggaranCbt::where('id_sesi', $id_sesi)
             ->where('id_siswa', $id_siswa)
             ->update(['is_resolved' => true]);
 
-        // Reset progress ujian siswa (Hapus skor dan jawaban)
-        \App\Models\AnalisisDiagnostik::where('id_sesi', $id_sesi)
-            ->where('id_siswa', $id_siswa)
-            ->delete();
+        \Illuminate\Support\Facades\Log::info("Unlock Siswa CBT: sesi={$id_sesi}, siswa={$id_siswa}, rows_updated={$updated}");
 
-        $sesi = SesiAsesmen::with('detailSesiSoal')->find($id_sesi);
-        if ($sesi) {
-            $detailIds = $sesi->detailSesiSoal->pluck('id_detail')->toArray();
-            if (!empty($detailIds)) {
-                \App\Models\JawabanSiswa::where('id_siswa', $id_siswa)
-                    ->whereIn('id_detail', $detailIds)
-                    ->delete();
-            }
-        }
-
-        return response()->json(['message' => 'Status ujian siswa berhasil dibuka kuncinya.']);
+        return response()->json([
+            'message' => 'Status ujian siswa berhasil dibuka kuncinya. Siswa dapat melanjutkan ujian.',
+            'rows_updated' => $updated
+        ]);
     }
 
     protected function ensureGuruMengampuMapel(int $guruId, int $idMapel): void

@@ -21,6 +21,10 @@ class LogPelanggaranCbt extends Model
         'is_resolved',
     ];
 
+    protected $casts = [
+        'is_resolved' => 'boolean',
+    ];
+
     public function sesiAsesmen()
     {
         return $this->belongsTo(SesiAsesmen::class, 'id_sesi', 'id_sesi');

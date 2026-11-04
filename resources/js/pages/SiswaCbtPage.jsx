@@ -18,6 +18,10 @@ export default function SiswaCbtPage({ session, onLogout, idSesi }) {
     const [jawaban, setJawaban] = useState({});
     const [currentIndex, setCurrentIndex] = useState(0);
     const [timeLeft, setTimeLeft] = useState(0);
+    const timeLeftRef = useRef(0);
+    useEffect(() => {
+        timeLeftRef.current = timeLeft;
+    }, [timeLeft]);
     const [resultData, setResultData] = useState(null);
     const [showSummary, setShowSummary] = useState(false);
     const [showConfirmModal, setShowConfirmModal] = useState(false);
@@ -27,6 +31,11 @@ export default function SiswaCbtPage({ session, onLogout, idSesi }) {
     const [warningToast, setWarningToast] = useState(null);
     const [submitErrorPopup, setSubmitErrorPopup] = useState(null);
     const [isLockedOut, setIsLockedOut] = useState(false);
+    const isLockedOutRef = useRef(false);
+    useEffect(() => {
+        isLockedOutRef.current = isLockedOut;
+    }, [isLockedOut]);
+    const [checkingUnlock, setCheckingUnlock] = useState(false);
     const [lockdownMessage, setLockdownMessage] = useState(null);
     const [zoomedImageUrl, setZoomedImageUrl] = useState(null);
 
@@ -51,9 +60,18 @@ export default function SiswaCbtPage({ session, onLogout, idSesi }) {
     }, []);
 
     const reportCheating = useCallback(async (jenis, keterangan) => {
+        if (isLockedOutRef.current) return; // Cegah trigger berulang jika sudah terkunci
+        isLockedOutRef.current = true;
         setIsLockdownActive(false); // Matikan event listener agar tidak trigger berulang
         setIsLockedOut(true);
         setLockdownMessage(keterangan);
+
+        try {
+            // Simpan sisa waktu pengerjaan saat terjadi pelanggaran agar timer tidak reset / bertambah
+            if (timeLeftRef.current > 0) {
+                localStorage.setItem(`${STORAGE_PREFIX}remaining-${idSesi}`, String(timeLeftRef.current));
+            }
+        } catch { /* ignore */ }
 
         try {
             await fetch(apiBase(`/api/siswa/cbt/${idSesi}/log-pelanggaran`), {
@@ -66,11 +84,6 @@ export default function SiswaCbtPage({ session, onLogout, idSesi }) {
                 },
                 body: JSON.stringify({ jenis_pelanggaran: jenis, keterangan }),
             });
-
-            // (Kita tidak lagi menghapus jawaban dari local storage agar progress tersimpan)
-            try { 
-                localStorage.removeItem(`${STORAGE_PREFIX}start-${idSesi}`);
-            } catch { /* ignore */ }
         } catch { /* silent fail */ }
     }, [idSesi, session.token]);
 
@@ -83,13 +96,15 @@ export default function SiswaCbtPage({ session, onLogout, idSesi }) {
         if (!isLockdownActive || resultData) return;
 
         const handleVisibilityChange = () => {
-            if (document.hidden) {
+            if (document.hidden && !isLockedOutRef.current) {
                 reportCheating('tab_switch', 'Anda terdeteksi berpindah tab atau meminimalkan browser.');
             }
         };
 
         const handleBlur = () => {
-            reportCheating('blur', 'Jendela ujian kehilangan fokus. Pastikan Anda tidak membuka aplikasi lain.');
+            if (!isLockedOutRef.current) {
+                reportCheating('blur', 'Jendela ujian kehilangan fokus. Pastikan Anda tidak membuka aplikasi lain.');
+            }
         };
 
         const handleContextMenu = (e) => {
@@ -156,7 +171,9 @@ export default function SiswaCbtPage({ session, onLogout, idSesi }) {
 
         const handleFullscreenChange = () => {
             if (!document.fullscreenElement && !document.webkitIsFullScreen && !document.mozFullScreen) {
-                reportCheating('fullscreen_exit', 'Anda keluar dari mode layar penuh.');
+                if (!isLockedOutRef.current) {
+                    reportCheating('fullscreen_exit', 'Anda keluar dari mode layar penuh.');
+                }
             }
         };
 
@@ -200,100 +217,127 @@ export default function SiswaCbtPage({ session, onLogout, idSesi }) {
         }
     }, [jawaban, storageKey, resultData]);
 
-    // Fetch data
-    useEffect(() => {
-        let mounted = true;
+    // Load exam data (supports silent background checking for auto-unlock)
+    const loadExamData = useCallback(async (silent = false) => {
+        try {
+            if (!silent) setLoading(true);
+            const url = new URL(apiBase(`/api/siswa/cbt/${idSesi}`), window.location.origin || 'http://localhost');
+            const searchParams = new URLSearchParams(window.location.search);
+            let examToken = searchParams.get('token');
+            if (examToken) {
+                try { sessionStorage.setItem(`cbt-token-${idSesi}`, examToken); } catch { /* ignore */ }
+            } else {
+                try { examToken = sessionStorage.getItem(`cbt-token-${idSesi}`); } catch { /* ignore */ }
+            }
+            if (examToken) {
+                url.searchParams.append('token', examToken);
+            }
 
-        async function fetchData() {
+            const response = await fetch(url.toString(), {
+                headers: {
+                    Accept: 'application/json',
+                    Authorization: `Bearer ${session.token}`,
+                },
+            });
+
+            if (!response.ok) {
+                const errorBody = await response.json().catch(() => ({}));
+                if (response.status === 403 && errorBody.locked) {
+                    isLockedOutRef.current = true;
+                    setIsLockedOut(true);
+                    setLockdownMessage(errorBody.message || 'Ujian Terkunci karena terdeteksi pelanggaran.');
+                    setLoading(false);
+                    return false;
+                }
+                if (errorBody.sudah_dikerjakan) {
+                    throw new Error('SUDAH_DIKERJAKAN');
+                }
+                throw new Error(errorBody.message || 'Gagal memuat data ujian');
+            }
+
+            const data = await response.json();
+
+            // Status kunci dibuka oleh guru pengawas
+            isLockedOutRef.current = false;
+            setIsLockedOut(false);
+            setLockdownMessage(null);
+
+            setSesiData(data.sesi);
+            setSoalData(data.soal);
+
+            // Merge: server answers + localStorage (localStorage takes priority)
+            const serverAnswers = {};
+            (data.jawaban_tersimpan || []).forEach((j) => {
+                serverAnswers[j.id_detail] = j.teks_jawaban;
+            });
+
+            let localAnswers = {};
             try {
-                const url = new URL(apiBase(`/api/siswa/cbt/${idSesi}`), window.location.origin || 'http://localhost');
-                const searchParams = new URLSearchParams(window.location.search);
-                if (searchParams.has('token')) {
-                    url.searchParams.append('token', searchParams.get('token'));
-                }
+                const stored = localStorage.getItem(`${STORAGE_PREFIX}${idSesi}`);
+                if (stored) localAnswers = JSON.parse(stored);
+            } catch { /* ignore */ }
 
-                const response = await fetch(url.toString(), {
-                    headers: {
-                        Accept: 'application/json',
-                        Authorization: `Bearer ${session.token}`,
-                    },
+            // Merge: localStorage overrides server
+            setJawaban({ ...serverAnswers, ...localAnswers });
+
+            // Initialize timer
+            const now = new Date().getTime();
+            const durationMs = data.sesi.durasi_menit * 60 * 1000;
+            
+            let studentStartTime = localStorage.getItem(`${STORAGE_PREFIX}start-${idSesi}`);
+            const savedRemaining = localStorage.getItem(`${STORAGE_PREFIX}remaining-${idSesi}`);
+
+            if (savedRemaining !== null && savedRemaining !== undefined) {
+                // Siswa kembali setelah terkunci: lanjutkan sisa waktu yang tersimpan
+                const preservedRemaining = Math.max(0, parseInt(savedRemaining, 10));
+                studentStartTime = String(now - (durationMs - preservedRemaining * 1000));
+                localStorage.setItem(`${STORAGE_PREFIX}start-${idSesi}`, studentStartTime);
+                localStorage.removeItem(`${STORAGE_PREFIX}remaining-${idSesi}`);
+            } else if (!studentStartTime || ((data.jawaban_tersimpan || []).length === 0 && (parseInt(studentStartTime, 10) + durationMs) <= now)) {
+                studentStartTime = String(now);
+                localStorage.setItem(`${STORAGE_PREFIX}start-${idSesi}`, studentStartTime);
+                (data.soal || []).forEach((s) => {
+                    try { localStorage.removeItem(`cbt-audio-play-${idSesi}-${s.id_detail}`); } catch { /* ignore */ }
                 });
+            }
+            
+            let endTime = parseInt(studentStartTime, 10) + durationMs;
 
-                if (!response.ok) {
-                    const errorBody = await response.json().catch(() => ({}));
-                    if (response.status === 403 && errorBody.locked) {
-                        setIsLockedOut(true);
-                        setLockdownMessage(errorBody.message || 'Ujian Terkunci karena terdeteksi pelanggaran.');
-                        setLoading(false);
-                        return;
-                    }
-                    if (errorBody.sudah_dikerjakan) {
-                        throw new Error('SUDAH_DIKERJAKAN');
-                    }
-                    throw new Error(errorBody.message || 'Gagal memuat data ujian');
-                }
-
-                const data = await response.json();
-
-                if (mounted) {
-                    setSesiData(data.sesi);
-                    setSoalData(data.soal);
-
-                    // Merge: server answers + localStorage (localStorage takes priority)
-                    const serverAnswers = {};
-                    (data.jawaban_tersimpan || []).forEach((j) => {
-                        serverAnswers[j.id_detail] = j.teks_jawaban;
-                    });
-
-                    let localAnswers = {};
-                    try {
-                        const stored = localStorage.getItem(`${STORAGE_PREFIX}${idSesi}`);
-                        if (stored) localAnswers = JSON.parse(stored);
-                    } catch { /* ignore */ }
-
-                    // Merge: localStorage overrides server
-                    setJawaban({ ...serverAnswers, ...localAnswers });
-
-                    // Initialize timer
-                    const now = new Date().getTime();
-                    const durationMs = data.sesi.durasi_menit * 60 * 1000;
-                    
-                    let studentStartTime = localStorage.getItem(`${STORAGE_PREFIX}start-${idSesi}`);
-                    
-                    // Reset timer jika belum ada atau jika guru telah mereset ujian (jawaban kosong) namun timer lokal sudah habis
-                    if (!studentStartTime || ((data.jawaban_tersimpan || []).length === 0 && (parseInt(studentStartTime, 10) + durationMs) <= now)) {
-                        studentStartTime = now;
-                        localStorage.setItem(`${STORAGE_PREFIX}start-${idSesi}`, studentStartTime);
-                        (data.soal || []).forEach((s) => {
-                            try { localStorage.removeItem(`cbt-audio-play-${idSesi}-${s.id_detail}`); } catch { /* ignore */ }
-                        });
-                    }
-                    
-                    let endTime = parseInt(studentStartTime, 10) + durationMs;
-
-                    if (data.sesi.waktu_selesai) {
-                        const absoluteEndTime = new Date(data.sesi.waktu_selesai).getTime();
-                        if (absoluteEndTime < endTime) {
-                            endTime = absoluteEndTime;
-                        }
-                    }
-
-                    const remaining = Math.max(0, Math.floor((endTime - now) / 1000));
-
-                    setTimeLeft(remaining);
-                    setLoading(false);
-                }
-            } catch (err) {
-                if (mounted) {
-                    setError(err.message);
-                    setLoading(false);
+            if (data.sesi.waktu_selesai) {
+                const absoluteEndTime = new Date(data.sesi.waktu_selesai).getTime();
+                if (absoluteEndTime < endTime) {
+                    endTime = absoluteEndTime;
                 }
             }
-        }
 
-        fetchData();
-        return () => { mounted = false; };
+            const remaining = Math.max(0, Math.floor((endTime - now) / 1000));
+
+            setTimeLeft(remaining);
+            setError(null);
+            setLoading(false);
+            return true;
+        } catch (err) {
+            setError(err.message);
+            setLoading(false);
+            return false;
+        }
     }, [idSesi, session.token]);
+
+    // Initial load
+    useEffect(() => {
+        loadExamData(false);
+    }, [loadExamData]);
+
+    // Polling background otomatis ketika ujian terkunci agar otomatis terbuka saat guru klik Buka Kunci
+    useEffect(() => {
+        if (!isLockedOut) return;
+
+        const interval = setInterval(() => {
+            loadExamData(true);
+        }, 3500);
+
+        return () => clearInterval(interval);
+    }, [isLockedOut, loadExamData]);
 
     // Auto-save a single answer to backend (debounced per id_detail)
     const autoSaveAnswer = useCallback((idDetail, teksJawaban) => {
@@ -359,6 +403,7 @@ export default function SiswaCbtPage({ session, onLogout, idSesi }) {
             try { 
                 localStorage.removeItem(storageKey); 
                 localStorage.removeItem(`${STORAGE_PREFIX}start-${idSesi}`);
+                localStorage.removeItem(`${STORAGE_PREFIX}remaining-${idSesi}`);
                 (soalData || []).forEach((s) => {
                     localStorage.removeItem(`cbt-audio-play-${idSesi}-${s.id_detail}`);
                 });
@@ -682,10 +727,37 @@ export default function SiswaCbtPage({ session, onLogout, idSesi }) {
                         <div className="mb-6 rounded-xl bg-rose-50 p-4 border border-rose-100">
                             <p className="text-sm font-semibold text-rose-700">"{lockdownMessage}"</p>
                         </div>
-                        <p className="text-sm text-slate-500 mb-6">Ujian dihentikan sementara. Silakan lapor kepada Guru pengawas untuk meminta akses ulang ujian (Buka Kunci).</p>
-                        <a href="/siswa/dashboard" className="inline-flex items-center justify-center rounded-xl bg-slate-800 px-6 py-3 text-sm font-bold text-white shadow transition hover:bg-slate-700 w-full">
-                            Kembali ke Dashboard
-                        </a>
+                        <p className="text-sm text-slate-500 mb-6">Ujian dihentikan sementara. Silakan lapor kepada Guru pengawas untuk meminta akses kelanjutan ujian (Buka Kunci).</p>
+                        <div className="flex flex-col gap-2.5">
+                            <button
+                                type="button"
+                                disabled={checkingUnlock}
+                                onClick={async () => {
+                                    setCheckingUnlock(true);
+                                    const success = await loadExamData(false);
+                                    setCheckingUnlock(false);
+                                    if (!success) {
+                                        triggerWarning('Ujian masih berstatus terkunci. Hubungi Guru pengawas untuk membuka kunci.');
+                                    }
+                                }}
+                                className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-800 px-6 py-3 text-sm font-bold text-white shadow transition hover:bg-slate-700 w-full disabled:opacity-60"
+                            >
+                                {checkingUnlock ? (
+                                    <>
+                                        <svg className="animate-spin h-4 w-4 text-white" viewBox="0 0 24 24" fill="none">
+                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+                                        </svg>
+                                        Memeriksa Status Ujian...
+                                    </>
+                                ) : (
+                                    'Periksa Status & Lanjutkan Ujian'
+                                )}
+                            </button>
+                            <a href="/siswa/dashboard" className="inline-flex items-center justify-center rounded-xl bg-slate-100 px-6 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-200 w-full">
+                                Kembali ke Dashboard
+                            </a>
+                        </div>
                     </div>
                 </div>
             </div>

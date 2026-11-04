@@ -53,6 +53,12 @@ class SiswaController extends Controller
                 ->pluck('id_sesi')
                 ->toArray();
 
+            $activeLocks = \App\Models\LogPelanggaranCbt::where('id_siswa', $idSiswa)
+                ->whereIn('id_sesi', $sessionIds)
+                ->where('is_resolved', false)
+                ->pluck('id_sesi')
+                ->toArray();
+
             $allDetailIds = $paginated->getCollection()->flatMap(function ($sesi) {
                 return $sesi->detailSesiSoal->pluck('id_detail');
             })->unique()->values();
@@ -62,14 +68,20 @@ class SiswaController extends Controller
                 ->pluck('id_detail')
                 ->toArray();
 
-            $paginated->getCollection()->transform(function ($sesi) use ($idSiswa, $percobaanBySesi, $analisisSesiIds, $answeredDetailIds) {
+            $paginated->getCollection()->transform(function ($sesi) use ($idSiswa, $percobaanBySesi, $analisisSesiIds, $answeredDetailIds, $activeLocks) {
                 $attemptCount = $percobaanBySesi->get($sesi->id_sesi)?->count() ?? 0;
                 $resolved = $sesi->resolveSoalForSiswa($idSiswa, max(0, $attemptCount - 1));
                 $sesiDetailIds = $resolved['details']->pluck('id_detail')->toArray();
                 $answeredCount = count(array_intersect($sesiDetailIds, $answeredDetailIds));
-                $hasSubmitted = $attemptCount > 0 || in_array($sesi->id_sesi, $analisisSesiIds);
 
-                $sesi->sudah_dikerjakan = $hasSubmitted || ($answeredCount > 0 && $answeredCount >= count($sesiDetailIds));
+                $isLocked = in_array($sesi->id_sesi, $activeLocks);
+                // Siswa hanya dianggap "sudah dikerjakan" jika memang sudah pernah submit ujian ini
+                // dan saat ini TIDAK sedang terkunci karena pelanggaran.
+                // Jawaban draft auto-save tidak boleh membuat status menjadi 'Selesai' sebelum siswa menekan kumpul ujian.
+                $hasSubmitted = ($attemptCount > 0 || in_array($sesi->id_sesi, $analisisSesiIds)) && !$isLocked;
+
+                $sesi->sudah_dikerjakan = $hasSubmitted;
+                $sesi->is_locked = $isLocked;
                 $sesi->ada_soal_baru = $hasSubmitted && $answeredCount < count($sesiDetailIds);
                 $sesi->jumlah_soal_siswa = count($sesiDetailIds);
                 $sesi->paket_aktif = $resolved['paket_aktif'];
@@ -480,6 +492,7 @@ class SiswaController extends Controller
             ->exists();
             
         if ($isLocked) {
+            \Illuminate\Support\Facades\Log::info("cbtData 403: Siswa {$siswa->id_siswa} is locked in sesi {$id_sesi}");
             return response()->json([
                 'message' => 'Ujian Terkunci! Anda terdeteksi melakukan pelanggaran. Hubungi Guru pengawas untuk membuka kunci.',
                 'locked' => true
@@ -516,11 +529,7 @@ class SiswaController extends Controller
 
         // Check if student already completed and retakes not allowed
         if (!$sesi->boleh_ulang) {
-            $totalSoal = $studentDetails->count();
-            $answeredCount = JawabanSiswa::where('id_siswa', $siswa->id_siswa)
-                ->whereIn('id_detail', $studentDetails->pluck('id_detail'))
-                ->count();
-            if ($hasSubmittedAttempt || ($answeredCount > 0 && $answeredCount >= $totalSoal)) {
+            if ($hasSubmittedAttempt) {
                 return response()->json([
                     'message' => 'Anda sudah mengerjakan ujian ini dan tidak diperbolehkan mengulang.',
                     'sudah_dikerjakan' => true,
