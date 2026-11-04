@@ -177,6 +177,18 @@ export default function GuruJadwalCbtPage({ session, onLogout }) {
     const handleDownloadAnalisisExcel = () => {
         if (!sesiDetailData) return;
         const { sesi, soal = [], siswa = [] } = sesiDetailData;
+        const totalSudah = Number(sesiDetailData.statistik?.sudah_mengerjakan || 0);
+        const totalSiswa = Number(sesiDetailData.statistik?.total_siswa || siswa.length || 0);
+
+        if (totalSudah === 0) {
+            showSuccessPopup(
+                'Belum Ada Siswa Mengerjakan',
+                `Dokumen Analisis Soal (Excel) belum dapat diunduh karena belum ada siswa yang mengerjakan atau mengumpulkan sesi CBT ini (0 dari ${totalSiswa} siswa).\n\nSilakan tunggu hingga minimal 1 siswa selesai mengerjakan ujian untuk menghasilkan rekapitulasi analisis butir soal dan jawaban.`,
+                'error'
+            );
+            return;
+        }
+
         const isEsai = (jenis) => jenis === 'esai' || jenis === 'essay';
         const jenisSingkat = (jenis) => (isEsai(jenis) ? 'Esai' : jenis === 'pilihan_ganda_kompleks' ? 'PGK' : 'PG');
         const jenisPanjang = (jenis) => (isEsai(jenis) ? 'Esai' : jenis === 'pilihan_ganda_kompleks' ? 'Pilihan Ganda Kompleks' : 'Pilihan Ganda');
@@ -983,51 +995,86 @@ export default function GuruJadwalCbtPage({ session, onLogout }) {
                                     </div>
                                     <div className="p-6 space-y-6 overflow-y-auto">
                                         {/* Download / Export */}
-                                        <div className="flex flex-col gap-3 rounded-2xl border border-border bg-slate-50/60 p-4 sm:flex-row sm:items-center sm:justify-between">
-                                            <div>
-                                                <p className="text-sm font-bold text-slate-800">Unduh Dokumen Sesi</p>
-                                                <p className="text-xs text-slate-500">Cetak soal untuk pembahasan di kelas, atau unduh analisis jawaban per soal (1 = benar, 0 = salah, esai berisi jawaban siswa).</p>
-                                                {(sesiDetailData.sesi?.multi_paket_aktif || sesiDetailData.sesi?.acak_soal) && (
-                                                    <p className="mt-1.5 text-[11px] leading-relaxed text-indigo-700 break-words">
-                                                        {sesiDetailData.sesi?.multi_paket_aktif && <>📦 Dokumen dipisah per paket ({(sesiDetailData.sesi?.paket_groups || []).map((g) => g.nama).join(', ')}). </>}
-                                                        {sesiDetailData.sesi?.acak_soal && <>🔀 Nomor soal = nomor master; urutan tampil tiap siswa ada di sheet "Urutan Soal per Siswa".</>}
-                                                    </p>
-                                                )}
-                                            </div>
-                                            <div className="flex flex-wrap gap-2">
-                                                <button
-                                                    id="btn-download-soal-pdf"
-                                                    type="button"
-                                                    disabled={downloadingPdf !== null}
-                                                    onClick={() => handleDownloadSoalPdf(false)}
-                                                    className="inline-flex items-center gap-2 rounded-xl border border-rose-200 bg-white px-4 py-2 text-xs font-bold text-rose-700 shadow-sm transition hover:bg-rose-50 disabled:opacity-60"
-                                                >
-                                                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3M6 20h12a2 2 0 002-2V8l-6-6H6a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>
-                                                    {downloadingPdf === 'siswa' ? 'Menyiapkan...' : 'Soal (PDF)'}
-                                                </button>
-                                                <button
-                                                    id="btn-download-soal-kunci-pdf"
-                                                    type="button"
-                                                    disabled={downloadingPdf !== null}
-                                                    onClick={() => handleDownloadSoalPdf(true)}
-                                                    className="inline-flex items-center gap-2 rounded-xl border border-rose-200 bg-white px-4 py-2 text-xs font-bold text-rose-700 shadow-sm transition hover:bg-rose-50 disabled:opacity-60"
-                                                >
-                                                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" /></svg>
-                                                    {downloadingPdf === 'kunci' ? 'Menyiapkan...' : 'Soal + Kunci (PDF)'}
-                                                </button>
-                                                <button
-                                                    id="btn-download-analisis-excel"
-                                                    type="button"
-                                                    onClick={handleDownloadAnalisisExcel}
-                                                    disabled={!sesiDetailData.statistik?.sudah_mengerjakan}
-                                                    title={!sesiDetailData.statistik?.sudah_mengerjakan ? 'Belum ada siswa yang mengerjakan' : ''}
-                                                    className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                                                >
-                                                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M3 14h18M10 3v18M14 3v18M5 3h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2z" /></svg>
-                                                    Analisis Soal (Excel)
-                                                </button>
-                                            </div>
-                                        </div>
+                                        {(() => {
+                                            const totalSudah = Number(sesiDetailData.statistik?.sudah_mengerjakan || 0);
+                                            const totalSiswa = Number(sesiDetailData.statistik?.total_siswa || (sesiDetailData.siswa || []).length || 0);
+                                            const hasPeserta = totalSudah > 0;
+
+                                            return (
+                                                <div className="flex flex-col gap-3 rounded-2xl border border-border bg-slate-50/60 p-4">
+                                                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                                        <div className="max-w-xl">
+                                                            <p className="text-sm font-bold text-slate-800">Unduh Dokumen Sesi</p>
+                                                            <p className="text-xs text-slate-500">Cetak soal untuk pembahasan di kelas, atau unduh analisis jawaban per soal (1 = benar, 0 = salah, esai berisi jawaban siswa).</p>
+                                                            {(sesiDetailData.sesi?.multi_paket_aktif || sesiDetailData.sesi?.acak_soal) && (
+                                                                <p className="mt-1.5 text-[11px] leading-relaxed text-indigo-700 break-words">
+                                                                    {sesiDetailData.sesi?.multi_paket_aktif && <>📦 Dokumen dipisah per paket ({(sesiDetailData.sesi?.paket_groups || []).map((g) => g.nama).join(', ')}). </>}
+                                                                    {sesiDetailData.sesi?.acak_soal && <>🔀 Nomor soal = nomor master; urutan tampil tiap siswa ada di sheet "Urutan Soal per Siswa".</>}
+                                                                </p>
+                                                            )}
+                                                        </div>
+                                                        <div className="flex flex-wrap items-center gap-2">
+                                                            <button
+                                                                id="btn-download-soal-pdf"
+                                                                type="button"
+                                                                disabled={downloadingPdf !== null}
+                                                                onClick={() => handleDownloadSoalPdf(false)}
+                                                                className="inline-flex items-center gap-2 rounded-xl border border-rose-200 bg-white px-4 py-2 text-xs font-bold text-rose-700 shadow-sm transition hover:bg-rose-50 disabled:opacity-60 active:scale-95"
+                                                            >
+                                                                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3M6 20h12a2 2 0 002-2V8l-6-6H6a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>
+                                                                {downloadingPdf === 'siswa' ? 'Menyiapkan...' : 'Soal (PDF)'}
+                                                            </button>
+                                                            <button
+                                                                id="btn-download-soal-kunci-pdf"
+                                                                type="button"
+                                                                disabled={downloadingPdf !== null}
+                                                                onClick={() => handleDownloadSoalPdf(true)}
+                                                                className="inline-flex items-center gap-2 rounded-xl border border-rose-200 bg-white px-4 py-2 text-xs font-bold text-rose-700 shadow-sm transition hover:bg-rose-50 disabled:opacity-60 active:scale-95"
+                                                            >
+                                                                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" /></svg>
+                                                                {downloadingPdf === 'kunci' ? 'Menyiapkan...' : 'Soal + Kunci (PDF)'}
+                                                            </button>
+                                                            <button
+                                                                id="btn-download-analisis-excel"
+                                                                type="button"
+                                                                onClick={handleDownloadAnalisisExcel}
+                                                                title={hasPeserta ? 'Unduh analisis butir soal Excel' : 'Klik untuk informasi: belum ada data siswa yang mengerjakan'}
+                                                                className={`inline-flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-bold shadow-sm transition active:scale-95 ${
+                                                                    hasPeserta
+                                                                        ? 'bg-emerald-600 text-white hover:bg-emerald-700 cursor-pointer'
+                                                                        : 'bg-emerald-50 text-emerald-800 border border-emerald-300 hover:bg-emerald-100 hover:border-emerald-400 cursor-pointer'
+                                                                }`}
+                                                            >
+                                                                {hasPeserta ? (
+                                                                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M3 14h18M10 3v18M14 3v18M5 3h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2z" /></svg>
+                                                                ) : (
+                                                                    <svg className="h-4 w-4 text-amber-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                                                    </svg>
+                                                                )}
+                                                                <span>Analisis Soal (Excel)</span>
+                                                                {!hasPeserta && (
+                                                                    <span className="rounded-md bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-800">
+                                                                        Belum Ada Data
+                                                                    </span>
+                                                                )}
+                                                            </button>
+                                                        </div>
+                                                    </div>
+
+                                                    {!hasPeserta && (
+                                                        <div className="flex items-start gap-2 rounded-xl border border-amber-200/90 bg-amber-50/90 p-2.5 text-xs text-amber-800">
+                                                            <svg className="h-4 w-4 shrink-0 text-amber-600 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                            </svg>
+                                                            <span className="leading-relaxed">
+                                                                <strong>Perhatian:</strong> Berkas <strong>Analisis Soal (Excel)</strong> memerlukan data pengerjaan siswa. Saat ini baru <strong>0 dari {totalSiswa} siswa</strong> yang mengumpulkan ujian. Klik tombol di atas untuk info lebih lanjut.
+                                                            </span>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            );
+                                        })()}
 
                                         {/* Statistik */}
                                         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
@@ -2183,7 +2230,7 @@ export default function GuruJadwalCbtPage({ session, onLogout }) {
                             )}
                         </div>
                         <h3 className="mb-2 text-xl font-bold text-slate-900">{successPopup.title}</h3>
-                        <p className="mb-6 text-sm text-slate-500">{successPopup.message}</p>
+                        <p className="mb-6 text-sm text-slate-500 whitespace-pre-line">{successPopup.message}</p>
                         <button onClick={closeSuccessPopup} className="w-full rounded-2xl bg-slate-900 py-3 text-sm font-semibold text-white transition hover:bg-slate-800">Tutup</button>
                     </div>
                 </div>
