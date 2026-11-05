@@ -7,6 +7,7 @@ import { formatDateTimeLabel } from '../lib/date';
 import useGuruWorkspace from '../hooks/useGuruWorkspace';
 import { guruNavigation } from './guru/guruNavigation';
 import FilterSelect from '../components/ui/FilterSelect';
+import ImageLightboxModal from '../components/ui/ImageLightboxModal';
 
 export default function GuruJadwalCbtPage({ session, onLogout }) {
     const { summary, workspace, sesiAsesmenHistory, loading, reloadWorkspace } = useGuruWorkspace(session);
@@ -46,6 +47,8 @@ export default function GuruJadwalCbtPage({ session, onLogout }) {
     const [bankFilterPaket, setBankFilterPaket] = useState('');
     const [bankFilterLevel, setBankFilterLevel] = useState('');
     const [bankFilterJenis, setBankFilterJenis] = useState('');
+    const [bankFilterMedia, setBankFilterMedia] = useState('');
+    const [zoomedImageUrl, setZoomedImageUrl] = useState(null);
 
     const round2 = (num) => Math.round((Number(num) + Number.EPSILON) * 100) / 100;
 
@@ -1133,6 +1136,24 @@ export default function GuruJadwalCbtPage({ session, onLogout }) {
                                                                         📦 {s.paket_soal}
                                                                     </span>
                                                                 )}
+                                                                {s.gambar_soal && (
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => setZoomedImageUrl(`/storage/${s.gambar_soal}`)}
+                                                                        className="inline-flex items-center gap-1 rounded-md bg-sky-50 border border-sky-200 px-2 py-0.5 text-[10px] font-semibold text-sky-700 hover:bg-sky-100 transition cursor-pointer shadow-2xs"
+                                                                        title="Klik untuk melihat pratinjau gambar"
+                                                                    >
+                                                                        🖼️ Gambar
+                                                                    </button>
+                                                                )}
+                                                                {s.audio_soal && (
+                                                                    <span 
+                                                                        className="inline-flex items-center gap-1 rounded-md bg-indigo-50 border border-indigo-200 px-2 py-0.5 text-[10px] font-semibold text-indigo-700 shadow-2xs"
+                                                                        title={`Audio Pendukung Soal${s.batas_putar_audio ? ` (Maksimal putar ${s.batas_putar_audio}x)` : ' (Bebas putar tanpa batas)'}`}
+                                                                    >
+                                                                        🎵 Audio {s.batas_putar_audio ? `(${s.batas_putar_audio}x)` : '(∞)'}
+                                                                    </span>
+                                                                )}
                                                             </div>
                                                             <span className="text-xs font-medium text-slate-500">Bobot: {s.bobot_nilai}</span>
                                                         </div>
@@ -1827,6 +1848,8 @@ export default function GuruJadwalCbtPage({ session, onLogout }) {
                                         if (bankFilterPaket && bankFilterPaket !== '__TANPA_PAKET__' && (item.paket_soal || '').trim() !== bankFilterPaket) return false;
                                         if (bankFilterLevel && item.level_kognitif !== bankFilterLevel) return false;
                                         if (bankFilterJenis && item.jenis_soal !== bankFilterJenis) return false;
+                                        if (bankFilterMedia === 'gambar' && !item.gambar_soal) return false;
+                                        if (bankFilterMedia === 'audio' && !item.audio_soal) return false;
                                         return true;
                                     });
 
@@ -2122,6 +2145,17 @@ export default function GuruJadwalCbtPage({ session, onLogout }) {
                                                             { value: 'esai', label: 'Esai' },
                                                         ]}
                                                     />
+                                                    <FilterSelect
+                                                        value={bankFilterMedia}
+                                                        onChange={setBankFilterMedia}
+                                                        placeholder="Semua Media"
+                                                        align="right"
+                                                        options={[
+                                                            { value: '', label: 'Semua Media' },
+                                                            { value: 'gambar', label: '🖼️ Ada Gambar' },
+                                                            { value: 'audio', label: '🎵 Ada Audio' },
+                                                        ]}
+                                                    />
                                                 </div>
                                             </div>
                                             
@@ -2169,7 +2203,40 @@ export default function GuruJadwalCbtPage({ session, onLogout }) {
                                                                 className="h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary"
                                                             />
                                                         </td>
-                                                        <td className="px-4 py-3 min-w-[280px] max-w-md whitespace-pre-wrap break-words">{item.isi_soal}</td>
+                                                        <td className="px-4 py-3 min-w-[280px] max-w-md">
+                                                            <div className="whitespace-pre-wrap break-words text-slate-800 leading-relaxed">{item.isi_soal}</div>
+                                                            {(item.gambar_soal || item.audio_soal) && (
+                                                                <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                                                                    {item.gambar_soal && (
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={(e) => {
+                                                                                e.stopPropagation();
+                                                                                setZoomedImageUrl(item.gambar_soal_url || `/storage/${item.gambar_soal}`);
+                                                                            }}
+                                                                            className="inline-flex items-center gap-1 rounded-md bg-sky-50 border border-sky-200 px-2 py-0.5 text-[11px] font-semibold text-sky-700 hover:bg-sky-100 transition cursor-pointer shadow-2xs"
+                                                                            title="Klik untuk melihat pratinjau gambar"
+                                                                        >
+                                                                            <span>🖼️</span>
+                                                                            <span>Gambar</span>
+                                                                            <svg className="w-2.5 h-2.5 text-sky-500 opacity-70" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                                                            </svg>
+                                                                        </button>
+                                                                    )}
+                                                                    {item.audio_soal && (
+                                                                        <span
+                                                                            className="inline-flex items-center gap-1 rounded-md bg-indigo-50 border border-indigo-200 px-2 py-0.5 text-[11px] font-semibold text-indigo-700 shadow-2xs"
+                                                                            title={`Audio Pendukung Soal${item.batas_putar_audio ? ` (Maksimal putar ${item.batas_putar_audio}x)` : ' (Bebas putar tanpa batas)'}`}
+                                                                        >
+                                                                            <span>🎵</span>
+                                                                            <span>Audio {item.batas_putar_audio ? `(${item.batas_putar_audio}x)` : '(∞)'}</span>
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+                                                            )}
+                                                        </td>
                                                         <td className="px-4 py-3 whitespace-nowrap">
                                                             {item.paket_soal ? (
                                                                 <span className="inline-flex items-center gap-1 rounded-md bg-violet-50 border border-violet-200 px-2 py-0.5 text-xs font-bold text-violet-700">
@@ -2340,6 +2407,13 @@ export default function GuruJadwalCbtPage({ session, onLogout }) {
                     </div>
                 </div>
             )}
+
+            <ImageLightboxModal
+                imageUrl={zoomedImageUrl}
+                alt="Pratinjau Gambar Soal"
+                caption="Gambar Pendukung Soal"
+                onClose={() => setZoomedImageUrl(null)}
+            />
         </DashboardLayout>
     );
 }

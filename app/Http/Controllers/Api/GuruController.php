@@ -565,6 +565,9 @@ class GuruController extends Controller
                 'level_kognitif' => $bs->level_kognitif,
                 'paket_soal' => $bs->paket_soal,
                 'bobot_nilai' => $detail->bobot_nilai,
+                'gambar_soal' => $bs->gambar_soal,
+                'audio_soal' => $bs->audio_soal,
+                'batas_putar_audio' => $bs->batas_putar_audio,
             ];
         })->values();
 
