@@ -11,11 +11,12 @@ export default function CbtAudioPlayer({
     src,
     idSesi,
     idDetail,
+    idSiswa = null,
     batasPutar = null,
     isReview = false,
 }) {
     const audioRef = useRef(null);
-    const storageKey = idSesi && idDetail ? `cbt-audio-play-${idSesi}-${idDetail}` : null;
+    const storageKey = idSesi && idDetail ? `cbt-audio-play-${idSiswa ? idSiswa + '-' : ''}${idSesi}-${idDetail}` : null;
 
     const maxPlays = batasPutar && Number(batasPutar) > 0 ? Number(batasPutar) : null;
 

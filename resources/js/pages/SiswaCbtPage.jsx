@@ -7,9 +7,14 @@ function apiBase(path) {
     return `${window.location.origin}${path}`;
 }
 
-const STORAGE_PREFIX = 'cbt-jawaban-';
-
 export default function SiswaCbtPage({ session, onLogout, idSesi }) {
+    // Kunci unik berbasis ID Siswa agar jika berganti akun di peramban yang sama tidak saling menimpa
+    const studentId = session?.user?.profile?.id_siswa || session?.user?.id_pengguna || 'u0';
+    const storageKey = `cbt-jawaban-${studentId}-${idSesi}`;
+    const startStorageKey = `cbt-start-${studentId}-${idSesi}`;
+    const remainingStorageKey = `cbt-remaining-${studentId}-${idSesi}`;
+    const tokenStorageKey = `cbt-token-${studentId}-${idSesi}`;
+
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState(null);
@@ -41,6 +46,23 @@ export default function SiswaCbtPage({ session, onLogout, idSesi }) {
 
     const warningTimerRef = useRef(null);
 
+    // Bersihkan data legacy yang tidak ter-scope per siswa (mencegah kontaminasi akun sebelumnya)
+    useEffect(() => {
+        try {
+            localStorage.removeItem(`cbt-jawaban-${idSesi}`);
+            localStorage.removeItem(`cbt-jawaban-start-${idSesi}`);
+            localStorage.removeItem(`cbt-jawaban-remaining-${idSesi}`);
+            localStorage.removeItem(`cbt-start-${idSesi}`);
+            localStorage.removeItem(`cbt-remaining-${idSesi}`);
+            sessionStorage.removeItem(`cbt-token-${idSesi}`);
+            Object.keys(localStorage).forEach((k) => {
+                if (k.startsWith(`cbt-audio-play-${idSesi}-`)) {
+                    localStorage.removeItem(k);
+                }
+            });
+        } catch { /* ignore */ }
+    }, [idSesi]);
+
     const triggerWarning = useCallback((msg) => {
         if (warningTimerRef.current) {
             clearTimeout(warningTimerRef.current);
@@ -69,7 +91,7 @@ export default function SiswaCbtPage({ session, onLogout, idSesi }) {
         try {
             // Simpan sisa waktu pengerjaan saat terjadi pelanggaran agar timer tidak reset / bertambah
             if (timeLeftRef.current > 0) {
-                localStorage.setItem(`${STORAGE_PREFIX}remaining-${idSesi}`, String(timeLeftRef.current));
+                localStorage.setItem(remainingStorageKey, String(timeLeftRef.current));
             }
         } catch { /* ignore */ }
 
@@ -85,11 +107,10 @@ export default function SiswaCbtPage({ session, onLogout, idSesi }) {
                 body: JSON.stringify({ jenis_pelanggaran: jenis, keterangan }),
             });
         } catch { /* silent fail */ }
-    }, [idSesi, session.token]);
+    }, [idSesi, session.token, remainingStorageKey]);
 
     const saveTimerRef = useRef({});
     const activeSoal = soalData[currentIndex];
-    const storageKey = `${STORAGE_PREFIX}${idSesi}`;
 
     // Browser Lockdown & Anti-Copy-Paste Event Listeners
     useEffect(() => {
@@ -225,9 +246,9 @@ export default function SiswaCbtPage({ session, onLogout, idSesi }) {
             const searchParams = new URLSearchParams(window.location.search);
             let examToken = searchParams.get('token');
             if (examToken) {
-                try { sessionStorage.setItem(`cbt-token-${idSesi}`, examToken); } catch { /* ignore */ }
+                try { sessionStorage.setItem(tokenStorageKey, examToken); } catch { /* ignore */ }
             } else {
-                try { examToken = sessionStorage.getItem(`cbt-token-${idSesi}`); } catch { /* ignore */ }
+                try { examToken = sessionStorage.getItem(tokenStorageKey); } catch { /* ignore */ }
             }
             if (examToken) {
                 url.searchParams.append('token', examToken);
@@ -273,7 +294,7 @@ export default function SiswaCbtPage({ session, onLogout, idSesi }) {
 
             let localAnswers = {};
             try {
-                const stored = localStorage.getItem(`${STORAGE_PREFIX}${idSesi}`);
+                const stored = localStorage.getItem(storageKey);
                 if (stored) localAnswers = JSON.parse(stored);
             } catch { /* ignore */ }
 
@@ -284,20 +305,23 @@ export default function SiswaCbtPage({ session, onLogout, idSesi }) {
             const now = new Date().getTime();
             const durationMs = data.sesi.durasi_menit * 60 * 1000;
             
-            let studentStartTime = localStorage.getItem(`${STORAGE_PREFIX}start-${idSesi}`);
-            const savedRemaining = localStorage.getItem(`${STORAGE_PREFIX}remaining-${idSesi}`);
+            let studentStartTime = localStorage.getItem(startStorageKey);
+            const savedRemaining = localStorage.getItem(remainingStorageKey);
 
             if (savedRemaining !== null && savedRemaining !== undefined) {
                 // Siswa kembali setelah terkunci: lanjutkan sisa waktu yang tersimpan
                 const preservedRemaining = Math.max(0, parseInt(savedRemaining, 10));
                 studentStartTime = String(now - (durationMs - preservedRemaining * 1000));
-                localStorage.setItem(`${STORAGE_PREFIX}start-${idSesi}`, studentStartTime);
-                localStorage.removeItem(`${STORAGE_PREFIX}remaining-${idSesi}`);
+                localStorage.setItem(startStorageKey, studentStartTime);
+                localStorage.removeItem(remainingStorageKey);
             } else if (!studentStartTime || ((data.jawaban_tersimpan || []).length === 0 && (parseInt(studentStartTime, 10) + durationMs) <= now)) {
                 studentStartTime = String(now);
-                localStorage.setItem(`${STORAGE_PREFIX}start-${idSesi}`, studentStartTime);
+                localStorage.setItem(startStorageKey, studentStartTime);
                 (data.soal || []).forEach((s) => {
-                    try { localStorage.removeItem(`cbt-audio-play-${idSesi}-${s.id_detail}`); } catch { /* ignore */ }
+                    try { 
+                        localStorage.removeItem(`cbt-audio-play-${studentId}-${idSesi}-${s.id_detail}`);
+                        localStorage.removeItem(`cbt-audio-play-${idSesi}-${s.id_detail}`);
+                    } catch { /* ignore */ }
                 });
             }
             
@@ -321,7 +345,7 @@ export default function SiswaCbtPage({ session, onLogout, idSesi }) {
             setLoading(false);
             return false;
         }
-    }, [idSesi, session.token]);
+    }, [idSesi, session.token, studentId, storageKey, startStorageKey, remainingStorageKey, tokenStorageKey]);
 
     // Initial load
     useEffect(() => {
@@ -402,11 +426,13 @@ export default function SiswaCbtPage({ session, onLogout, idSesi }) {
             // Clear localStorage on success
             try { 
                 localStorage.removeItem(storageKey); 
-                localStorage.removeItem(`${STORAGE_PREFIX}start-${idSesi}`);
-                localStorage.removeItem(`${STORAGE_PREFIX}remaining-${idSesi}`);
+                localStorage.removeItem(startStorageKey);
+                localStorage.removeItem(remainingStorageKey);
                 (soalData || []).forEach((s) => {
+                    localStorage.removeItem(`cbt-audio-play-${studentId}-${idSesi}-${s.id_detail}`);
                     localStorage.removeItem(`cbt-audio-play-${idSesi}-${s.id_detail}`);
                 });
+                sessionStorage.removeItem(tokenStorageKey);
             } catch { /* ignore */ }
 
             setResultData(result);
@@ -414,7 +440,7 @@ export default function SiswaCbtPage({ session, onLogout, idSesi }) {
             setSubmitErrorPopup(err.message || "Terjadi kesalahan saat mengumpulkan ujian.");
             setSubmitting(false);
         }
-    }, [jawaban, session.token, idSesi, submitting, storageKey]);
+    }, [jawaban, session.token, idSesi, submitting, storageKey, startStorageKey, remainingStorageKey, tokenStorageKey, studentId, soalData]);
 
     // Timer
     useEffect(() => {
@@ -575,6 +601,7 @@ export default function SiswaCbtPage({ session, onLogout, idSesi }) {
                                             src={`/storage/${item.audio_soal}`}
                                             idSesi={idSesi}
                                             idDetail={item.id_detail}
+                                            idSiswa={studentId}
                                             batasPutar={item.batas_putar_audio}
                                             isReview={true}
                                         />
@@ -1036,6 +1063,7 @@ export default function SiswaCbtPage({ session, onLogout, idSesi }) {
                                         src={`/storage/${activeSoal.audio_soal}`}
                                         idSesi={idSesi}
                                         idDetail={activeSoal.id_detail}
+                                        idSiswa={studentId}
                                         batasPutar={activeSoal.batas_putar_audio}
                                         isReview={false}
                                     />

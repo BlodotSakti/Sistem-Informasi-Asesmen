@@ -159,6 +159,9 @@ function App() {
 
         clearSession();
         setSession(null);
+        try {
+            sessionStorage.clear();
+        } catch { /* ignore */ }
         if (reason === 'timeout') {
             localStorage.setItem('sia-session-expired', 'true');
         }
