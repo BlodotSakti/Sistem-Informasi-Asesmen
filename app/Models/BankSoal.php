@@ -94,24 +94,26 @@ class BankSoal extends Model
 
     public function getGambarSoalUrlAttribute(): ?string
     {
-        if (!$this->gambar_soal) {
+        if (empty($this->gambar_soal)) {
             return null;
         }
-        if (str_starts_with($this->gambar_soal, 'data:') || str_starts_with($this->gambar_soal, 'http://') || str_starts_with($this->gambar_soal, 'https://')) {
-            return $this->gambar_soal;
+        $val = (string) $this->gambar_soal;
+        if (str_starts_with($val, 'data:') || str_starts_with($val, 'http://') || str_starts_with($val, 'https://')) {
+            return $val;
         }
-        return asset('storage/' . $this->gambar_soal);
+        return asset('storage/' . ltrim($val, '/'));
     }
 
     public function getAudioSoalUrlAttribute(): ?string
     {
-        if (!$this->audio_soal) {
+        if (empty($this->audio_soal)) {
             return null;
         }
-        if (str_starts_with($this->audio_soal, 'data:') || str_starts_with($this->audio_soal, 'http://') || str_starts_with($this->audio_soal, 'https://')) {
-            return $this->audio_soal;
+        $val = (string) $this->audio_soal;
+        if (str_starts_with($val, 'data:') || str_starts_with($val, 'http://') || str_starts_with($val, 'https://')) {
+            return $val;
         }
-        return asset('storage/' . $this->audio_soal);
+        return asset('storage/' . ltrim($val, '/'));
     }
 
     public function pembuat(): BelongsTo
