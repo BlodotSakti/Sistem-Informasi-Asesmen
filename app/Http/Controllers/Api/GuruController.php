@@ -540,9 +540,12 @@ class GuruController extends Controller
             ->get()
             ->groupBy('id_siswa');
 
+        // Urutkan di PHP (bukan ORDER BY MySQL) agar tidak memicu "Out of sort memory"
+        // pada server DB dengan sort_buffer kecil (mis. Aiven) karena kolom JSON data_jawaban besar.
         $allPercobaan = PercobaanCbt::where('id_sesi', $id_sesi)
-            ->orderBy('percobaan_ke', 'asc')
             ->get()
+            ->sortBy('percobaan_ke')
+            ->values()
             ->groupBy('id_siswa');
 
         // Build soal list with correct answers
@@ -875,10 +878,15 @@ class GuruController extends Controller
             ->where('id_sesi', $id_sesi)
             ->update(['skor_total' => $totalSkor]);
 
-        $latestPercobaan = PercobaanCbt::where('id_siswa', $id_siswa)
+        $latestPercobaanKe = PercobaanCbt::where('id_siswa', $id_siswa)
             ->where('id_sesi', $id_sesi)
-            ->orderByDesc('percobaan_ke')
-            ->first();
+            ->max('percobaan_ke');
+        $latestPercobaan = $latestPercobaanKe !== null
+            ? PercobaanCbt::where('id_siswa', $id_siswa)
+                ->where('id_sesi', $id_sesi)
+                ->where('percobaan_ke', $latestPercobaanKe)
+                ->first()
+            : null;
 
         if ($latestPercobaan) {
             $jumlahBenar = JawabanSiswa::where('id_siswa', $id_siswa)

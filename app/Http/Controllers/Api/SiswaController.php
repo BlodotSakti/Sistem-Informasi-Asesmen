@@ -963,9 +963,12 @@ class SiswaController extends Controller
                 return response()->json(['data' => []]);
             }
 
+            // Urutkan di PHP (bukan ORDER BY MySQL) agar tidak memicu "Out of sort memory"
+            // pada server DB dengan sort_buffer kecil (mis. Aiven) karena kolom JSON data_jawaban besar.
             $allPercobaan = PercobaanCbt::where('id_siswa', $siswa->id_siswa)
-                ->orderBy('percobaan_ke', 'asc')
                 ->get()
+                ->sortBy('percobaan_ke')
+                ->values()
                 ->groupBy('id_sesi');
 
             $analisisSesiIds = AnalisisDiagnostik::where('id_siswa', $siswa->id_siswa)
@@ -1117,7 +1120,9 @@ class SiswaController extends Controller
                 'trace' => $e->getTraceAsString(),
             ]);
             return response()->json([
-                'message' => 'Gagal memuat riwayat CBT: ' . $e->getMessage(),
+                'message' => config('app.debug')
+                    ? 'Gagal memuat riwayat CBT: ' . $e->getMessage()
+                    : 'Gagal memuat riwayat CBT. Silakan coba lagi beberapa saat.',
                 'data' => [],
             ], 500);
         }
@@ -1142,8 +1147,9 @@ class SiswaController extends Controller
 
         $riwayatPercobaanRaw = PercobaanCbt::where('id_siswa', $siswa->id_siswa)
             ->where('id_sesi', $id_sesi)
-            ->orderBy('percobaan_ke', 'asc')
-            ->get();
+            ->get()
+            ->sortBy('percobaan_ke')
+            ->values();
 
         $analisis = AnalisisDiagnostik::where('id_siswa', $siswa->id_siswa)
             ->where('id_sesi', $id_sesi)
