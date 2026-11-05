@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import AnalisisDiagnostikCard from '../components/ui/AnalisisDiagnostikCard';
 import ImageLightboxModal from '../components/ui/ImageLightboxModal';
 import CbtAudioPlayer from '../components/ui/CbtAudioPlayer';
+import { getMediaUrl } from '../lib/api';
 
 function apiBase(path) {
     return `${window.location.origin}${path}`;
@@ -579,15 +580,15 @@ export default function SiswaCbtPage({ session, onLogout, idSesi }) {
                                     <div className="mt-3">
                                         <div className="inline-block max-w-full">
                                             <img
-                                                src={`/storage/${item.gambar_soal}`}
+                                                src={getMediaUrl(item.gambar_soal_url || item.gambar_soal)}
                                                 alt="Gambar Soal"
-                                                onClick={() => setZoomedImageUrl(`/storage/${item.gambar_soal}`)}
+                                                onClick={() => setZoomedImageUrl(getMediaUrl(item.gambar_soal_url || item.gambar_soal))}
                                                 title="Klik untuk memperbesar gambar"
                                                 className="max-h-48 sm:max-h-56 max-w-full cursor-zoom-in rounded-lg border border-border object-contain shadow-sm transition hover:opacity-95"
                                             />
                                             <button
                                                 type="button"
-                                                onClick={() => setZoomedImageUrl(`/storage/${item.gambar_soal}`)}
+                                                onClick={() => setZoomedImageUrl(getMediaUrl(item.gambar_soal_url || item.gambar_soal))}
                                                 className="mt-1.5 flex items-center gap-1 text-xs font-medium text-primary hover:underline"
                                             >
                                                 🔍 Klik gambar untuk memperbesar
@@ -598,7 +599,7 @@ export default function SiswaCbtPage({ session, onLogout, idSesi }) {
                                 {item.audio_soal && (
                                     <div className="mt-4">
                                         <CbtAudioPlayer
-                                            src={`/storage/${item.audio_soal}`}
+                                            src={getMediaUrl(item.audio_soal_url || item.audio_soal)}
                                             idSesi={idSesi}
                                             idDetail={item.id_detail}
                                             idSiswa={studentId}
@@ -1038,16 +1039,16 @@ export default function SiswaCbtPage({ session, onLogout, idSesi }) {
                                     <div className="mt-4">
                                         <div className="inline-block max-w-full">
                                             <img
-                                                src={`/storage/${activeSoal.gambar_soal}`}
+                                                src={getMediaUrl(activeSoal.gambar_soal_url || activeSoal.gambar_soal)}
                                                 alt="Ilustrasi Soal"
                                                 onDragStart={(e) => e.preventDefault()}
-                                                onClick={() => setZoomedImageUrl(`/storage/${activeSoal.gambar_soal}`)}
+                                                onClick={() => setZoomedImageUrl(getMediaUrl(activeSoal.gambar_soal_url || activeSoal.gambar_soal))}
                                                 title="Klik untuk memperbesar gambar"
                                                 className="max-h-64 max-w-full cursor-zoom-in rounded-xl border border-border object-contain shadow-sm transition hover:opacity-95"
                                             />
                                             <button
                                                 type="button"
-                                                onClick={() => setZoomedImageUrl(`/storage/${activeSoal.gambar_soal}`)}
+                                                onClick={() => setZoomedImageUrl(getMediaUrl(activeSoal.gambar_soal_url || activeSoal.gambar_soal))}
                                                 className="mt-1.5 flex items-center gap-1 text-xs font-medium text-primary hover:underline"
                                             >
                                                 🔍 Klik gambar untuk memperbesar
@@ -1060,7 +1061,7 @@ export default function SiswaCbtPage({ session, onLogout, idSesi }) {
                             {activeSoal.audio_soal && (
                                 <div className="mt-6">
                                     <CbtAudioPlayer
-                                        src={`/storage/${activeSoal.audio_soal}`}
+                                        src={getMediaUrl(activeSoal.audio_soal_url || activeSoal.audio_soal)}
                                         idSesi={idSesi}
                                         idDetail={activeSoal.id_detail}
                                         idSiswa={studentId}

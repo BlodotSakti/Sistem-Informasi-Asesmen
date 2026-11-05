@@ -2,6 +2,15 @@ export function apiBase(path) {
     return `${window.location.origin}${path}`;
 }
 
+export function getMediaUrl(path) {
+    if (!path) return '';
+    if (typeof path !== 'string') return '';
+    if (path.startsWith('data:') || path.startsWith('http://') || path.startsWith('https://')) {
+        return path;
+    }
+    return `/storage/${path}`;
+}
+
 export async function apiFetch(path, session, options = {}) {
     const isJsonBody = options.body && typeof options.body === 'string' && (options.body.startsWith('{') || options.body.startsWith('['));
 

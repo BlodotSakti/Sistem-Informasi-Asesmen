@@ -201,11 +201,11 @@ class GuruController extends Controller
         $data = $validator->validate();
 
         if ($request->hasFile('gambar_soal')) {
-            $data['gambar_soal'] = $request->file('gambar_soal')->store('soal_images', 'public');
+            $data['gambar_soal'] = BankSoal::fileToDataUri($request->file('gambar_soal'));
         }
 
         if ($request->hasFile('audio_soal')) {
-            $data['audio_soal'] = $request->file('audio_soal')->store('soal_audio', 'public');
+            $data['audio_soal'] = BankSoal::fileToDataUri($request->file('audio_soal'));
         }
         $data['batas_putar_audio'] = !empty($data['batas_putar_audio']) && (int) $data['batas_putar_audio'] > 0 ? (int) $data['batas_putar_audio'] : null;
 
@@ -313,28 +313,32 @@ class GuruController extends Controller
         $data = $validator->validate();
 
         if ($request->hasFile('gambar_soal')) {
-            if ($bankSoal->gambar_soal) {
+            if ($bankSoal->gambar_soal && !str_starts_with($bankSoal->gambar_soal, 'data:')) {
                 \Illuminate\Support\Facades\Storage::disk('public')->delete($bankSoal->gambar_soal);
             }
-            $data['gambar_soal'] = $request->file('gambar_soal')->store('soal_images', 'public');
+            $data['gambar_soal'] = BankSoal::fileToDataUri($request->file('gambar_soal'));
         } elseif ($request->input('hapus_gambar') === 'true') {
-            if ($bankSoal->gambar_soal) {
+            if ($bankSoal->gambar_soal && !str_starts_with($bankSoal->gambar_soal, 'data:')) {
                 \Illuminate\Support\Facades\Storage::disk('public')->delete($bankSoal->gambar_soal);
             }
             $data['gambar_soal'] = null;
+        } else {
+            unset($data['gambar_soal']);
         }
 
         if ($request->hasFile('audio_soal')) {
-            if ($bankSoal->audio_soal) {
+            if ($bankSoal->audio_soal && !str_starts_with($bankSoal->audio_soal, 'data:')) {
                 \Illuminate\Support\Facades\Storage::disk('public')->delete($bankSoal->audio_soal);
             }
-            $data['audio_soal'] = $request->file('audio_soal')->store('soal_audio', 'public');
+            $data['audio_soal'] = BankSoal::fileToDataUri($request->file('audio_soal'));
         } elseif ($request->input('hapus_audio') === 'true') {
-            if ($bankSoal->audio_soal) {
+            if ($bankSoal->audio_soal && !str_starts_with($bankSoal->audio_soal, 'data:')) {
                 \Illuminate\Support\Facades\Storage::disk('public')->delete($bankSoal->audio_soal);
             }
             $data['audio_soal'] = null;
             $data['batas_putar_audio'] = null;
+        } else {
+            unset($data['audio_soal']);
         }
 
         if (array_key_exists('batas_putar_audio', $data) && ($data['audio_soal'] ?? $bankSoal->audio_soal)) {
@@ -380,10 +384,10 @@ class GuruController extends Controller
             $gambar_soal = $bankSoal->gambar_soal;
             $audio_soal = $bankSoal->audio_soal;
             $bankSoal->delete();
-            if ($gambar_soal) {
+            if ($gambar_soal && !str_starts_with($gambar_soal, 'data:')) {
                 \Illuminate\Support\Facades\Storage::disk('public')->delete($gambar_soal);
             }
-            if ($audio_soal) {
+            if ($audio_soal && !str_starts_with($audio_soal, 'data:')) {
                 \Illuminate\Support\Facades\Storage::disk('public')->delete($audio_soal);
             }
             return response()->json(['message' => 'Soal berhasil dihapus.']);
@@ -442,24 +446,21 @@ class GuruController extends Controller
             $soal['created_by'] = $penggunaId;
             $soal['id_mapel'] = $data['id_mapel'];
 
-            $decodedImage = null;
             if (!empty($soal['gambar_soal_base64'])) {
-                if (preg_match('/^data:image\/(png|jpe?g);base64,(.+)$/i', $soal['gambar_soal_base64'], $matches)) {
-                    $ext = strtolower($matches[1]) === 'jpeg' ? 'jpg' : strtolower($matches[1]);
+                if (preg_match('/^data:image\/(png|jpe?g|webp);base64,(.+)$/i', $soal['gambar_soal_base64'], $matches)) {
                     $binary = base64_decode($matches[2], true);
                     if ($binary === false) {
                         $errors[] = "Baris " . ($index + 2) . ": Data gambar pendukung tidak valid.";
                     } elseif (strlen($binary) > 2 * 1024 * 1024) {
                         $errors[] = "Baris " . ($index + 2) . ": Ukuran gambar pendukung melebihi 2 MB.";
                     } else {
-                        $decodedImage = ['ext' => $ext, 'binary' => $binary];
+                        $soal['gambar_soal'] = $soal['gambar_soal_base64'];
                     }
                 } else {
-                    $errors[] = "Baris " . ($index + 2) . ": Format gambar pendukung harus JPG, JPEG, atau PNG.";
+                    $errors[] = "Baris " . ($index + 2) . ": Format gambar pendukung harus JPG, JPEG, PNG, atau WEBP.";
                 }
             }
             unset($soal['gambar_soal_base64']);
-            $soal['_decoded_image'] = $decodedImage;
 
             if ($soal['jenis_soal'] === 'esai') {
                 $soal['opsi_jawaban'] = [];
@@ -511,13 +512,6 @@ class GuruController extends Controller
 
         $inserted = [];
         foreach ($created as $soal) {
-            $decodedImage = $soal['_decoded_image'] ?? null;
-            unset($soal['_decoded_image']);
-            if ($decodedImage) {
-                $filename = 'soal_images/' . \Illuminate\Support\Str::uuid() . '.' . $decodedImage['ext'];
-                \Illuminate\Support\Facades\Storage::disk('public')->put($filename, $decodedImage['binary']);
-                $soal['gambar_soal'] = $filename;
-            }
             $inserted[] = BankSoal::create($soal);
         }
 
@@ -766,9 +760,13 @@ class GuruController extends Controller
 
                 // Gambar di-embed sebagai base64 agar dompdf tidak perlu akses file/URL eksternal
                 $gambar = null;
-                if ($bs->gambar_soal && Storage::disk('public')->exists($bs->gambar_soal)) {
-                    $mime = Storage::disk('public')->mimeType($bs->gambar_soal) ?: 'image/png';
-                    $gambar = 'data:' . $mime . ';base64,' . base64_encode(Storage::disk('public')->get($bs->gambar_soal));
+                if ($bs->gambar_soal) {
+                    if (str_starts_with($bs->gambar_soal, 'data:')) {
+                        $gambar = $bs->gambar_soal;
+                    } elseif (Storage::disk('public')->exists($bs->gambar_soal)) {
+                        $mime = Storage::disk('public')->mimeType($bs->gambar_soal) ?: 'image/png';
+                        $gambar = 'data:' . $mime . ';base64,' . base64_encode(Storage::disk('public')->get($bs->gambar_soal));
+                    }
                 }
 
                 $kunci = $bs->kunci_jawaban;

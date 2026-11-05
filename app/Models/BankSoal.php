@@ -85,14 +85,33 @@ class BankSoal extends Model
         'audio_soal_url',
     ];
 
+    public static function fileToDataUri(\Illuminate\Http\UploadedFile $file): string
+    {
+        $mime = $file->getMimeType() ?: $file->getClientMimeType() ?: 'application/octet-stream';
+        $contents = file_get_contents($file->getRealPath());
+        return 'data:' . $mime . ';base64,' . base64_encode($contents);
+    }
+
     public function getGambarSoalUrlAttribute(): ?string
     {
-        return $this->gambar_soal ? asset('storage/' . $this->gambar_soal) : null;
+        if (!$this->gambar_soal) {
+            return null;
+        }
+        if (str_starts_with($this->gambar_soal, 'data:') || str_starts_with($this->gambar_soal, 'http://') || str_starts_with($this->gambar_soal, 'https://')) {
+            return $this->gambar_soal;
+        }
+        return asset('storage/' . $this->gambar_soal);
     }
 
     public function getAudioSoalUrlAttribute(): ?string
     {
-        return $this->audio_soal ? asset('storage/' . $this->audio_soal) : null;
+        if (!$this->audio_soal) {
+            return null;
+        }
+        if (str_starts_with($this->audio_soal, 'data:') || str_starts_with($this->audio_soal, 'http://') || str_starts_with($this->audio_soal, 'https://')) {
+            return $this->audio_soal;
+        }
+        return asset('storage/' . $this->audio_soal);
     }
 
     public function pembuat(): BelongsTo

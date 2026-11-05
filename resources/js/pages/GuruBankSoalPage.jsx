@@ -2,7 +2,7 @@ import React, { useState, useMemo, useRef } from 'react';
 import DashboardLayout from '../components/layout/DashboardLayout';
 import StatCard from '../components/ui/StatCard';
 import FilterSelect from '../components/ui/FilterSelect';
-import { apiFetch } from '../lib/api';
+import { apiFetch, getMediaUrl } from '../lib/api';
 import useGuruWorkspace from '../hooks/useGuruWorkspace';
 import { guruNavigation } from './guru/guruNavigation';
 import * as XLSX from 'xlsx';
@@ -134,10 +134,10 @@ export default function GuruBankSoalPage({ session, onLogout }) {
             paket_soal: item.paket_soal || '',
             level_kognitif: item.level_kognitif || '',
             gambar_soal: null,
-            gambar_soal_url: item.gambar_soal ? `/storage/${item.gambar_soal}` : '',
+            gambar_soal_url: getMediaUrl(item.gambar_soal_url || item.gambar_soal),
             hapus_gambar: false,
             audio_soal: null,
-            audio_soal_url: item.audio_soal ? `/storage/${item.audio_soal}` : '',
+            audio_soal_url: getMediaUrl(item.audio_soal_url || item.audio_soal),
             hapus_audio: false,
             batas_putar_audio: item.batas_putar_audio ? String(item.batas_putar_audio) : '',
             keywords: item.keywords ? item.keywords.join('\n') : '',

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import DashboardLayout from '../components/layout/DashboardLayout';
 import StatCard from '../components/ui/StatCard';
-import { apiFetch, apiBase } from '../lib/api';
+import { apiFetch, apiBase, getMediaUrl } from '../lib/api';
 import * as XLSX from 'xlsx';
 import { formatDateTimeLabel } from '../lib/date';
 import useGuruWorkspace from '../hooks/useGuruWorkspace';
@@ -1139,7 +1139,7 @@ export default function GuruJadwalCbtPage({ session, onLogout }) {
                                                                 {s.gambar_soal && (
                                                                     <button
                                                                         type="button"
-                                                                        onClick={() => setZoomedImageUrl(`/storage/${s.gambar_soal}`)}
+                                                                        onClick={() => setZoomedImageUrl(getMediaUrl(s.gambar_soal_url || s.gambar_soal))}
                                                                         className="inline-flex items-center gap-1 rounded-md bg-sky-50 border border-sky-200 px-2 py-0.5 text-[10px] font-semibold text-sky-700 hover:bg-sky-100 transition cursor-pointer shadow-2xs"
                                                                         title="Klik untuk melihat pratinjau gambar"
                                                                     >
@@ -2212,7 +2212,7 @@ export default function GuruJadwalCbtPage({ session, onLogout }) {
                                                                             type="button"
                                                                             onClick={(e) => {
                                                                                 e.stopPropagation();
-                                                                                setZoomedImageUrl(item.gambar_soal_url || `/storage/${item.gambar_soal}`);
+                                                                                setZoomedImageUrl(getMediaUrl(item.gambar_soal_url || item.gambar_soal));
                                                                             }}
                                                                             className="inline-flex items-center gap-1 rounded-md bg-sky-50 border border-sky-200 px-2 py-0.5 text-[11px] font-semibold text-sky-700 hover:bg-sky-100 transition cursor-pointer shadow-2xs"
                                                                             title="Klik untuk melihat pratinjau gambar"

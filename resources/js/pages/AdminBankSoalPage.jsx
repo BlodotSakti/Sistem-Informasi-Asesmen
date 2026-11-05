@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useMemo, useRef } from 'react';
 import DashboardLayout from '../components/layout/DashboardLayout';
-import { apiFetch } from '../lib/api';
+import { apiFetch, getMediaUrl } from '../lib/api';
 import { adminNavigation } from './adminNavigation';
 import * as XLSX from 'xlsx';
 import BankSoalForm from '../components/ui/BankSoalForm';
@@ -138,10 +138,10 @@ export default function AdminBankSoalPage({ session, onLogout }) {
             level_kognitif: soal.level_kognitif,
             gambar_soal: null,
             hapus_gambar: false,
-            gambar_soal_url: soal.gambar_soal ? `/storage/${soal.gambar_soal}` : (soal.gambar_soal_url || null),
+            gambar_soal_url: getMediaUrl(soal.gambar_soal_url || soal.gambar_soal) || null,
             audio_soal: null,
             hapus_audio: false,
-            audio_soal_url: soal.audio_soal ? `/storage/${soal.audio_soal}` : (soal.audio_soal_url || null),
+            audio_soal_url: getMediaUrl(soal.audio_soal_url || soal.audio_soal) || null,
             batas_putar_audio: soal.batas_putar_audio ? String(soal.batas_putar_audio) : '',
             keywords: soal.jenis_soal === 'esai' && Array.isArray(soal.keywords) ? soal.keywords.join('\n') : '',
             rule_weight: soal.rule_weight ?? 0.5,

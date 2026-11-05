@@ -544,7 +544,9 @@ class SiswaController extends Controller
                 'jenis_soal' => $bankSoal->jenis_soal,
                 'isi_soal' => $bankSoal->isi_soal,
                 'gambar_soal' => $bankSoal->gambar_soal,
+                'gambar_soal_url' => $bankSoal->gambar_soal_url,
                 'audio_soal' => $bankSoal->audio_soal,
+                'audio_soal_url' => $bankSoal->audio_soal_url,
                 'batas_putar_audio' => $bankSoal->batas_putar_audio,
                 'opsi_jawaban' => $bankSoal->opsi_jawaban,
                 'bobot_nilai' => $detail->bobot_nilai,
@@ -1136,7 +1138,9 @@ class SiswaController extends Controller
                 'id_detail' => $detail->id_detail,
                 'isi_soal' => $bankSoal->isi_soal,
                 'gambar_soal' => $bankSoal->gambar_soal,
+                'gambar_soal_url' => $bankSoal->gambar_soal_url,
                 'audio_soal' => $bankSoal->audio_soal,
+                'audio_soal_url' => $bankSoal->audio_soal_url,
                 'batas_putar_audio' => $bankSoal->batas_putar_audio,
                 'jenis_soal' => $bankSoal->jenis_soal,
                 'taksonomi_bloom' => $bankSoal->taksonomi_bloom ?? $bankSoal->level_kognitif,
@@ -1187,7 +1191,9 @@ class SiswaController extends Controller
                 $bs = $detail?->bankSoal;
                 return array_merge($dj, [
                     'gambar_soal' => $dj['gambar_soal'] ?? $bs?->gambar_soal,
+                    'gambar_soal_url' => $dj['gambar_soal_url'] ?? $bs?->gambar_soal_url,
                     'audio_soal' => $dj['audio_soal'] ?? $bs?->audio_soal,
+                    'audio_soal_url' => $dj['audio_soal_url'] ?? $bs?->audio_soal_url,
                     'batas_putar_audio' => $dj['batas_putar_audio'] ?? $bs?->batas_putar_audio,
                     'taksonomi_bloom' => $dj['taksonomi_bloom'] ?? $bs?->taksonomi_bloom ?? $bs?->level_kognitif,
                 ]);
