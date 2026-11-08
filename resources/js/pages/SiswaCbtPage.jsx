@@ -567,8 +567,22 @@ export default function SiswaCbtPage({ session, onLogout, idSesi }) {
                     {/* Per-soal breakdown */}
                     <h2 className="mb-4 text-xl font-bold text-slate-800">Ringkasan Jawaban</h2>
                     <div className="space-y-4">
-                        {(resultData.detail_hasil || []).map((item, idx) => (
-                            <div key={item.id_detail} className={`rounded-2xl border p-5 shadow-sm ${item.skor_diperoleh == item.bobot_nilai ? 'border-emerald-200 bg-emerald-50/40' : item.skor_diperoleh > 0 ? 'border-amber-200 bg-amber-50/40' : 'border-rose-200 bg-rose-50/40'}`}>
+                        {(resultData.detail_hasil || []).map((rawItem, idx) => {
+                            const soalFromExam = (soalData || []).find((s) => Number(s.id_detail) === Number(rawItem.id_detail)) || {};
+                            const item = {
+                                ...soalFromExam,
+                                ...rawItem,
+                                gambar_soal: rawItem.gambar_soal ?? soalFromExam.gambar_soal,
+                                gambar_soal_url: rawItem.gambar_soal_url ?? soalFromExam.gambar_soal_url,
+                                audio_soal: rawItem.audio_soal ?? soalFromExam.audio_soal,
+                                audio_soal_url: rawItem.audio_soal_url ?? soalFromExam.audio_soal_url,
+                                batas_putar_audio: rawItem.batas_putar_audio ?? soalFromExam.batas_putar_audio,
+                            };
+                            const imgSrc = getMediaUrl(item.gambar_soal_url || item.gambar_soal);
+                            const audioSrc = getMediaUrl(item.audio_soal_url || item.audio_soal);
+
+                            return (
+                            <div key={item.id_detail || idx} className={`rounded-2xl border p-5 shadow-sm ${item.skor_diperoleh == item.bobot_nilai ? 'border-emerald-200 bg-emerald-50/40' : item.skor_diperoleh > 0 ? 'border-amber-200 bg-amber-50/40' : 'border-rose-200 bg-rose-50/40'}`}>
                                 <div className="flex items-start justify-between">
                                     <h3 className="font-semibold text-slate-800">Soal {idx + 1}</h3>
                                     <span className={`rounded-full px-3 py-1 text-xs font-bold ${item.skor_diperoleh == item.bobot_nilai ? 'bg-emerald-100 text-emerald-700' : item.skor_diperoleh > 0 ? 'bg-amber-100 text-amber-700' : 'bg-rose-100 text-rose-700'}`}>
@@ -576,19 +590,19 @@ export default function SiswaCbtPage({ session, onLogout, idSesi }) {
                                     </span>
                                 </div>
                                 <p className="mt-2 text-sm text-slate-600 whitespace-pre-wrap">{item.isi_soal}</p>
-                                {item.gambar_soal && (
+                                {imgSrc && (
                                     <div className="mt-3">
                                         <div className="inline-block max-w-full">
                                             <img
-                                                src={getMediaUrl(item.gambar_soal_url || item.gambar_soal)}
+                                                src={imgSrc}
                                                 alt="Gambar Soal"
-                                                onClick={() => setZoomedImageUrl(getMediaUrl(item.gambar_soal_url || item.gambar_soal))}
+                                                onClick={() => setZoomedImageUrl(imgSrc)}
                                                 title="Klik untuk memperbesar gambar"
                                                 className="max-h-48 sm:max-h-56 max-w-full cursor-zoom-in rounded-lg border border-border object-contain shadow-sm transition hover:opacity-95"
                                             />
                                             <button
                                                 type="button"
-                                                onClick={() => setZoomedImageUrl(getMediaUrl(item.gambar_soal_url || item.gambar_soal))}
+                                                onClick={() => setZoomedImageUrl(imgSrc)}
                                                 className="mt-1.5 flex items-center gap-1 text-xs font-medium text-primary hover:underline"
                                             >
                                                 🔍 Klik gambar untuk memperbesar
@@ -596,10 +610,10 @@ export default function SiswaCbtPage({ session, onLogout, idSesi }) {
                                         </div>
                                     </div>
                                 )}
-                                {item.audio_soal && (
+                                {audioSrc && (
                                     <div className="mt-4">
                                         <CbtAudioPlayer
-                                            src={getMediaUrl(item.audio_soal_url || item.audio_soal)}
+                                            src={audioSrc}
                                             idSesi={idSesi}
                                             idDetail={item.id_detail}
                                             idSiswa={studentId}
@@ -673,7 +687,8 @@ export default function SiswaCbtPage({ session, onLogout, idSesi }) {
                                     </div>
                                 )}
                             </div>
-                        ))}
+                            );
+                        })}
                     </div>
 
                     {/* Analisis Diagnostik AI */}

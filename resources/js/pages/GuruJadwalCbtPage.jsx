@@ -1490,8 +1490,39 @@ export default function GuruJadwalCbtPage({ session, onLogout }) {
                                                                                                 </div>
                                                                                             </div>
                                                                                             
-                                                                                            <div className="mb-3">
+                                                                                            <div className="mb-3 space-y-2.5">
                                                                                                 <p className="text-sm text-slate-700 whitespace-pre-wrap">{soal.isi_soal}</p>
+                                                                                                {(soal.gambar_soal_url || soal.gambar_soal) && (
+                                                                                                    <div>
+                                                                                                        <div className="inline-block max-w-full">
+                                                                                                            <img
+                                                                                                                src={getMediaUrl(soal.gambar_soal_url || soal.gambar_soal)}
+                                                                                                                alt="Gambar Soal"
+                                                                                                                onClick={() => setZoomedImageUrl(getMediaUrl(soal.gambar_soal_url || soal.gambar_soal))}
+                                                                                                                title="Klik untuk memperbesar gambar"
+                                                                                                                className="max-h-44 max-w-full cursor-zoom-in rounded-lg border border-border object-contain shadow-sm transition hover:opacity-95"
+                                                                                                            />
+                                                                                                            <button
+                                                                                                                type="button"
+                                                                                                                onClick={() => setZoomedImageUrl(getMediaUrl(soal.gambar_soal_url || soal.gambar_soal))}
+                                                                                                                className="mt-1 flex items-center gap-1 text-[11px] font-medium text-primary hover:underline"
+                                                                                                            >
+                                                                                                                🔍 Klik gambar untuk memperbesar
+                                                                                                            </button>
+                                                                                                        </div>
+                                                                                                    </div>
+                                                                                                )}
+                                                                                                {(soal.audio_soal_url || soal.audio_soal) && (
+                                                                                                    <div className="max-w-md rounded-xl border border-indigo-200 bg-white p-2.5 shadow-xs space-y-1.5">
+                                                                                                        <span className="block text-[11px] font-semibold text-indigo-900">🎵 Audio Soal Listening</span>
+                                                                                                        <audio
+                                                                                                            controls
+                                                                                                            controlsList="nodownload"
+                                                                                                            src={getMediaUrl(soal.audio_soal_url || soal.audio_soal)}
+                                                                                                            className="h-9 w-full max-w-full"
+                                                                                                        />
+                                                                                                    </div>
+                                                                                                )}
                                                                                             </div>
 
                                                                                             <div className="grid gap-4 sm:grid-cols-2 mt-1">

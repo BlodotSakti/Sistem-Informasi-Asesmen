@@ -30,6 +30,11 @@ RUN apk add --no-cache \
 RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install pdo pdo_mysql mbstring gd zip bcmath xml opcache
 
+# Konfigurasi batas memori PHP & ukuran upload untuk menangani media soal & PDF
+RUN echo "memory_limit=512M" > /usr/local/etc/php/conf.d/memory-limit.ini \
+    && echo "upload_max_filesize=32M" > /usr/local/etc/php/conf.d/uploads.ini \
+    && echo "post_max_size=32M" >> /usr/local/etc/php/conf.d/uploads.ini
+
 # Install Composer
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 

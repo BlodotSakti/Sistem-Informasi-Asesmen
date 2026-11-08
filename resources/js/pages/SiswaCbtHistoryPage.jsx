@@ -393,7 +393,9 @@ export default function SiswaCbtHistoryPage({ session, onLogout }) {
                                                                         ...base,
                                                                         ...dj,
                                                                         gambar_soal: dj.gambar_soal ?? base.gambar_soal,
+                                                                        gambar_soal_url: dj.gambar_soal_url ?? base.gambar_soal_url,
                                                                         audio_soal: dj.audio_soal ?? base.audio_soal,
+                                                                        audio_soal_url: dj.audio_soal_url ?? base.audio_soal_url,
                                                                         batas_putar_audio: dj.batas_putar_audio ?? base.batas_putar_audio,
                                                                         taksonomi_bloom: dj.taksonomi_bloom ?? base.taksonomi_bloom,
                                                                         bobot_nilai: dj.bobot_nilai ?? base.bobot_nilai,
@@ -406,6 +408,8 @@ export default function SiswaCbtHistoryPage({ session, onLogout }) {
                                                                 const isCorrect = item.is_correct;
                                                                 const skorDiperoleh = item.skor_diperoleh;
                                                                 const bobotSoal = item.bobot_nilai;
+                                                                const imgSrc = getMediaUrl(item.gambar_soal_url || item.gambar_soal);
+                                                                const audioSrc = getMediaUrl(item.audio_soal_url || item.audio_soal);
 
                                                                 return (
                                                                     <div key={item.id_detail || idx} className={`rounded-2xl border p-4 ${isCorrect ? 'border-emerald-200 bg-emerald-50/30' : 'border-rose-200 bg-rose-50/30'}`}>
@@ -423,19 +427,19 @@ export default function SiswaCbtHistoryPage({ session, onLogout }) {
                                                                             </span>
                                                                         </div>
                                                                         <p className="text-sm text-slate-600 mb-3 whitespace-pre-wrap">{item.isi_soal}</p>
-                                                                        {item.gambar_soal && (
+                                                                        {imgSrc && (
                                                                             <div className="mb-3">
                                                                                 <div className="inline-block max-w-full">
                                                                                     <img
-                                                                                        src={getMediaUrl(item.gambar_soal_url || item.gambar_soal)}
+                                                                                        src={imgSrc}
                                                                                         alt="Gambar Soal"
-                                                                                        onClick={() => setZoomedImageUrl(getMediaUrl(item.gambar_soal_url || item.gambar_soal))}
+                                                                                        onClick={() => setZoomedImageUrl(imgSrc)}
                                                                                         title="Klik untuk memperbesar gambar"
                                                                                         className="max-h-48 max-w-full cursor-zoom-in rounded-lg border border-border object-contain shadow-sm transition hover:opacity-95"
                                                                                     />
                                                                                     <button
                                                                                         type="button"
-                                                                                        onClick={() => setZoomedImageUrl(getMediaUrl(item.gambar_soal_url || item.gambar_soal))}
+                                                                                        onClick={() => setZoomedImageUrl(imgSrc)}
                                                                                         className="mt-1.5 flex items-center gap-1 text-xs font-medium text-primary hover:underline"
                                                                                     >
                                                                                         🔍 Klik gambar untuk memperbesar
@@ -443,10 +447,10 @@ export default function SiswaCbtHistoryPage({ session, onLogout }) {
                                                                                 </div>
                                                                             </div>
                                                                         )}
-                                                                        {item.audio_soal && (
+                                                                        {audioSrc && (
                                                                             <div className="mb-3">
                                                                                 <CbtAudioPlayer
-                                                                                    src={getMediaUrl(item.audio_soal_url || item.audio_soal)}
+                                                                                    src={audioSrc}
                                                                                     idSesi={reviewData.sesi?.id_sesi}
                                                                                     idDetail={item.id_detail}
                                                                                     batasPutar={item.batas_putar_audio}

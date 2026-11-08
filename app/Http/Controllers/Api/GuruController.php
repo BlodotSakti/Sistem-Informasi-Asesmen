@@ -563,7 +563,9 @@ class GuruController extends Controller
                 'paket_soal' => $bs->paket_soal,
                 'bobot_nilai' => $detail->bobot_nilai,
                 'gambar_soal' => $bs->gambar_soal,
+                'gambar_soal_url' => $bs->gambar_soal_url,
                 'audio_soal' => $bs->audio_soal,
+                'audio_soal_url' => $bs->audio_soal_url,
                 'batas_putar_audio' => $bs->batas_putar_audio,
             ];
         })->values();

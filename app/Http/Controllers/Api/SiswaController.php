@@ -851,6 +851,19 @@ class SiswaController extends Controller
             ]);
         }
 
+        $detailHasilWithMedia = array_map(function (array $item) use ($details) {
+            $detail = isset($item['id_detail']) ? $details->get((int) $item['id_detail']) : null;
+            $bs = $detail?->bankSoal;
+            return array_merge($item, [
+                'gambar_soal' => $item['gambar_soal'] ?? $bs?->gambar_soal,
+                'gambar_soal_url' => $item['gambar_soal_url'] ?? $bs?->gambar_soal_url,
+                'audio_soal' => $item['audio_soal'] ?? $bs?->audio_soal,
+                'audio_soal_url' => $item['audio_soal_url'] ?? $bs?->audio_soal_url,
+                'batas_putar_audio' => $item['batas_putar_audio'] ?? $bs?->batas_putar_audio,
+                'taksonomi_bloom' => $item['taksonomi_bloom'] ?? $bs?->taksonomi_bloom ?? $bs?->level_kognitif,
+            ]);
+        }, $resultPerSoal);
+
         return response()->json([
             'message' => 'Ujian berhasil disubmit',
             'total_skor' => round($highestAttempt ? (float)$highestAttempt->total_skor : $totalSkor, 4),
@@ -867,7 +880,7 @@ class SiswaController extends Controller
             'mata_pelajaran' => $sesi->mataPelajaran?->nama_mapel,
             'jenis_asesmen' => $sesi->jenis_asesmen,
             'tipe_soal' => $sesi->tipe_soal,
-            'detail_hasil' => $resultPerSoal,
+            'detail_hasil' => $detailHasilWithMedia,
             'analisis_diagnostik' => $analisisDiagnostik,
         ], 200);
     }
