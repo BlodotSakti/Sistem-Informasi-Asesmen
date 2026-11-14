@@ -645,10 +645,13 @@ class SiswaController extends Controller
             ];
         })->values()->all();
 
-        // --- Auto-Grading Essay API Calls ---
+        // --- Auto-Grading Essay API Calls (Batch Grading: 1 HTTP Request per Siswa) ---
         $essayGrades = [];
+        $batchItems = [];
+        $batchBobotByDetail = [];
         $apiUrl = config('services.essay_grader.url');
-        $apiTimeout = (int) config('services.essay_grader.timeout', 10);
+        $apiToken = config('services.essay_grader.token');
+        $apiTimeout = (int) config('services.essay_grader.timeout', 30);
         
         foreach ($jawabanByDetail as $jawab) {
             $detail = $details->get($jawab['id_detail']);
@@ -659,89 +662,127 @@ class SiswaController extends Controller
             
             if ($bankSoal->jenis_soal === 'esai' && $teksJawaban !== null && $teksJawaban !== '') {
                 $keywords = $bankSoal->keywords ?? [];
+                $essayGrades[$detail->id_detail] = ['score' => 0, 'is_correct' => false];
                 
                 // Cek flag MANUAL_REVIEW
                 if (in_array('MANUAL_REVIEW', $keywords)) {
-                    $essayGrades[$detail->id_detail] = ['score' => 0, 'is_correct' => false];
                     continue;
                 }
 
                 if ($apiUrl) {
-                    try {
-                        $subjectName = $bankSoal->mataPelajaran?->nama_lengkap
-                            ?? $bankSoal->mataPelajaran?->nama_mapel
-                            ?? $sesi->mataPelajaran?->nama_lengkap
-                            ?? $sesi->mataPelajaran?->nama_mapel;
+                    $subjectName = $bankSoal->mataPelajaran?->nama_lengkap
+                        ?? $bankSoal->mataPelajaran?->nama_mapel
+                        ?? $sesi->mataPelajaran?->nama_lengkap
+                        ?? $sesi->mataPelajaran?->nama_mapel;
 
-                        $response = \Illuminate\Support\Facades\Http::timeout($apiTimeout)->post(rtrim($apiUrl, '/') . '/grade', [
-                            'subject' => $subjectName,
-                            'student_answer' => $teksJawaban,
-                            'reference_answers' => array_values(array_filter(array_map('trim', explode('|', $bankSoal->kunci_jawaban ?? '')))),
-                            'keywords' => array_map(function($kw) {
-                                $kw = trim($kw);
-                                $weight = 1.0;
-                                if (str_contains($kw, ':')) {
-                                    $lastColon = strrpos($kw, ':');
-                                    $possibleWeight = trim(substr($kw, $lastColon + 1));
-                                    if (is_numeric($possibleWeight)) {
-                                        $weight = (float) $possibleWeight;
-                                        $kw = trim(substr($kw, 0, $lastColon));
-                                    }
-                                }
-                                $strict = false;
-                                if (!str_contains($kw, '/') && str_starts_with($kw, '**')) {
-                                    $strict = true;
-                                    $kw = trim(substr($kw, 2));
-                                    if (str_ends_with($kw, '**')) {
-                                        $kw = trim(substr($kw, 0, -2));
-                                    }
-                                }
-                                return [
-                                    'keyword' => $kw,
-                                    'weight' => $weight,
-                                    'strict' => $strict
-                                ];
-                            }, $keywords),
-                            'rule_weight' => (float) ($bankSoal->rule_weight ?? 0.5),
-                            'lsa_weight' => (float) ($bankSoal->lsa_weight ?? 0.5),
-                            'math_steps' => array_map(function($eq) {
-                                $eq = trim($eq);
-                                $weight = 1.0;
-                                if (str_contains($eq, ':')) {
-                                    $lastColon = strrpos($eq, ':');
-                                    $possibleWeight = trim(substr($eq, $lastColon + 1));
-                                    if (is_numeric($possibleWeight)) {
-                                        $weight = (float) $possibleWeight;
-                                        $eq = trim(substr($eq, 0, $lastColon));
-                                    }
-                                }
-                                return [
-                                    'equation' => $eq,
-                                    'weight' => $weight
-                                ];
-                            }, $bankSoal->math_steps ?? []),
-                            'math_weight' => (float) ($bankSoal->math_weight ?? 0.0),
-                            'tgate' => (float) ($bankSoal->tgate ?? 0.0),
-                            'required_keywords_count' => !empty($bankSoal->required_keywords_count) ? (int) $bankSoal->required_keywords_count : null
-                        ]);
-                        
-                        if ($response->successful()) {
-                            $gradeData = $response->json();
-                            $scoreRatio = $gradeData['final_score'] ?? 0;
-                            $essayGrades[$detail->id_detail] = [
-                                'score' => round(($scoreRatio / 100) * $detail->bobot_nilai, 4),
-                                'is_correct' => $scoreRatio >= 50 
-                            ];
-                        } else {
-                            $essayGrades[$detail->id_detail] = ['score' => 0, 'is_correct' => false];
-                        }
-                    } catch (\Exception $e) {
-                        \Illuminate\Support\Facades\Log::error('Essay Grading API Error: ' . $e->getMessage());
-                        $essayGrades[$detail->id_detail] = ['score' => 0, 'is_correct' => false];
+                    $refAnswers = array_values(array_filter(array_map('trim', explode('|', $bankSoal->kunci_jawaban ?? ''))));
+                    if (empty($refAnswers)) {
+                        $refAnswers = [''];
                     }
-                } else {
-                    $essayGrades[$detail->id_detail] = ['score' => 0, 'is_correct' => false];
+
+                    $batchBobotByDetail[$detail->id_detail] = (float) $detail->bobot_nilai;
+                    $batchItems[] = [
+                        'id' => $detail->id_detail,
+                        'subject' => $subjectName,
+                        'student_answer' => $teksJawaban,
+                        'reference_answers' => $refAnswers,
+                        'keywords' => array_map(function($kw) {
+                            $kw = trim($kw);
+                            $weight = 1.0;
+                            if (str_contains($kw, ':')) {
+                                $lastColon = strrpos($kw, ':');
+                                $possibleWeight = trim(substr($kw, $lastColon + 1));
+                                if (is_numeric($possibleWeight)) {
+                                    $weight = (float) $possibleWeight;
+                                    $kw = trim(substr($kw, 0, $lastColon));
+                                }
+                            }
+                            $strict = false;
+                            if (!str_contains($kw, '/') && str_starts_with($kw, '**')) {
+                                $strict = true;
+                                $kw = trim(substr($kw, 2));
+                                if (str_ends_with($kw, '**')) {
+                                    $kw = trim(substr($kw, 0, -2));
+                                }
+                            }
+                            return [
+                                'keyword' => $kw,
+                                'weight' => $weight,
+                                'strict' => $strict
+                            ];
+                        }, $keywords),
+                        'rule_weight' => (float) ($bankSoal->rule_weight ?? 0.5),
+                        'lsa_weight' => (float) ($bankSoal->lsa_weight ?? 0.5),
+                        'math_steps' => array_map(function($eq) {
+                            $eq = trim($eq);
+                            $weight = 1.0;
+                            if (str_contains($eq, ':')) {
+                                $lastColon = strrpos($eq, ':');
+                                $possibleWeight = trim(substr($eq, $lastColon + 1));
+                                if (is_numeric($possibleWeight)) {
+                                    $weight = (float) $possibleWeight;
+                                    $eq = trim(substr($eq, 0, $lastColon));
+                                }
+                            }
+                            return [
+                                'equation' => $eq,
+                                'weight' => $weight
+                            ];
+                        }, $bankSoal->math_steps ?? []),
+                        'math_weight' => (float) ($bankSoal->math_weight ?? 0.0),
+                        'tgate' => (float) ($bankSoal->tgate ?? 0.0),
+                        'required_keywords_count' => !empty($bankSoal->required_keywords_count) ? (int) $bankSoal->required_keywords_count : null,
+                        'max_score' => (float) $detail->bobot_nilai,
+                    ];
                 }
+            }
+        }
+
+        if ($apiUrl && !empty($batchItems)) {
+            $baseApiUrl = rtrim($apiUrl, '/');
+            $http = \Illuminate\Support\Facades\Http::timeout($apiTimeout);
+            if (!empty($apiToken)) {
+                $http = $http->withToken($apiToken);
+            }
+
+            try {
+                $response = $http->post($baseApiUrl . '/grade-batch', [
+                    'items' => $batchItems,
+                ]);
+
+                if ($response->successful()) {
+                    $results = $response->json('results') ?? [];
+                    foreach ($results as $idx => $gradeData) {
+                        $detailId = $gradeData['id'] ?? ($batchItems[$idx]['id'] ?? null);
+                        if ($detailId !== null && isset($batchBobotByDetail[$detailId])) {
+                            $scoreRatio = (float) ($gradeData['final_score'] ?? 0);
+                            $essayGrades[$detailId] = [
+                                'score' => round(($scoreRatio / 100) * $batchBobotByDetail[$detailId], 4),
+                                'is_correct' => $scoreRatio >= 50,
+                            ];
+                        }
+                    }
+                } elseif ($response->status() === 404) {
+                    // Fallback ke endpoint tunggal /grade jika server API belum di-update ke versi batch
+                    foreach ($batchItems as $item) {
+                        $detailId = $item['id'];
+                        try {
+                            $singleRes = $http->post($baseApiUrl . '/grade', $item);
+                            if ($singleRes->successful()) {
+                                $gradeData = $singleRes->json();
+                                $scoreRatio = (float) ($gradeData['final_score'] ?? 0);
+                                $essayGrades[$detailId] = [
+                                    'score' => round(($scoreRatio / 100) * $batchBobotByDetail[$detailId], 4),
+                                    'is_correct' => $scoreRatio >= 50,
+                                ];
+                            }
+                        } catch (\Exception $e) {
+                            \Illuminate\Support\Facades\Log::error('Essay Grading Single Fallback Error: ' . $e->getMessage());
+                        }
+                    }
+                }
+            } catch (\Exception $e) {
+                \Illuminate\Support\Facades\Log::error('Essay Grading Batch API Error: ' . $e->getMessage());
             }
         }
 

@@ -37,6 +37,7 @@ return [
 
     'essay_grader' => [
         'url' => env('ESSAY_GRADER_API_URL'),
+        'token' => env('ESSAY_GRADER_API_TOKEN'),
         'timeout' => env('ESSAY_GRADER_TIMEOUT', 30),
     ],
 
