@@ -488,8 +488,12 @@ class GuruController extends Controller
                 }
             }
             
-            $soal['rule_weight'] = $soal['rule_weight'] ?? 0;
-            $soal['lsa_weight'] = $soal['lsa_weight'] ?? 0;
+            $isEsaiWithoutWeights = ($soal['jenis_soal'] ?? '') === 'esai'
+                && !isset($soal['rule_weight'])
+                && !isset($soal['lsa_weight'])
+                && !isset($soal['math_weight']);
+            $soal['rule_weight'] = $soal['rule_weight'] ?? ($isEsaiWithoutWeights ? 0.50 : 0);
+            $soal['lsa_weight'] = $soal['lsa_weight'] ?? ($isEsaiWithoutWeights ? 0.50 : 0);
             $soal['math_steps'] = $soal['math_steps'] ?? null;
             $soal['math_weight'] = $soal['math_weight'] ?? 0;
             $soal['tgate'] = $soal['tgate'] ?? 0;
