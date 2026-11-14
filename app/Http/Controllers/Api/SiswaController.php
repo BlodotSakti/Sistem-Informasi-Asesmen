@@ -599,7 +599,7 @@ class SiswaController extends Controller
         ]);
 
         $sesi = SesiAsesmen::query()
-            ->with(['detailSesiSoal.bankSoal', 'mataPelajaran'])
+            ->with(['detailSesiSoal.bankSoal.mataPelajaran', 'mataPelajaran'])
             ->findOrFail($id_sesi);
 
         if ($sesi->waktu_selesai && now()->gt(\Carbon\Carbon::parse($sesi->waktu_selesai)->addMinutes(5))) {
@@ -668,25 +668,32 @@ class SiswaController extends Controller
 
                 if ($apiUrl) {
                     try {
+                        $subjectName = $bankSoal->mataPelajaran?->nama_lengkap
+                            ?? $bankSoal->mataPelajaran?->nama_mapel
+                            ?? $sesi->mataPelajaran?->nama_lengkap
+                            ?? $sesi->mataPelajaran?->nama_mapel;
+
                         $response = \Illuminate\Support\Facades\Http::timeout($apiTimeout)->post(rtrim($apiUrl, '/') . '/grade', [
+                            'subject' => $subjectName,
                             'student_answer' => $teksJawaban,
                             'reference_answers' => array_values(array_filter(array_map('trim', explode('|', $bankSoal->kunci_jawaban ?? '')))),
                             'keywords' => array_map(function($kw) {
                                 $kw = trim($kw);
+                                $weight = 1.0;
+                                if (str_contains($kw, ':')) {
+                                    $lastColon = strrpos($kw, ':');
+                                    $possibleWeight = trim(substr($kw, $lastColon + 1));
+                                    if (is_numeric($possibleWeight)) {
+                                        $weight = (float) $possibleWeight;
+                                        $kw = trim(substr($kw, 0, $lastColon));
+                                    }
+                                }
                                 $strict = false;
-                                if (str_starts_with($kw, '**')) {
+                                if (!str_contains($kw, '/') && str_starts_with($kw, '**')) {
                                     $strict = true;
                                     $kw = trim(substr($kw, 2));
                                     if (str_ends_with($kw, '**')) {
                                         $kw = trim(substr($kw, 0, -2));
-                                    }
-                                }
-                                $weight = 1.0;
-                                if (str_contains($kw, ':')) {
-                                    $parts = explode(':', $kw, 2);
-                                    $kw = trim($parts[0]);
-                                    if (is_numeric(trim($parts[1]))) {
-                                        $weight = (float) trim($parts[1]);
                                     }
                                 }
                                 return [
@@ -698,9 +705,19 @@ class SiswaController extends Controller
                             'rule_weight' => (float) ($bankSoal->rule_weight ?? 0.5),
                             'lsa_weight' => (float) ($bankSoal->lsa_weight ?? 0.5),
                             'math_steps' => array_map(function($eq) {
+                                $eq = trim($eq);
+                                $weight = 1.0;
+                                if (str_contains($eq, ':')) {
+                                    $lastColon = strrpos($eq, ':');
+                                    $possibleWeight = trim(substr($eq, $lastColon + 1));
+                                    if (is_numeric($possibleWeight)) {
+                                        $weight = (float) $possibleWeight;
+                                        $eq = trim(substr($eq, 0, $lastColon));
+                                    }
+                                }
                                 return [
-                                    'equation' => trim($eq),
-                                    'weight' => 1.0
+                                    'equation' => $eq,
+                                    'weight' => $weight
                                 ];
                             }, $bankSoal->math_steps ?? []),
                             'math_weight' => (float) ($bankSoal->math_weight ?? 0.0),
